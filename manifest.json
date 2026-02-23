@@ -1,0 +1,35 @@
+{
+  "name": "Lentse Plas Temperatuur Tracker",
+  "short_name": "Lentse Plas",
+  "description": "Registreer en volg de temperatuur van de Lentse Plas",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#e8f4fd",
+  "theme_color": "#0277bd",
+  "orientation": "portrait-primary",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Nieuwe meting",
+      "short_name": "Toevoegen",
+      "description": "Voeg een nieuwe temperatuurmeting toe",
+      "url": "./index.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

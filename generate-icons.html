@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!-- Run this file once in a browser to generate icon PNGs, then download them -->
+<html><body>
+<canvas id="c192" width="192" height="192" style="display:none"></canvas>
+<canvas id="c512" width="512" height="512" style="display:none"></canvas>
+<a id="dl192" download="icon-192.png">Download icon-192.png</a><br>
+<a id="dl512" download="icon-512.png">Download icon-512.png</a>
+<script>
+function drawIcon(canvas) {
+  const ctx = canvas.getContext('2d');
+  const s = canvas.width;
+  const r = s * 0.18;
+  // Background rounded rect
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(s - r, 0);
+  ctx.quadraticCurveTo(s, 0, s, r);
+  ctx.lineTo(s, s - r);
+  ctx.quadraticCurveTo(s, s, s - r, s);
+  ctx.lineTo(r, s);
+  ctx.quadraticCurveTo(0, s, 0, s - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, s, s);
+  grad.addColorStop(0, '#01579b');
+  grad.addColorStop(1, '#0097a7');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // Wave
+  ctx.beginPath();
+  ctx.moveTo(0, s * 0.65);
+  ctx.bezierCurveTo(s*0.25, s*0.58, s*0.75, s*0.72, s, s*0.65);
+  ctx.lineTo(s, s);
+  ctx.lineTo(0, s);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,150,200,0.4)';
+  ctx.fill();
+  // Emoji
+  ctx.font = `${s * 0.45}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏊', s / 2, s * 0.44);
+}
+['c192','c512'].forEach(id => {
+  const c = document.getElementById(id);
+  drawIcon(c);
+  const size = id === 'c192' ? 192 : 512;
+  document.getElementById('dl'+size).href = c.toDataURL('image/png');
+});
+</script>
+</body></html>
