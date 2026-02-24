@@ -1,5 +1,5 @@
 // Service Worker — Lentse Plas Temperatuur Tracker
-const CACHE = 'lentse-plas-v1';
+const CACHE = 'lentse-plas-v3';
 const ASSETS = [
   './',
   './index.html',
