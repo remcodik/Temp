@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Lentse Plas">
   <meta name="theme-color" content="#0277bd">
-  <title>🏊 Lentse Plas Temp</title>
+  <title>Lentse Plas Temp</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
@@ -51,8 +51,8 @@
       padding: 14px 18px 10px;
     }
     .hdr-title { display:flex; align-items:center; gap:10px; }
-    .hdr-title h1 { font-size:20px; font-weight:700; }
-    .hdr-title p  { font-size:12px; opacity:.85; }
+    .hdr-title h1 { font-size:20px; font-weight:700; letter-spacing:-.3px; }
+    .hdr-title p  { font-size:12px; opacity:.8; margin-top:1px; }
     .waterkaart-btn {
       display: flex;
       align-items: center;
@@ -74,7 +74,7 @@
       bottom: 0; left: 0; right: 0;
       background: var(--card);
       display: flex;
-      border-top: 1px solid #ddd;
+      border-top: 1px solid #dde3e8;
       z-index: 100;
       padding-bottom: env(safe-area-inset-bottom);
       box-shadow: 0 -3px 18px rgba(0,0,0,0.08);
@@ -101,55 +101,170 @@
     .page { display:none; padding:16px; max-width:600px; margin:0 auto; }
     .page.active { display:block; }
 
-    /* ── Cards ── */
+    /* ── Generic card ── */
     .card {
       background: var(--card);
       border-radius: var(--radius);
       padding: 18px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       box-shadow: var(--shadow);
     }
-    .card-title { font-size:17px; font-weight:700; margin-bottom:14px; }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
 
-    /* ── Weather hero ── */
-    .hero {
-      background: linear-gradient(135deg, #0288d1, #00acc1);
+    /* ══════════════════════════════════════════
+       WATER HERO  –  the star of the show
+    ══════════════════════════════════════════ */
+    .water-hero {
+      background: linear-gradient(140deg, #01579b 0%, #0288d1 55%, #00acc1 100%);
       border-radius: var(--radius);
-      padding: 20px;
-      margin-bottom: 14px;
-      box-shadow: var(--shadow);
+      padding: 22px 22px 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 32px rgba(2,119,189,.38);
       color: white;
+      position: relative;
+      overflow: hidden;
     }
-    .hero-row { display:flex; justify-content:space-between; align-items:flex-end; }
-    .hero-temp { font-size:52px; font-weight:800; line-height:1; }
-    .hero-label { font-size:13px; opacity:.88; margin-top:4px; }
-    .hero-icon  { font-size:44px; }
-    .hero-meta  { display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
-    .hero-date  { font-size:13px; opacity:.82; }
-    .hero-updated { font-size:11px; opacity:.7; }
+    .water-hero::before {
+      content: '🌊';
+      position: absolute;
+      right: -6px; top: -8px;
+      font-size: 120px;
+      opacity: .09;
+      pointer-events: none;
+      transform: rotate(-12deg);
+    }
+    .wh-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.8px;
+      opacity: .78;
+      margin-bottom: 4px;
+    }
+    .wh-temp {
+      font-size: 80px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -4px;
+    }
+    .wh-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+    .wh-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 12px;
+    }
+    .wh-date { font-size: 12px; opacity: .7; }
+    .wh-delta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .delta-pos { color: #a5f3fc; }
+    .delta-neg { color: #fca5a5; }
+    .wh-empty {
+      text-align: center;
+      padding: 8px 0 4px;
+      opacity: .65;
+    }
+    .wh-empty-num { font-size: 52px; font-weight: 900; opacity: .4; letter-spacing: -2px; }
+
+    /* ── Air temp – secondary ── */
+    .air-secondary {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 11px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .air-left { display:flex; align-items:center; gap:10px; }
+    .air-icon { font-size:22px; }
+    .air-lbl  { font-size:11px; color:var(--muted); margin-bottom:1px; }
+    .air-val  { font-size:22px; font-weight:700; color:#e65100; line-height:1; }
+    .air-meta { font-size:11px; color:var(--muted); text-align:right; }
 
     /* ── Stats grid ── */
-    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
     .stat-card {
       background: var(--card);
-      border-radius:12px;
-      padding:15px;
-      text-align:center;
-      box-shadow:var(--shadow);
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+      box-shadow: var(--shadow);
     }
-    .stat-value { font-size:26px; font-weight:800; color:var(--primary); }
+    .stat-value { font-size:26px; font-weight:800; color:var(--primary); line-height:1.1; }
     .stat-label { font-size:11px; color:var(--muted); margin-top:3px; }
+    .stat-record { font-size:10px; color:var(--muted); margin-top:3px; opacity:.7; }
+
+    /* ── Trend card ── */
+    .trend-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+    }
+    .trend-row + .trend-row { border-top: 1px solid rgba(0,0,0,.055); }
+    .trend-lbl { font-size:13px; color:var(--muted); }
+    .trend-val { font-size:15px; font-weight:700; text-align:right; line-height:1.2; }
+    .trend-delta { font-size:12px; font-weight:600; margin-top:2px; text-align:right; }
+    .trend-up   { color:#00897b; }
+    .trend-down { color:#c62828; }
+
+    /* ── Best swim day ── */
+    .best-day-card {
+      background: linear-gradient(135deg, #fff8e1, #fffde7);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid #f9a825;
+    }
+    .bd-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #bf6000;
+      margin-bottom: 10px;
+    }
+    .bd-body { display:flex; justify-content:space-between; align-items:center; }
+    .bd-temp { font-size:34px; font-weight:900; color:#e65100; line-height:1; }
+    .bd-date { font-size:12px; color:#795548; margin-top:4px; }
+    .bd-conds { font-size:18px; margin-top:7px; }
 
     /* ── Section header ── */
     .section-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-    .section-hdr h2 { font-size:17px; font-weight:700; }
+    .section-hdr h2 { font-size:16px; font-weight:700; }
     .badge {
       background: var(--primary);
       color: white;
-      border-radius:10px;
-      padding:2px 9px;
-      font-size:12px;
-      font-weight:600;
+      border-radius: 10px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     /* ── FAB ── */
@@ -187,19 +302,24 @@
     .icon-btn  { width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; }
     .edit-btn  { background:#e3f2fd; }
     .del-btn   { background:#ffebee; }
-    .rc-temps  { display:flex; gap:20px; margin-bottom:9px; }
-    .rc-temp   { display:flex; flex-direction:column; }
+
+    /* water = king, air = secondary */
+    .rc-temps { display:flex; align-items:flex-end; gap:14px; margin-bottom:9px; }
+    .rc-temp  { display:flex; flex-direction:column; }
     .rc-temp .tv { font-size:30px; font-weight:800; line-height:1; }
-    .rc-temp .tl { font-size:11px; color:var(--muted); }
-    .wt .tv { color:#0288d1; }
-    .at .tv { color:#e65100; }
-    .rc-conds  { display:flex; gap:7px; flex-wrap:wrap; }
+    .rc-temp .tl { font-size:11px; color:var(--muted); margin-top:2px; }
+    .wt .tv { color:#0288d1; font-size:40px; }
+    .at .tv { color:#e65100; font-size:21px; opacity:.8; }
+    .at .tl { font-size:10px; }
+    .rc-divider { width:1px; background:#e0e7ee; height:34px; margin-bottom:5px; }
+
+    .rc-conds { display:flex; gap:7px; flex-wrap:wrap; }
     .cond-badge {
       display:flex; align-items:center; gap:4px;
       background:#f0f4ff; border-radius:20px;
       padding:4px 10px; font-size:13px;
     }
-    .rc-notes  { margin-top:9px; font-size:13px; color:var(--muted); font-style:italic; }
+    .rc-notes { margin-top:9px; font-size:13px; color:var(--muted); font-style:italic; }
 
     /* ── Empty state ── */
     .empty { text-align:center; padding:44px 20px; color:var(--muted); }
@@ -235,9 +355,9 @@
     /* ── Form ── */
     .fg { margin-bottom:16px; }
     .fg label {
-      display:block; font-size:12px; font-weight:700;
+      display:block; font-size:11px; font-weight:700;
       color:var(--muted); margin-bottom:7px;
-      text-transform:uppercase; letter-spacing:.5px;
+      text-transform:uppercase; letter-spacing:.6px;
     }
     .fg input, .fg textarea {
       width:100%; padding:13px 15px;
@@ -314,10 +434,11 @@
       font-size:13px; line-height:1.65; color:#5d4037; margin-bottom:14px;
     }
 
-    /* ── Responsive tweaks ── */
+    /* ── Responsive ── */
     @media (max-width:360px) {
-      .ico { min-width:55px; padding:8px 8px; }
+      .ico { min-width:55px; padding:8px; }
       .ico .ie { font-size:21px; }
+      .wh-temp { font-size:66px; }
     }
 
     /* ── Dark mode ── */
@@ -334,12 +455,16 @@
       .ico .il { color:#90caf9; }
       .close-btn { background:#1a3a5c; color:#e3f2fd; }
       .cond-badge { background:#1a3a5c; }
-      .stat-card, .reading-card, .action-card, .modal { background:#112136; }
+      .stat-card, .reading-card, .action-card, .modal, .air-secondary { background:#112136; }
       .edit-btn  { background:#0d3a60; }
       .del-btn   { background:#4a1212; }
       .fetch-btn { background:#0d3a60; }
       .btn-plain { background:#1a3a5c; color:#e3f2fd; }
       .info-box  { background:#1a2a10; color:#c5e1a5; }
+      .rc-divider { background:#2a4a6a; }
+      .trend-row + .trend-row { border-top-color: rgba(255,255,255,.06); }
+      .best-day-card { background:linear-gradient(135deg,#2a1e00,#1a1400); border-left-color:#f9a825; }
+      .bd-date { color:#c5a565; }
     }
   </style>
 </head>
@@ -370,34 +495,52 @@
 <!-- HOME -->
 <div id="page-home" class="page active">
 
-  <!-- Air temp hero -->
-  <div class="hero">
-    <div class="hero-row">
+  <!-- ① Water temp HERO — primaire element -->
+  <div id="water-hero-section"></div>
+
+  <!-- ② Luchttemperatuur — secundair -->
+  <div class="air-secondary">
+    <div class="air-left">
+      <div class="air-icon" id="cur-icon">🌡️</div>
       <div>
-        <div class="hero-temp" id="cur-air">--°C</div>
-        <div class="hero-label">🌡️ Huidige luchttemperatuur</div>
-      </div>
-      <div style="text-align:right">
-        <div class="hero-icon" id="cur-icon">🌡️</div>
-        <div class="hero-date" id="cur-date"></div>
+        <div class="air-lbl">Luchttemperatuur nu</div>
+        <div class="air-val" id="cur-air">--°C</div>
       </div>
     </div>
-    <div class="hero-meta">
-      <span class="hero-updated" id="cur-updated">Ophalen…</span>
-    </div>
+    <div class="air-meta" id="cur-updated">Ophalen…</div>
   </div>
 
-  <!-- Stats -->
+  <!-- ③ Stats grid (met record-datums) -->
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-value" id="s-count">0</div><div class="stat-label">📋 Metingen</div></div>
-    <div class="stat-card"><div class="stat-value" id="s-avg">--</div><div class="stat-label">🌊 Gem. water °C</div></div>
-    <div class="stat-card"><div class="stat-value" id="s-max">--</div><div class="stat-label">🔥 Max water °C</div></div>
-    <div class="stat-card"><div class="stat-value" id="s-min">--</div><div class="stat-label">🥶 Min water °C</div></div>
+    <div class="stat-card">
+      <div class="stat-value" id="s-count">0</div>
+      <div class="stat-label">Metingen totaal</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="s-avg">--</div>
+      <div class="stat-label">🌊 Gemiddeld water</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="s-max">--</div>
+      <div class="stat-label">🔥 Record hoog</div>
+      <div class="stat-record" id="s-max-date"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="s-min">--</div>
+      <div class="stat-label">🥶 Record laag</div>
+      <div class="stat-record" id="s-min-date"></div>
+    </div>
   </div>
 
-  <!-- Latest 5 -->
+  <!-- ④ Trend & statistieken -->
+  <div id="trend-section"></div>
+
+  <!-- ⑤ Beste zwemdag -->
+  <div id="best-day-section"></div>
+
+  <!-- ⑥ Laatste 5 metingen -->
   <div class="section-hdr">
-    <h2>🕐 Laatste metingen</h2>
+    <h2>Laatste metingen</h2>
     <span class="badge" id="badge-home">0</span>
   </div>
   <div id="preview-list"></div>
@@ -406,7 +549,7 @@
 <!-- ALL DATA -->
 <div id="page-data" class="page">
   <div class="section-hdr">
-    <h2>📋 Alle metingen</h2>
+    <h2>Alle metingen</h2>
     <span class="badge" id="badge-data">0</span>
   </div>
   <div id="all-list"></div>
@@ -415,18 +558,18 @@
 <!-- CHART -->
 <div id="page-chart" class="page">
   <div class="card">
-    <div class="card-title">📈 Water & lucht temperatuur</div>
+    <div class="card-title">Watertemperatuur over tijd</div>
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title">🌊 Watertemperatuur per meting</div>
+    <div class="card-title">Water per meting</div>
     <div class="chart-wrap"><canvas id="chart-water"></canvas></div>
   </div>
 </div>
 
 <!-- EXPORT / SETTINGS -->
 <div id="page-export" class="page">
-  <div class="section-hdr"><h2>📁 Data &amp; instellingen</h2></div>
+  <div class="section-hdr"><h2>Data &amp; instellingen</h2></div>
 
   <div class="action-grid" style="margin-bottom:16px">
     <button class="action-card" onclick="exportCSV()">
@@ -454,7 +597,7 @@
 
   <!-- Firebase -->
   <div class="card">
-    <div class="card-title">☁️ Cloud delen (optioneel)</div>
+    <div class="card-title">Cloud delen (optioneel)</div>
     <div class="info-box">
       Verbind met een gratis Firebase project om data te delen met anderen.<br>
       Je hebt alleen een <strong>Google account</strong> nodig — geen extra kosten.
@@ -475,7 +618,7 @@
 
   <!-- Danger zone -->
   <div class="card" style="border:2px solid #ffcdd2;">
-    <div class="card-title" style="color:var(--danger);">⚠️ Data wissen</div>
+    <div class="card-title" style="color:var(--danger);">Data wissen</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Wist alle lokale metingen permanent.</p>
     <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
   </div>
@@ -496,14 +639,14 @@
 <div class="overlay" id="form-overlay">
   <div class="modal">
     <div class="modal-hdr">
-      <h2 id="form-title">➕ Nieuwe meting</h2>
+      <h2 id="form-title">Nieuwe meting</h2>
       <button class="close-btn" onclick="closeForm()">✕</button>
     </div>
     <form onsubmit="saveReading(event)">
       <input type="hidden" id="f-id">
 
       <div class="fg">
-        <label>📅 Datum &amp; tijd</label>
+        <label>Datum &amp; tijd</label>
         <input type="datetime-local" id="f-dt" required>
       </div>
 
@@ -516,7 +659,7 @@
       </div>
 
       <div class="fg">
-        <label>🌡️ Luchttemperatuur</label>
+        <label>Luchttemperatuur</label>
         <div class="input-row">
           <input type="number" id="f-at" placeholder="bijv. 25.0" step="0.1" min="-30" max="50">
           <button type="button" class="fetch-btn" onclick="fetchAndFill()">🔄 Ophalen</button>
@@ -524,21 +667,21 @@
       </div>
 
       <div class="fg">
-        <label>🌤️ Hemelconditie</label>
+        <label>Hemelconditie</label>
         <div class="icon-picker" id="sky-picker"></div>
       </div>
 
       <div class="fg">
-        <label>💨 Wind &amp; gevoel</label>
+        <label>Wind &amp; gevoel</label>
         <div class="icon-picker" id="wind-picker"></div>
       </div>
 
       <div class="fg">
-        <label>📝 Notities (optioneel)</label>
+        <label>Notities (optioneel)</label>
         <textarea id="f-notes" rows="3" placeholder="Bijv. water was helder, veel bezoekers…"></textarea>
       </div>
 
-      <button type="submit" class="btn btn-primary">💾 Opslaan</button>
+      <button type="submit" class="btn btn-primary">Opslaan</button>
     </form>
   </div>
 </div>
@@ -547,7 +690,7 @@
 <div class="overlay" id="help-overlay">
   <div class="modal">
     <div class="modal-hdr">
-      <h2>☁️ Firebase instellen</h2>
+      <h2>Firebase instellen</h2>
       <button class="close-btn" onclick="closeHelp()">✕</button>
     </div>
     <div style="font-size:14px;line-height:1.75;color:var(--muted);">
@@ -587,23 +730,23 @@ const SKY = [
   { v:'stormy',       e:'⛈️', l:'Onweer'        },
 ];
 const WIND = [
-  { v:'freezing', e:'🥶', l:'IJskoud'       },
-  { v:'cold',     e:'🌬️',l:'Koud & winderig'},
-  { v:'fresh',    e:'🍃', l:'Fris briesje'  },
-  { v:'pleasant', e:'😊', l:'Aangenaam'     },
-  { v:'warm',     e:'🌞', l:'Warm'          },
-  { v:'hot',      e:'🔥', l:'Heet'          },
+  { v:'freezing', e:'🥶', l:'IJskoud'        },
+  { v:'cold',     e:'🌬️',l:'Koud & winderig' },
+  { v:'fresh',    e:'🍃', l:'Fris briesje'   },
+  { v:'pleasant', e:'😊', l:'Aangenaam'      },
+  { v:'warm',     e:'🌞', l:'Warm'           },
+  { v:'hot',      e:'🔥', l:'Heet'           },
 ];
 
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let readings  = [];
-let editingId = null;
-let selSky    = null;
-let selWind   = null;
-let chartComb = null;
-let chartWater= null;
+let readings   = [];
+let editingId  = null;
+let selSky     = null;
+let selWind    = null;
+let chartComb  = null;
+let chartWater = null;
 
 // ─────────────────────────────────────────────
 // PERSISTENCE
@@ -620,7 +763,48 @@ function uid() {
 }
 
 // ─────────────────────────────────────────────
-// WEATHER
+// WATER STATUS LABEL
+// ─────────────────────────────────────────────
+function waterStatus(t) {
+  if (t < 10) return { e:'🥶', l:'Te koud om te zwemmen' };
+  if (t < 15) return { e:'🌊', l:'Koud, voor de durfals'  };
+  if (t < 18) return { e:'😅', l:'Fris maar te doen'      };
+  if (t < 22) return { e:'😊', l:'Aangenaam zwemwater'    };
+  if (t < 25) return { e:'🌞', l:'Heerlijk zwemwater'     };
+  return           { e:'🔥', l:'Warm zwemwater'          };
+}
+
+// ─────────────────────────────────────────────
+// STATISTICS HELPERS
+// ─────────────────────────────────────────────
+// weeksBack=0 → deze week, weeksBack=1 → vorige week
+function weekAvg(weeksBack) {
+  const MS  = 86400000;
+  const now = new Date();
+  const end   = new Date(now.getTime() - weeksBack * 7 * MS);
+  const start = new Date(end.getTime() - 7 * MS);
+  const sub   = readings.filter(r => {
+    const d = new Date(r.datetime);
+    return d >= start && d < end;
+  });
+  if (!sub.length) return null;
+  return sub.reduce((a, b) => a + b.waterTemp, 0) / sub.length;
+}
+
+function bestSwimDay() {
+  if (!readings.length) return null;
+  return readings.reduce((best, r) =>
+    (!best || r.waterTemp > best.waterTemp) ? r : best, null);
+}
+
+function shortDate(dt) {
+  return new Date(dt).toLocaleDateString('nl-NL', {
+    day:'numeric', month:'short', year:'numeric'
+  });
+}
+
+// ─────────────────────────────────────────────
+// WEATHER / AIR TEMP
 // ─────────────────────────────────────────────
 async function fetchAirTemp() {
   try {
@@ -641,21 +825,18 @@ async function fetchAndFill() {
   }
 }
 
-async function updateHero() {
+async function updateAirTemp() {
   const t = await fetchAirTemp();
   if (t !== null) {
     document.getElementById('cur-air').textContent = t + '°C';
     document.getElementById('cur-updated').textContent =
-      'Bijgewerkt: ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-    const icon =
+      'Bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('cur-icon').textContent =
       t < 5  ? '🥶' : t < 12 ? '🧥' :
       t < 18 ? '😊' : t < 25 ? '⛅' : '☀️';
-    document.getElementById('cur-icon').textContent = icon;
   } else {
     document.getElementById('cur-updated').textContent = 'Niet beschikbaar';
   }
-  document.getElementById('cur-date').textContent =
-    new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
 }
 
 // ─────────────────────────────────────────────
@@ -679,8 +860,7 @@ function openForm(id) {
   renderPicker('sky-picker',  SKY,  'sky');
   renderPicker('wind-picker', WIND, 'wind');
 
-  // Default datetime = now
-  const now  = new Date();
+  const now   = new Date();
   const local = new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
   document.getElementById('f-dt').value    = local;
   document.getElementById('f-wt').value    = '';
@@ -691,7 +871,7 @@ function openForm(id) {
   if (id) {
     const r = readings.find(x => x.id === id);
     if (r) {
-      document.getElementById('form-title').textContent = '✏️ Meting bewerken';
+      document.getElementById('form-title').textContent = 'Meting bewerken';
       document.getElementById('f-id').value    = r.id;
       document.getElementById('f-dt').value    = r.datetime;
       document.getElementById('f-wt').value    = r.waterTemp;
@@ -701,8 +881,7 @@ function openForm(id) {
       if (r.wind) pickIcon('wind', r.wind);
     }
   } else {
-    document.getElementById('form-title').textContent = '➕ Nieuwe meting';
-    // Auto-fetch air temp for new entries
+    document.getElementById('form-title').textContent = 'Nieuwe meting';
     fetchAndFill();
   }
 
@@ -778,7 +957,7 @@ function deleteReading(id) {
 }
 
 // ─────────────────────────────────────────────
-// RENDER
+// RENDER HELPERS
 // ─────────────────────────────────────────────
 function fmtDate(dt) {
   return new Date(dt).toLocaleDateString('nl-NL',{
@@ -788,8 +967,14 @@ function fmtDate(dt) {
 }
 
 function readingHTML(r) {
-  const se = emoji(SKY, r.sky), sl = label(SKY, r.sky);
-  const we = emoji(WIND,r.wind),wl = label(WIND,r.wind);
+  const se = emoji(SKY, r.sky),  sl = label(SKY, r.sky);
+  const we = emoji(WIND,r.wind), wl = label(WIND,r.wind);
+  const airHTML = r.airTemp != null ? `
+    <div class="rc-divider"></div>
+    <div class="rc-temp at">
+      <span class="tv">${r.airTemp}°</span>
+      <span class="tl">Lucht</span>
+    </div>` : '';
   return `
     <div class="reading-card">
       <div class="rc-header">
@@ -804,11 +989,7 @@ function readingHTML(r) {
           <span class="tv">${r.waterTemp}°</span>
           <span class="tl">🌊 Water</span>
         </div>
-        ${r.airTemp != null ? `
-        <div class="rc-temp at">
-          <span class="tv">${r.airTemp}°</span>
-          <span class="tl">🌡️ Lucht</span>
-        </div>` : ''}
+        ${airHTML}
       </div>
       <div class="rc-conds">
         ${se ? `<span class="cond-badge">${se} ${sl}</span>` : ''}
@@ -818,19 +999,164 @@ function readingHTML(r) {
     </div>`;
 }
 
+// ── Water Hero ──────────────────────────────
+function renderWaterHero() {
+  const el = document.getElementById('water-hero-section');
+  const n  = readings.length;
+
+  if (n === 0) {
+    el.innerHTML = `
+      <div class="water-hero">
+        <div class="wh-label">Watertemperatuur</div>
+        <div class="wh-empty">
+          <div class="wh-empty-num">--°</div>
+          <div style="font-size:13px;margin-top:8px;opacity:.7">Voeg je eerste meting toe via +</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const latest = readings[0];
+  const prev   = readings[1];
+  const status = waterStatus(latest.waterTemp);
+  const delta  = prev ? (latest.waterTemp - prev.waterTemp) : null;
+
+  let deltaHTML = '';
+  if (delta !== null) {
+    const cls   = delta >= 0 ? 'delta-pos' : 'delta-neg';
+    const arrow = delta >= 0 ? '▲' : '▼';
+    deltaHTML = `
+      <div class="wh-delta">
+        <span class="${cls}">${arrow} ${Math.abs(delta).toFixed(1)}°</span>
+        <span style="opacity:.6;font-size:11px;font-weight:400">vs vorige meting</span>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="water-hero">
+      <div class="wh-label">Watertemperatuur</div>
+      <div class="wh-temp">${latest.waterTemp.toFixed(1)}°</div>
+      <div class="wh-status">${status.e} ${status.l}</div>
+      <div class="wh-bottom">
+        <div class="wh-date">📅 ${fmtDate(latest.datetime)}</div>
+        ${deltaHTML}
+      </div>
+    </div>`;
+}
+
+// ── Trend & statistieken ─────────────────────
+function renderTrendSection() {
+  const el = document.getElementById('trend-section');
+  const n  = readings.length;
+  if (n === 0) { el.innerHTML = ''; return; }
+
+  const thisWeek = weekAvg(0);
+  const lastWeek = weekAvg(1);
+  const now      = new Date();
+
+  const thisMonth = readings.filter(r => {
+    const d = new Date(r.datetime);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  const thisYear = readings.filter(r =>
+    new Date(r.datetime).getFullYear() === now.getFullYear()
+  ).length;
+
+  let rows = '';
+
+  if (thisWeek !== null) {
+    let deltaHTML = '<span style="opacity:.4;font-size:11px">Eerste week met data</span>';
+    if (lastWeek !== null) {
+      const d     = thisWeek - lastWeek;
+      const cls   = d >= 0 ? 'trend-up' : 'trend-down';
+      const arrow = d >= 0 ? '▲' : '▼';
+      deltaHTML = `<div class="trend-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}° t.o.v. vorige week</div>`;
+    }
+    rows += `
+      <div class="trend-row">
+        <span class="trend-lbl">Gem. deze week</span>
+        <div>
+          <div class="trend-val">${thisWeek.toFixed(1)}°C</div>
+          ${deltaHTML}
+        </div>
+      </div>`;
+  }
+
+  rows += `
+    <div class="trend-row">
+      <span class="trend-lbl">Deze maand</span>
+      <span class="trend-val">${thisMonth} meting${thisMonth !== 1 ? 'en' : ''}</span>
+    </div>
+    <div class="trend-row">
+      <span class="trend-lbl">Dit jaar</span>
+      <span class="trend-val">${thisYear} meting${thisYear !== 1 ? 'en' : ''}</span>
+    </div>`;
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-title">Trend &amp; statistieken</div>
+      ${rows}
+    </div>`;
+}
+
+// ── Beste zwemdag ────────────────────────────
+function renderBestDay() {
+  const el   = document.getElementById('best-day-section');
+  const best = bestSwimDay();
+  if (!best) { el.innerHTML = ''; return; }
+
+  const se  = emoji(SKY,  best.sky);
+  const we  = emoji(WIND, best.wind);
+  const bs  = waterStatus(best.waterTemp);
+  const condHTML = (se || we)
+    ? `<div class="bd-conds">${[se, we].filter(Boolean).join(' ')}</div>` : '';
+
+  el.innerHTML = `
+    <div class="best-day-card">
+      <div class="bd-label">🏆 Beste zwemdag ooit</div>
+      <div class="bd-body">
+        <div>
+          <div class="bd-temp">${best.waterTemp.toFixed(1)}°C</div>
+          <div class="bd-date">${new Date(best.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}</div>
+          ${condHTML}
+        </div>
+        <div style="font-size:46px">${bs.e}</div>
+      </div>
+    </div>`;
+}
+
+// ── Main renderAll ───────────────────────────
 function renderAll() {
   const n = readings.length;
-  document.getElementById('s-count').textContent   = n;
+
+  document.getElementById('s-count').textContent    = n;
   document.getElementById('badge-home').textContent = n;
   document.getElementById('badge-data').textContent = n;
 
   if (n > 0) {
-    const wt = readings.map(r => r.waterTemp);
-    const avg = wt.reduce((a,b) => a+b,0) / n;
+    const wt     = readings.map(r => r.waterTemp);
+    const avg    = wt.reduce((a,b) => a+b,0) / n;
+    const maxVal = Math.max(...wt);
+    const minVal = Math.min(...wt);
+    const maxR   = readings.find(r => r.waterTemp === maxVal);
+    const minR   = readings.find(r => r.waterTemp === minVal);
+
     document.getElementById('s-avg').textContent = avg.toFixed(1) + '°';
-    document.getElementById('s-max').textContent = Math.max(...wt).toFixed(1) + '°';
-    document.getElementById('s-min').textContent = Math.min(...wt).toFixed(1) + '°';
+    document.getElementById('s-max').textContent = maxVal.toFixed(1) + '°';
+    document.getElementById('s-min').textContent = minVal.toFixed(1) + '°';
+    if (maxR) document.getElementById('s-max-date').textContent = shortDate(maxR.datetime);
+    if (minR) document.getElementById('s-min-date').textContent = shortDate(minR.datetime);
+  } else {
+    ['s-avg','s-max','s-min'].forEach(id =>
+      document.getElementById(id).textContent = '--');
+    ['s-max-date','s-min-date'].forEach(id =>
+      document.getElementById(id).textContent = '');
   }
+
+  renderWaterHero();
+  renderTrendSection();
+  renderBestDay();
 
   const emptyHTML = `
     <div class="empty">
@@ -838,13 +1164,11 @@ function renderAll() {
       <p>Nog geen metingen.<br>Tik op <strong>+</strong> om te beginnen!</p>
     </div>`;
 
-  const preview = document.getElementById('preview-list');
-  preview.innerHTML = n === 0
+  document.getElementById('preview-list').innerHTML = n === 0
     ? emptyHTML
     : readings.slice(0,5).map(readingHTML).join('');
 
-  const all = document.getElementById('all-list');
-  all.innerHTML = n === 0
+  document.getElementById('all-list').innerHTML = n === 0
     ? emptyHTML
     : readings.map(readingHTML).join('');
 }
@@ -873,18 +1197,18 @@ function renderCharts() {
     }
   };
 
-  if (chartComb)  chartComb.destroy();
+  if (chartComb) chartComb.destroy();
   chartComb = new Chart(document.getElementById('chart-combined'), {
     type:'line',
     data:{
       labels,
       datasets:[
         { label:'🌊 Water °C', data:wt, borderColor:'#0288d1',
-          backgroundColor:'rgba(2,136,209,.12)', borderWidth:3,
+          backgroundColor:'rgba(2,136,209,.15)', borderWidth:3,
           pointRadius:5, pointBackgroundColor:'#0288d1', fill:true, tension:.4 },
         { label:'🌡️ Lucht °C', data:at, borderColor:'#e65100',
-          backgroundColor:'rgba(230,81,0,.05)', borderWidth:2,
-          pointRadius:4, pointBackgroundColor:'#e65100', fill:false, tension:.4 },
+          backgroundColor:'rgba(230,81,0,.04)', borderWidth:1.5,
+          pointRadius:3, pointBackgroundColor:'#e65100', fill:false, tension:.4 },
       ]
     },
     options: baseOpts,
@@ -898,10 +1222,10 @@ function renderCharts() {
       datasets:[{
         label:'🌊 Water °C', data:wt, borderRadius:8,
         backgroundColor: wt.map(t =>
-          t < 15 ? 'rgba(2,136,209,.65)' :
-          t < 20 ? 'rgba(0,150,136,.65)' :
-          t < 24 ? 'rgba(67,160,71,.65)' :
-                   'rgba(230,81,0,.65)'
+          t < 15 ? 'rgba(2,136,209,.7)' :
+          t < 20 ? 'rgba(0,150,136,.7)' :
+          t < 24 ? 'rgba(67,160,71,.7)' :
+                   'rgba(230,81,0,.7)'
         ),
       }]
     },
@@ -914,7 +1238,7 @@ function renderCharts() {
 // ─────────────────────────────────────────────
 function exportCSV() {
   if (!readings.length) { showToast('Geen data om te exporteren'); return; }
-  const hdr = ['Datum','Tijd','Water °C','Lucht °C','Hemel','Wind/gevoel','Notities'];
+  const hdr  = ['Datum','Tijd','Water °C','Lucht °C','Hemel','Wind/gevoel','Notities'];
   const rows = readings.map(r => {
     const dt = new Date(r.datetime);
     return [
@@ -985,7 +1309,7 @@ function dlFile(content, filename, type) {
 function today() { return new Date().toISOString().slice(0,10); }
 
 // ─────────────────────────────────────────────
-// FIREBASE CONFIG (persistence only; real-time sync requires server setup)
+// FIREBASE CONFIG
 // ─────────────────────────────────────────────
 function saveFbConfig() {
   const pid = document.getElementById('fb-project').value.trim();
@@ -1047,8 +1371,8 @@ if ('serviceWorker' in navigator) {
 // ─────────────────────────────────────────────
 load();
 renderAll();
-updateHero();
-setInterval(updateHero, 10 * 60 * 1000);
+updateAirTemp();
+setInterval(updateAirTemp, 10 * 60 * 1000);
 </script>
 </body>
 </html>
