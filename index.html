@@ -1367,9 +1367,39 @@ if ('serviceWorker' in navigator) {
 }
 
 // ─────────────────────────────────────────────
+// SEED DATA  –  eenmalig inladen bij eerste start
+// ─────────────────────────────────────────────
+const SEED = [
+  { id:'imp_20260221', datetime:'2026-02-21T12:00', waterTemp:6.1,  airTemp:7.5,  sky:null,    wind:null, notes:'' },
+  { id:'imp_20260214', datetime:'2026-02-14T12:00', waterTemp:6.5,  airTemp:-0.5, sky:null,    wind:null, notes:'' },
+  { id:'imp_20260111', datetime:'2026-01-11T12:00', waterTemp:2.7,  airTemp:-8,   sky:null,    wind:null, notes:'' },
+  { id:'imp_20260107', datetime:'2026-01-07T12:00', waterTemp:3.0,  airTemp:-1.1, sky:null,    wind:null, notes:'' },
+  { id:'imp_20260103', datetime:'2026-01-03T12:00', waterTemp:3.6,  airTemp:0,    sky:null,    wind:null, notes:'' },
+  { id:'imp_20260101', datetime:'2026-01-01T12:00', waterTemp:4.2,  airTemp:null, sky:null,    wind:null, notes:'' },
+  { id:'imp_20251229', datetime:'2025-12-29T12:00', waterTemp:4.3,  airTemp:0.3,  sky:null,    wind:null, notes:'' },
+  { id:'imp_20251228', datetime:'2025-12-28T12:00', waterTemp:4.1,  airTemp:2.8,  sky:null,    wind:null, notes:'' },
+  { id:'imp_20251220', datetime:'2025-12-20T12:00', waterTemp:8.3,  airTemp:3.2,  sky:'misty', wind:null, notes:'' },
+  { id:'imp_20251213', datetime:'2025-12-13T12:00', waterTemp:8.6,  airTemp:8.7,  sky:null,    wind:null, notes:'' },
+  { id:'imp_20251129', datetime:'2025-11-29T12:00', waterTemp:7.3,  airTemp:8,    sky:null,    wind:null, notes:'' },
+  { id:'imp_20251122', datetime:'2025-11-22T12:00', waterTemp:8.2,  airTemp:-1.5, sky:null,    wind:null, notes:'' },
+  { id:'imp_20251114', datetime:'2025-11-14T12:00', waterTemp:10.9, airTemp:7,    sky:null,    wind:null, notes:'' },
+  { id:'imp_20251108', datetime:'2025-11-08T12:00', waterTemp:11.6, airTemp:10,   sky:null,    wind:null, notes:'' },
+  { id:'imp_20251101', datetime:'2025-11-01T12:00', waterTemp:12.0, airTemp:11,   sky:null,    wind:null, notes:'' },
+  { id:'imp_20251025', datetime:'2025-10-25T12:00', waterTemp:12.7, airTemp:9.5,  sky:null,    wind:null, notes:'' },
+  { id:'imp_20251011', datetime:'2025-10-11T12:00', waterTemp:14.9, airTemp:null, sky:null,    wind:null, notes:'' },
+];
+
+function seedIfEmpty() {
+  if (readings.length > 0) return;          // al data aanwezig → niets doen
+  readings = [...SEED].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  save();
+}
+
+// ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
 load();
+seedIfEmpty();
 renderAll();
 updateAirTemp();
 setInterval(updateAirTemp, 10 * 60 * 1000);
