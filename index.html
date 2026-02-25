@@ -21,8 +21,8 @@
       --text: #1a237e;
       --muted: #546e7a;
       --danger: #e53935;
-      --radius: 16px;
-      --shadow: 0 4px 20px rgba(0,0,0,0.09);
+      --radius: 12px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
       --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -32,7 +32,7 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding-bottom: 80px;
+      padding-bottom: 64px;
     }
 
     /* ── Header ── */
@@ -48,25 +48,25 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 18px 10px;
+      padding: 10px 14px 7px;
     }
-    .hdr-title { display:flex; align-items:center; gap:10px; }
-    .hdr-title h1 { font-size:20px; font-weight:700; letter-spacing:-.3px; }
-    .hdr-title p  { font-size:12px; opacity:.8; margin-top:1px; }
+    .hdr-title { display:flex; align-items:center; gap:8px; }
+    .hdr-title h1 { font-size:17px; font-weight:700; letter-spacing:-.3px; }
+    .hdr-title p  { font-size:11px; opacity:.8; margin-top:1px; }
     .waterkaart-btn {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       color: white;
       text-decoration: none;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       background: rgba(255,255,255,0.18);
-      padding: 7px 13px;
+      padding: 5px 10px;
       border-radius: 20px;
       white-space: nowrap;
     }
-    .wave-svg { display:block; width:100%; height:28px; margin-bottom:-4px; }
+    .wave-svg { display:block; width:100%; height:20px; margin-bottom:-4px; }
 
     /* ── Bottom Nav ── */
     .nav {
@@ -84,49 +84,47 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 9px 0;
+      padding: 7px 0;
       background: none;
       border: none;
       cursor: pointer;
       color: #90a4ae;
-      font-size: 11px;
-      gap: 3px;
+      font-size: 10px;
+      gap: 2px;
       font-family: var(--font);
       transition: color .2s;
     }
-    .nav-btn .ni { font-size: 22px; }
+    .nav-btn .ni { font-size: 20px; }
     .nav-btn.active { color: var(--primary); }
 
     /* ── Pages ── */
-    .page { display:none; padding:16px; max-width:600px; margin:0 auto; }
+    .page { display:none; padding:10px 12px; max-width:600px; margin:0 auto; }
     .page.active { display:block; }
 
     /* ── Generic card ── */
     .card {
       background: var(--card);
       border-radius: var(--radius);
-      padding: 18px;
-      margin-bottom: 12px;
+      padding: 12px 14px;
+      margin-bottom: 9px;
       box-shadow: var(--shadow);
     }
     .card-title {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: var(--muted);
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
 
-    /* ══════════════════════════════════════════
-       WATER HERO  –  the star of the show
-    ══════════════════════════════════════════ */
+    /* ══ WATER HERO ══ */
     .water-hero {
       background: linear-gradient(140deg, #01579b 0%, #0288d1 55%, #00acc1 100%);
       border-radius: var(--radius);
-      padding: 22px 22px 18px;
-      margin-bottom: 12px;
-      box-shadow: 0 8px 32px rgba(2,119,189,.38);
+      padding: 14px 16px 11px;
+      margin-bottom: 9px;
+      box-shadow: 0 6px 24px rgba(2,119,189,.35);
       color: white;
       position: relative;
       overflow: hidden;
@@ -134,266 +132,248 @@
     .water-hero::before {
       content: '🌊';
       position: absolute;
-      right: -6px; top: -8px;
-      font-size: 120px;
+      right: -4px; top: -6px;
+      font-size: 90px;
       opacity: .09;
       pointer-events: none;
       transform: rotate(-12deg);
     }
-    .wh-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.8px;
-      opacity: .78;
-      margin-bottom: 4px;
-    }
-    .wh-temp {
-      font-size: 80px;
-      font-weight: 900;
-      line-height: 1;
-      letter-spacing: -4px;
-    }
+    .wh-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; opacity:.78; margin-bottom:2px; }
+    .wh-temp  { font-size:60px; font-weight:900; line-height:1; letter-spacing:-3px; }
     .wh-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255,255,255,.18);
-      backdrop-filter: blur(4px);
-      border-radius: 20px;
-      padding: 5px 14px;
-      font-size: 14px;
-      font-weight: 600;
-      margin-top: 10px;
+      display: inline-flex; align-items:center; gap:5px;
+      background: rgba(255,255,255,.18); backdrop-filter:blur(4px);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 13px; font-weight: 600; margin-top: 7px;
     }
-    .wh-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-top: 12px;
-    }
-    .wh-date { font-size: 12px; opacity: .7; }
-    .wh-delta {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .delta-pos { color: #a5f3fc; }
-    .delta-neg { color: #fca5a5; }
-    .wh-empty {
-      text-align: center;
-      padding: 8px 0 4px;
-      opacity: .65;
-    }
-    .wh-empty-num { font-size: 52px; font-weight: 900; opacity: .4; letter-spacing: -2px; }
+    .wh-bottom { display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px; }
+    .wh-date  { font-size:11px; opacity:.7; }
+    .wh-delta { display:flex; align-items:center; gap:4px; font-size:12px; font-weight:700; }
+    .delta-pos { color:#a5f3fc; }
+    .delta-neg { color:#fca5a5; }
+    .wh-empty { text-align:center; padding:6px 0 2px; opacity:.65; }
+    .wh-empty-num { font-size:44px; font-weight:900; opacity:.4; letter-spacing:-2px; }
 
-    /* ── Air temp – secondary ── */
+    /* ── Air – secondary ── */
     .air-secondary {
       background: var(--card);
-      border-radius: 12px;
-      padding: 11px 16px;
-      margin-bottom: 12px;
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-bottom: 9px;
       box-shadow: var(--shadow);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    .air-left { display:flex; align-items:center; gap:10px; }
-    .air-icon { font-size:22px; }
-    .air-lbl  { font-size:11px; color:var(--muted); margin-bottom:1px; }
-    .air-val  { font-size:22px; font-weight:700; color:#e65100; line-height:1; }
-    .air-meta { font-size:11px; color:var(--muted); text-align:right; }
+    .air-left { display:flex; align-items:center; gap:8px; }
+    .air-icon { font-size:20px; }
+    .air-lbl  { font-size:10px; color:var(--muted); margin-bottom:1px; }
+    .air-val  { font-size:20px; font-weight:700; color:#e65100; line-height:1; }
+    .air-meta { font-size:10px; color:var(--muted); text-align:right; }
 
     /* ── Stats grid ── */
-    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:9px; }
     .stat-card {
       background: var(--card);
-      border-radius: 12px;
-      padding: 14px 12px;
+      border-radius: 10px;
+      padding: 10px 10px;
       text-align: center;
       box-shadow: var(--shadow);
     }
-    .stat-value { font-size:26px; font-weight:800; color:var(--primary); line-height:1.1; }
-    .stat-label { font-size:11px; color:var(--muted); margin-top:3px; }
-    .stat-record { font-size:10px; color:var(--muted); margin-top:3px; opacity:.7; }
+    .stat-value { font-size:22px; font-weight:800; color:var(--primary); line-height:1.1; }
+    .stat-label { font-size:10px; color:var(--muted); margin-top:2px; }
+    .stat-record{ font-size:9px; color:var(--muted); margin-top:2px; opacity:.7; }
 
-    /* ── Trend card ── */
+    /* ── Trend ── */
     .trend-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 9px 0;
+      display: flex; justify-content:space-between; align-items:center;
+      padding: 6px 0;
     }
-    .trend-row + .trend-row { border-top: 1px solid rgba(0,0,0,.055); }
-    .trend-lbl { font-size:13px; color:var(--muted); }
-    .trend-val { font-size:15px; font-weight:700; text-align:right; line-height:1.2; }
-    .trend-delta { font-size:12px; font-weight:600; margin-top:2px; text-align:right; }
+    .trend-row + .trend-row { border-top:1px solid rgba(0,0,0,.05); }
+    .trend-lbl  { font-size:12px; color:var(--muted); }
+    .trend-val  { font-size:13px; font-weight:700; text-align:right; line-height:1.2; }
+    .trend-delta{ font-size:11px; font-weight:600; margin-top:1px; text-align:right; }
     .trend-up   { color:#00897b; }
     .trend-down { color:#c62828; }
 
     /* ── Best swim day ── */
     .best-day-card {
-      background: linear-gradient(135deg, #fff8e1, #fffde7);
+      background: linear-gradient(135deg,#fff8e1,#fffde7);
       border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 12px;
+      padding: 11px 13px;
+      margin-bottom: 9px;
       box-shadow: var(--shadow);
-      border-left: 4px solid #f9a825;
+      border-left: 3px solid #f9a825;
     }
-    .bd-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #bf6000;
-      margin-bottom: 10px;
-    }
-    .bd-body { display:flex; justify-content:space-between; align-items:center; }
-    .bd-temp { font-size:34px; font-weight:900; color:#e65100; line-height:1; }
-    .bd-date { font-size:12px; color:#795548; margin-top:4px; }
-    .bd-conds { font-size:18px; margin-top:7px; }
+    .bd-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#bf6000; margin-bottom:7px; }
+    .bd-body  { display:flex; justify-content:space-between; align-items:center; }
+    .bd-temp  { font-size:28px; font-weight:900; color:#e65100; line-height:1; }
+    .bd-date  { font-size:11px; color:#795548; margin-top:3px; }
+    .bd-conds { font-size:16px; margin-top:5px; }
 
     /* ── Section header ── */
-    .section-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-    .section-hdr h2 { font-size:16px; font-weight:700; }
+    .section-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; }
+    .section-hdr h2 { font-size:14px; font-weight:700; }
     .badge {
-      background: var(--primary);
-      color: white;
-      border-radius: 10px;
-      padding: 2px 9px;
-      font-size: 12px;
-      font-weight: 600;
+      background: var(--primary); color:white;
+      border-radius:10px; padding:2px 8px;
+      font-size:11px; font-weight:600;
     }
 
     /* ── FAB ── */
     .fab {
       position: fixed;
-      bottom: 74px; right: 18px;
-      width: 58px; height: 58px;
-      border-radius: 29px;
+      bottom: 62px; right: 16px;
+      width: 52px; height: 52px;
+      border-radius: 26px;
       background: var(--accent);
-      color: white;
-      border: none;
-      box-shadow: 0 6px 18px rgba(255,111,0,.45);
-      font-size: 30px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 90;
-      transition: transform .15s;
+      color: white; border: none;
+      box-shadow: 0 5px 15px rgba(255,111,0,.45);
+      font-size: 28px; cursor: pointer;
+      display: flex; align-items:center; justify-content:center;
+      z-index: 90; transition: transform .15s;
     }
     .fab:active { transform:scale(.93); }
 
-    /* ── Reading card ── */
+    /* ── Reading cards (compact + swipe) ── */
+    .reading-wrap {
+      position: relative;
+      margin-bottom: 8px;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .swipe-bg {
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 70px;
+      background: var(--danger);
+      display: flex; align-items:center; justify-content:center;
+      font-size: 22px;
+      border-radius: var(--radius);
+      pointer-events: none;
+    }
     .reading-card {
       background: var(--card);
       border-radius: var(--radius);
-      padding: 15px;
-      margin-bottom: 11px;
+      padding: 9px 11px;
       box-shadow: var(--shadow);
-      border-left: 4px solid var(--primary);
+      border-left: 3px solid var(--primary);
+      position: relative;
+      touch-action: pan-y;
+      cursor: default;
+      will-change: transform;
     }
-    .rc-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:9px; }
-    .rc-date   { font-size:13px; color:var(--muted); font-weight:500; }
-    .rc-actions{ display:flex; gap:7px; }
-    .icon-btn  { width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; }
-    .edit-btn  { background:#e3f2fd; }
-    .del-btn   { background:#ffebee; }
+    .rc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+    .rc-date   { font-size:11px; color:var(--muted); font-weight:500; }
+    .rc-edit   { background:#e3f2fd; border:none; border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .rc-body   { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .rc-water  { font-size:26px; font-weight:900; line-height:1; }
+    .rc-air    { font-size:16px; font-weight:700; line-height:1; opacity:.85; }
+    .rc-sep    { font-size:12px; color:#ccc; }
+    .rc-icons  { font-size:15px; margin-left:auto; letter-spacing:1px; }
+    .rc-notes  { margin-top:5px; font-size:11px; color:var(--muted); font-style:italic; line-height:1.4; }
+    .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:4px; }
 
-    /* water = king, air = secondary */
-    .rc-temps { display:flex; align-items:flex-end; gap:14px; margin-bottom:9px; }
-    .rc-temp  { display:flex; flex-direction:column; }
-    .rc-temp .tv { font-size:30px; font-weight:800; line-height:1; }
-    .rc-temp .tl { font-size:11px; color:var(--muted); margin-top:2px; }
-    .wt .tv { color:#0288d1; font-size:40px; }
-    .at .tv { color:#e65100; font-size:21px; opacity:.8; }
-    .at .tl { font-size:10px; }
-    .rc-divider { width:1px; background:#e0e7ee; height:34px; margin-bottom:5px; }
-
-    .rc-conds { display:flex; gap:7px; flex-wrap:wrap; }
-    .cond-badge {
-      display:flex; align-items:center; gap:4px;
-      background:#f0f4ff; border-radius:20px;
-      padding:4px 10px; font-size:13px;
+    /* ── Photo thumbnail in card ── */
+    .rc-thumb {
+      width:36px; height:36px; object-fit:cover;
+      border-radius:5px; cursor:pointer;
+      flex-shrink:0; margin-left:auto;
     }
-    .rc-notes { margin-top:9px; font-size:13px; color:var(--muted); font-style:italic; }
 
     /* ── Empty state ── */
-    .empty { text-align:center; padding:44px 20px; color:var(--muted); }
-    .empty .ei { font-size:50px; display:block; margin-bottom:12px; }
+    .empty { text-align:center; padding:36px 16px; color:var(--muted); }
+    .empty .ei { font-size:44px; display:block; margin-bottom:10px; }
 
     /* ── Modal ── */
     .overlay {
       position:fixed; inset:0;
       background:rgba(0,0,0,.52);
       z-index:200;
-      display:none;
-      align-items:flex-end;
-      justify-content:center;
+      display:none; align-items:flex-end; justify-content:center;
     }
     .overlay.open { display:flex; }
     .modal {
       background: var(--card);
-      border-radius: 22px 22px 0 0;
-      width: 100%;
-      max-width: 600px;
-      max-height: 92vh;
-      overflow-y: auto;
-      padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
+      border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 600px;
+      max-height: 92vh; overflow-y:auto;
+      padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
     }
-    .modal-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
-    .modal-hdr h2 { font-size:19px; font-weight:700; }
+    .modal-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    .modal-hdr h2 { font-size:17px; font-weight:700; }
     .close-btn {
-      background:#f0f0f0; border:none; width:32px; height:32px;
-      border-radius:16px; font-size:17px; cursor:pointer;
+      background:#f0f0f0; border:none; width:30px; height:30px;
+      border-radius:15px; font-size:15px; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
     }
 
     /* ── Form ── */
-    .fg { margin-bottom:16px; }
+    .fg { margin-bottom:12px; }
+    .fg-row { display:flex; gap:10px; margin-bottom:12px; }
+    .fg-row .fg { flex:1; margin-bottom:0; }
     .fg label {
-      display:block; font-size:11px; font-weight:700;
-      color:var(--muted); margin-bottom:7px;
+      display:block; font-size:10px; font-weight:700;
+      color:var(--muted); margin-bottom:5px;
       text-transform:uppercase; letter-spacing:.6px;
     }
     .fg input, .fg textarea {
-      width:100%; padding:13px 15px;
-      border:2px solid #e0e0e0; border-radius:12px;
-      font-size:16px; font-family:var(--font);
+      width:100%; padding:10px 12px;
+      border:2px solid #e0e0e0; border-radius:10px;
+      font-size:15px; font-family:var(--font);
       outline:none; background:#fafafa;
       transition:border-color .2s;
     }
     .fg input:focus, .fg textarea:focus { border-color:var(--primary); background:white; }
-    .input-row { display:flex; align-items:center; gap:10px; }
+    .input-row { display:flex; align-items:center; gap:7px; }
     .input-row input { flex:1; }
-    .unit-lbl { font-size:20px; font-weight:800; color:var(--primary); min-width:28px; }
+    .unit-lbl { font-size:17px; font-weight:800; color:var(--primary); min-width:24px; }
     .fetch-btn {
       background:#e3f2fd; color:var(--primary);
       border:none; border-radius:8px;
-      padding:9px 12px; font-size:13px;
+      padding:8px 10px; font-size:13px;
       font-weight:600; cursor:pointer; white-space:nowrap;
       font-family:var(--font);
     }
 
     /* ── Icon picker ── */
-    .icon-picker { display:flex; flex-wrap:wrap; gap:7px; }
+    .icon-picker { display:flex; flex-wrap:wrap; gap:5px; }
     .ico {
-      display:flex; flex-direction:column; align-items:center; gap:3px;
-      padding:9px 11px; border:2px solid #e0e0e0; border-radius:12px;
-      cursor:pointer; background:white; min-width:62px;
-      transition:all .18s;
+      display:flex; flex-direction:column; align-items:center; gap:2px;
+      padding:7px 8px; border:2px solid #e0e0e0; border-radius:10px;
+      cursor:pointer; background:white; min-width:50px;
+      transition:all .15s;
     }
     .ico:hover, .ico.sel { border-color:var(--primary); background:var(--primary-light); }
-    .ico .ie { font-size:24px; }
-    .ico .il { font-size:9px; color:var(--muted); text-align:center; line-height:1.2; }
+    .ico .ie { font-size:20px; }
+    .ico .il { font-size:8px; color:var(--muted); text-align:center; line-height:1.2; }
+
+    /* ── Photo input ── */
+    .photo-input-wrap {
+      display:flex; align-items:center; gap:10px;
+    }
+    .photo-btn {
+      display:flex; align-items:center; gap:6px;
+      background:#e8f5e9; color:#2e7d32;
+      border:2px dashed #81c784; border-radius:10px;
+      padding:9px 14px; cursor:pointer;
+      font-size:13px; font-weight:600;
+      font-family:var(--font);
+    }
+    .photo-preview {
+      width:48px; height:48px; object-fit:cover;
+      border-radius:8px; display:none;
+      border:2px solid #e0e0e0;
+    }
+    .photo-clear {
+      background:none; border:none; cursor:pointer;
+      font-size:16px; color:var(--muted); display:none;
+    }
 
     /* ── Buttons ── */
     .btn {
-      padding:14px 22px; border-radius:12px; border:none;
-      font-size:16px; font-weight:600; cursor:pointer;
+      padding:12px 18px; border-radius:10px; border:none;
+      font-size:15px; font-weight:600; cursor:pointer;
       font-family:var(--font); transition:all .18s;
     }
     .btn-primary { background:var(--primary); color:white; width:100%; }
@@ -402,27 +382,54 @@
     .btn-plain   { background:#f4f4f4; color:var(--text); width:100%; }
 
     /* ── Charts ── */
-    .chart-wrap { position:relative; height:230px; }
+    .chart-wrap { position:relative; height:200px; }
+
+    /* ── Landscape: grotere grafieken ── */
+    @media (orientation: landscape) {
+      .chart-wrap { height: calc(50vh - 60px); min-height:160px; }
+      #page-chart { padding: 6px 10px; }
+      #page-chart .card { margin-bottom:6px; padding:8px 12px; }
+    }
+
+    /* ── Photo overlay / lightbox ── */
+    #photo-overlay {
+      background: rgba(0,0,0,.88);
+      align-items: center;
+      justify-content: center;
+    }
+    #photo-overlay img {
+      max-width: 96vw;
+      max-height: 90vh;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+    #photo-overlay .close-photo {
+      position:absolute; top:16px; right:16px;
+      background:rgba(255,255,255,.15);
+      border:none; color:white; font-size:22px;
+      width:38px; height:38px; border-radius:19px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
 
     /* ── Data page actions ── */
-    .action-grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+    .action-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
     .action-card {
-      background:var(--card); border-radius:13px; padding:16px;
+      background:var(--card); border-radius:11px; padding:13px;
       text-align:center; box-shadow:var(--shadow); cursor:pointer;
       border:none; font-family:var(--font); transition:transform .12s;
     }
     .action-card:active { transform:scale(.96); }
-    .action-card .ai { font-size:30px; display:block; margin-bottom:5px; }
-    .action-card .al { font-size:13px; font-weight:700; color:var(--text); }
-    .action-card .ad { font-size:11px; color:var(--muted); margin-top:2px; }
+    .action-card .ai { font-size:26px; display:block; margin-bottom:4px; }
+    .action-card .al { font-size:12px; font-weight:700; color:var(--text); }
+    .action-card .ad { font-size:10px; color:var(--muted); margin-top:2px; }
 
     /* ── Toast ── */
     .toast {
-      position:fixed; bottom:88px; left:50%;
+      position:fixed; bottom:76px; left:50%;
       transform:translateX(-50%) translateY(16px);
       background:rgba(0,0,0,.82); color:white;
-      padding:11px 20px; border-radius:20px;
-      font-size:14px; opacity:0; z-index:300;
+      padding:9px 18px; border-radius:18px;
+      font-size:13px; opacity:0; z-index:300;
       transition:all .28s; white-space:nowrap;
       pointer-events:none;
     }
@@ -430,15 +437,15 @@
 
     /* ── Firebase setup card ── */
     .info-box {
-      background:#fff8e1; border-radius:12px; padding:14px;
-      font-size:13px; line-height:1.65; color:#5d4037; margin-bottom:14px;
+      background:#fff8e1; border-radius:10px; padding:11px;
+      font-size:12px; line-height:1.6; color:#5d4037; margin-bottom:11px;
     }
 
     /* ── Responsive ── */
     @media (max-width:360px) {
-      .ico { min-width:55px; padding:8px; }
-      .ico .ie { font-size:21px; }
-      .wh-temp { font-size:66px; }
+      .ico { min-width:44px; padding:6px; }
+      .ico .ie { font-size:18px; }
+      .wh-temp { font-size:50px; }
     }
 
     /* ── Dark mode ── */
@@ -446,7 +453,7 @@
       :root {
         --bg: #0a1929; --card: #112136;
         --text: #e3f2fd; --muted: #90caf9;
-        --shadow: 0 4px 18px rgba(0,0,0,.35);
+        --shadow: 0 3px 14px rgba(0,0,0,.35);
       }
       .nav { background:#0d1e30; border-top-color:#1a3a5c; }
       .fg input, .fg textarea { background:#1a3a5c; border-color:#2a5a8c; color:#e3f2fd; }
@@ -454,27 +461,26 @@
       .ico.sel { background:#0d47a1; border-color:var(--primary); }
       .ico .il { color:#90caf9; }
       .close-btn { background:#1a3a5c; color:#e3f2fd; }
-      .cond-badge { background:#1a3a5c; }
       .stat-card, .reading-card, .action-card, .modal, .air-secondary { background:#112136; }
-      .edit-btn  { background:#0d3a60; }
-      .del-btn   { background:#4a1212; }
+      .rc-edit  { background:#0d3a60; }
       .fetch-btn { background:#0d3a60; }
       .btn-plain { background:#1a3a5c; color:#e3f2fd; }
       .info-box  { background:#1a2a10; color:#c5e1a5; }
-      .rc-divider { background:#2a4a6a; }
-      .trend-row + .trend-row { border-top-color: rgba(255,255,255,.06); }
+      .trend-row + .trend-row { border-top-color:rgba(255,255,255,.06); }
       .best-day-card { background:linear-gradient(135deg,#2a1e00,#1a1400); border-left-color:#f9a825; }
       .bd-date { color:#c5a565; }
+      .swipe-bg { background:#c62828; }
+      .photo-btn { background:#1a3a5c; border-color:#2e7d32; color:#81c784; }
     }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════ HEADER ═══════════════ -->
+<!-- HEADER -->
 <header>
   <div class="hdr-inner">
     <div class="hdr-title">
-      <span style="font-size:30px">🏊</span>
+      <span style="font-size:24px">🏊</span>
       <div>
         <h1>Lentse Plas</h1>
         <p>Temperatuur Tracker</p>
@@ -485,20 +491,16 @@
       📍 Waterkaart
     </a>
   </div>
-  <svg class="wave-svg" viewBox="0 0 1200 28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0,18 C200,28 400,8 600,18 C800,28 1000,8 1200,18 L1200,28 L0,28 Z" fill="#e8f4fd"/>
+  <svg class="wave-svg" viewBox="0 0 1200 20" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,13 C200,20 400,5 600,13 C800,20 1000,5 1200,13 L1200,20 L0,20 Z" fill="#e8f4fd"/>
   </svg>
 </header>
 
-<!-- ═══════════════ PAGES ═══════════════ -->
+<!-- PAGES -->
 
 <!-- HOME -->
 <div id="page-home" class="page active">
-
-  <!-- ① Water temp HERO — primaire element -->
   <div id="water-hero-section"></div>
-
-  <!-- ② Luchttemperatuur — secundair -->
   <div class="air-secondary">
     <div class="air-left">
       <div class="air-icon" id="cur-icon">🌡️</div>
@@ -509,16 +511,14 @@
     </div>
     <div class="air-meta" id="cur-updated">Ophalen…</div>
   </div>
-
-  <!-- ③ Stats grid (met record-datums) -->
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-value" id="s-count">0</div>
-      <div class="stat-label">Metingen totaal</div>
+      <div class="stat-value" id="s-count" style="color:var(--primary)">0</div>
+      <div class="stat-label">Metingen</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-avg">--</div>
-      <div class="stat-label">🌊 Gemiddeld water</div>
+      <div class="stat-label">🌊 Gem. water</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-max">--</div>
@@ -531,14 +531,8 @@
       <div class="stat-record" id="s-min-date"></div>
     </div>
   </div>
-
-  <!-- ④ Trend & statistieken -->
   <div id="trend-section"></div>
-
-  <!-- ⑤ Beste zwemdag -->
   <div id="best-day-section"></div>
-
-  <!-- ⑥ Laatste 5 metingen -->
   <div class="section-hdr">
     <h2>Laatste metingen</h2>
     <span class="badge" id="badge-home">0</span>
@@ -570,8 +564,7 @@
 <!-- EXPORT / SETTINGS -->
 <div id="page-export" class="page">
   <div class="section-hdr"><h2>Data &amp; instellingen</h2></div>
-
-  <div class="action-grid" style="margin-bottom:16px">
+  <div class="action-grid" style="margin-bottom:13px">
     <button class="action-card" onclick="exportCSV()">
       <span class="ai">📊</span>
       <div class="al">Export CSV</div>
@@ -595,7 +588,6 @@
   </div>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
-  <!-- Firebase -->
   <div class="card">
     <div class="card-title">Cloud delen (optioneel)</div>
     <div class="info-box">
@@ -610,21 +602,20 @@
       <label>Firebase API Key</label>
       <input type="text" id="fb-key" placeholder="AIzaSy..." oninput="saveFbConfig()">
     </div>
-    <div id="fb-status" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
-    <button class="btn btn-plain" onclick="openHelp()" style="margin-bottom:8px;">
+    <div id="fb-status" style="font-size:11px;color:var(--muted);margin-bottom:9px;"></div>
+    <button class="btn btn-plain" onclick="openHelp()" style="margin-bottom:7px;">
       📖 Hoe maak ik gratis Firebase aan?
     </button>
   </div>
 
-  <!-- Danger zone -->
   <div class="card" style="border:2px solid #ffcdd2;">
     <div class="card-title" style="color:var(--danger);">Data wissen</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Wist alle lokale metingen permanent.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Wist alle lokale metingen permanent.</p>
     <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
   </div>
 </div>
 
-<!-- ═══════════════ BOTTOM NAV ═══════════════ -->
+<!-- BOTTOM NAV -->
 <nav class="nav">
   <button class="nav-btn active"  onclick="goPage('home',this)">  <span class="ni">🏠</span><span>Home</span>    </button>
   <button class="nav-btn"         onclick="goPage('data',this)">  <span class="ni">📋</span><span>Metingen</span></button>
@@ -635,7 +626,7 @@
 <!-- FAB -->
 <button class="fab" onclick="openForm()">+</button>
 
-<!-- ═══════════════ ADD / EDIT MODAL ═══════════════ -->
+<!-- ADD / EDIT MODAL -->
 <div class="overlay" id="form-overlay">
   <div class="modal">
     <div class="modal-hdr">
@@ -646,23 +637,25 @@
       <input type="hidden" id="f-id">
 
       <div class="fg">
-        <label>Datum &amp; tijd</label>
-        <input type="datetime-local" id="f-dt" required>
+        <label>Datum</label>
+        <input type="date" id="f-dt" required>
       </div>
 
-      <div class="fg">
-        <label>🌊 Watertemperatuur</label>
-        <div class="input-row">
-          <input type="number" id="f-wt" placeholder="bijv. 22.5" step="0.1" min="-5" max="45" required>
-          <span class="unit-lbl">°C</span>
+      <!-- Water + Lucht naast elkaar -->
+      <div class="fg-row">
+        <div class="fg">
+          <label>🌊 Water °C</label>
+          <div class="input-row">
+            <input type="number" id="f-wt" placeholder="22.5" step="0.1" min="-5" max="45" required>
+            <span class="unit-lbl">°</span>
+          </div>
         </div>
-      </div>
-
-      <div class="fg">
-        <label>Luchttemperatuur</label>
-        <div class="input-row">
-          <input type="number" id="f-at" placeholder="bijv. 25.0" step="0.1" min="-30" max="50">
-          <button type="button" class="fetch-btn" onclick="fetchAndFill()">🔄 Ophalen</button>
+        <div class="fg">
+          <label>Lucht °C</label>
+          <div class="input-row">
+            <input type="number" id="f-at" placeholder="25.0" step="0.1" min="-30" max="50">
+            <button type="button" class="fetch-btn" onclick="fetchAndFill()" title="Haal luchttemperatuur op">🔄</button>
+          </div>
         </div>
       </div>
 
@@ -676,9 +669,23 @@
         <div class="icon-picker" id="wind-picker"></div>
       </div>
 
+      <!-- Foto -->
+      <div class="fg">
+        <label>📷 Foto (optioneel)</label>
+        <div class="photo-input-wrap">
+          <button type="button" class="photo-btn" onclick="document.getElementById('f-photo').click()">
+            📷 Foto maken / kiezen
+          </button>
+          <img id="photo-preview" class="photo-preview" alt="preview">
+          <button type="button" id="photo-clear" class="photo-clear" onclick="clearPhoto()">✕</button>
+        </div>
+        <input type="file" id="f-photo" accept="image/*" capture="environment" style="display:none"
+               onchange="handlePhotoSelect(event)">
+      </div>
+
       <div class="fg">
         <label>Notities (optioneel)</label>
-        <textarea id="f-notes" rows="3" placeholder="Bijv. water was helder, veel bezoekers…"></textarea>
+        <textarea id="f-notes" rows="2" placeholder="Bijv. water was helder…"></textarea>
       </div>
 
       <button type="submit" class="btn btn-primary">Opslaan</button>
@@ -686,24 +693,29 @@
   </div>
 </div>
 
-<!-- ═══════════════ FIREBASE HELP MODAL ═══════════════ -->
+<!-- FIREBASE HELP MODAL -->
 <div class="overlay" id="help-overlay">
   <div class="modal">
     <div class="modal-hdr">
       <h2>Firebase instellen</h2>
       <button class="close-btn" onclick="closeHelp()">✕</button>
     </div>
-    <div style="font-size:14px;line-height:1.75;color:var(--muted);">
+    <div style="font-size:13px;line-height:1.75;color:var(--muted);">
       <p><strong style="color:var(--text)">1.</strong> Ga naar
         <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary)">console.firebase.google.com</a>
       </p>
       <p><strong style="color:var(--text)">2.</strong> Klik <em>Project toevoegen</em> → geef het een naam</p>
       <p><strong style="color:var(--text)">3.</strong> Klik <em>Firestore Database</em> → Maak database → <em>testmodus</em></p>
-      <p><strong style="color:var(--text)">4.</strong> Projectinstellingen ⚙️ → <em>Jouw apps</em> → Webapplicatie toevoegen &lt;/&gt;</p>
+      <p><strong style="color:var(--text)">4.</strong> Projectinstellingen ⚙️ → <em>Jouw apps</em> → Webapplicatie &lt;/&gt;</p>
       <p><strong style="color:var(--text)">5.</strong> Kopieer <code>projectId</code> en <code>apiKey</code> en plak ze in de app</p>
-      <p style="margin-top:12px;font-size:13px;">Iedereen die dezelfde sleutels invoert ziet dezelfde data in real-time. ✅</p>
     </div>
   </div>
+</div>
+
+<!-- PHOTO LIGHTBOX -->
+<div class="overlay" id="photo-overlay" onclick="closePhoto()">
+  <button class="close-photo" onclick="closePhoto()">✕</button>
+  <img id="photo-img" src="" alt="foto meting">
 </div>
 
 <!-- Toast -->
@@ -713,58 +725,114 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-// ─────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────
+// ─── CONSTANTS ────────────────────────────────
 const LAT = 51.873, LON = 5.863;
 const WEATHER_API =
   `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
 const SKY = [
-  { v:'sunny',        e:'☀️',  l:'Zonnig'        },
-  { v:'partly-cloudy',e:'⛅',  l:'Half bewolkt'  },
-  { v:'cloudy',       e:'☁️',  l:'Bewolkt'       },
-  { v:'misty',        e:'🌫️', l:'Mistig'        },
-  { v:'rainy',        e:'🌧️', l:'Regenachtig'   },
-  { v:'stormy',       e:'⛈️', l:'Onweer'        },
+  { v:'sunny',         e:'☀️',  l:'Zonnig'       },
+  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt' },
+  { v:'cloudy',        e:'☁️',  l:'Bewolkt'      },
+  { v:'misty',         e:'🌫️', l:'Mistig'       },
+  { v:'rainy',         e:'🌧️', l:'Regen'        },
+  { v:'stormy',        e:'⛈️', l:'Onweer'       },
 ];
 const WIND = [
-  { v:'freezing', e:'🥶', l:'IJskoud'        },
-  { v:'cold',     e:'🌬️',l:'Koud & winderig' },
-  { v:'fresh',    e:'🍃', l:'Fris briesje'   },
-  { v:'pleasant', e:'😊', l:'Aangenaam'      },
-  { v:'warm',     e:'🌞', l:'Warm'           },
-  { v:'hot',      e:'🔥', l:'Heet'           },
+  { v:'freezing', e:'🥶',  l:'IJskoud'   },
+  { v:'cold',     e:'🌬️', l:'Koud'      },
+  { v:'fresh',    e:'🍃',  l:'Fris'      },
+  { v:'pleasant', e:'😊',  l:'Aangenaam' },
+  { v:'warm',     e:'🌞',  l:'Warm'      },
+  { v:'hot',      e:'🔥',  l:'Heet'      },
 ];
 
-// ─────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────
+// ─── STATE ────────────────────────────────────
 let readings   = [];
 let editingId  = null;
 let selSky     = null;
 let selWind    = null;
 let chartComb  = null;
 let chartWater = null;
+let pendingPhotoData = null; // base64 van nieuwe foto in form
 
-// ─────────────────────────────────────────────
-// PERSISTENCE
-// ─────────────────────────────────────────────
+// ─── PERSISTENCE ─────────────────────────────
 function load() {
   try { readings = JSON.parse(localStorage.getItem('lp-readings') || '[]'); }
   catch { readings = []; }
 }
-function save() {
-  localStorage.setItem('lp-readings', JSON.stringify(readings));
-}
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+function save() { localStorage.setItem('lp-readings', JSON.stringify(readings)); }
+function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ─── PHOTO STORAGE ────────────────────────────
+function savePhoto(id, dataUrl) { localStorage.setItem('lp-photo-' + id, dataUrl); }
+function loadPhoto(id)          { return localStorage.getItem('lp-photo-' + id); }
+function deletePhoto(id)        { localStorage.removeItem('lp-photo-' + id); }
+
+function compressPhoto(file, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 700;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
-// ─────────────────────────────────────────────
-// WATER STATUS LABEL
-// ─────────────────────────────────────────────
+function handlePhotoSelect(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  compressPhoto(file, dataUrl => {
+    pendingPhotoData = dataUrl;
+    const prev = document.getElementById('photo-preview');
+    const clr  = document.getElementById('photo-clear');
+    prev.src = dataUrl;
+    prev.style.display = 'block';
+    clr.style.display  = 'block';
+  });
+}
+
+function clearPhoto() {
+  pendingPhotoData = null;
+  document.getElementById('f-photo').value = '';
+  const prev = document.getElementById('photo-preview');
+  const clr  = document.getElementById('photo-clear');
+  prev.style.display = 'none';
+  clr.style.display  = 'none';
+}
+
+function openPhoto(id) {
+  const d = loadPhoto(id);
+  if (!d) return;
+  document.getElementById('photo-img').src = d;
+  document.getElementById('photo-overlay').classList.add('open');
+}
+function closePhoto() {
+  document.getElementById('photo-overlay').classList.remove('open');
+}
+
+// ─── TEMPERATURE COLOR ────────────────────────
+function tempColor(t) {
+  if (t == null || isNaN(t)) return 'inherit';
+  if (t <  4) return '#1565c0';  // ijskoud – donkerblauw
+  if (t <  9) return '#0288d1';  // koud – blauw
+  if (t < 14) return '#00838f';  // fris – teal
+  if (t < 18) return '#2e7d32';  // koel – groen
+  if (t < 22) return '#558b2f';  // aangenaam – lichtgroen
+  if (t < 26) return '#e65100';  // warm – oranje
+  return '#c62828';              // heet – rood
+}
+
+// ─── WATER STATUS ─────────────────────────────
 function waterStatus(t) {
   if (t < 10) return { e:'🥶', l:'Te koud om te zwemmen' };
   if (t < 15) return { e:'🌊', l:'Koud, voor de durfals'  };
@@ -774,38 +842,27 @@ function waterStatus(t) {
   return           { e:'🔥', l:'Warm zwemwater'          };
 }
 
-// ─────────────────────────────────────────────
-// STATISTICS HELPERS
-// ─────────────────────────────────────────────
-// weeksBack=0 → deze week, weeksBack=1 → vorige week
+// ─── STATISTICS ───────────────────────────────
 function weekAvg(weeksBack) {
-  const MS  = 86400000;
+  const MS = 86400000;
   const now = new Date();
   const end   = new Date(now.getTime() - weeksBack * 7 * MS);
   const start = new Date(end.getTime() - 7 * MS);
-  const sub   = readings.filter(r => {
-    const d = new Date(r.datetime);
-    return d >= start && d < end;
-  });
+  const sub   = readings.filter(r => { const d = new Date(r.datetime); return d >= start && d < end; });
   if (!sub.length) return null;
-  return sub.reduce((a, b) => a + b.waterTemp, 0) / sub.length;
+  return sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length;
 }
 
 function bestSwimDay() {
   if (!readings.length) return null;
-  return readings.reduce((best, r) =>
-    (!best || r.waterTemp > best.waterTemp) ? r : best, null);
+  return readings.reduce((best,r) => (!best || r.waterTemp > best.waterTemp) ? r : best, null);
 }
 
 function shortDate(dt) {
-  return new Date(dt).toLocaleDateString('nl-NL', {
-    day:'numeric', month:'short', year:'numeric'
-  });
+  return new Date(dt).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'});
 }
 
-// ─────────────────────────────────────────────
-// WEATHER / AIR TEMP
-// ─────────────────────────────────────────────
+// ─── WEATHER / AIR TEMP ───────────────────────
 async function fetchAirTemp() {
   try {
     const r = await fetch(WEATHER_API);
@@ -829,6 +886,7 @@ async function updateAirTemp() {
   const t = await fetchAirTemp();
   if (t !== null) {
     document.getElementById('cur-air').textContent = t + '°C';
+    document.getElementById('cur-air').style.color = tempColor(t);
     document.getElementById('cur-updated').textContent =
       'Bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('cur-icon').textContent =
@@ -839,9 +897,7 @@ async function updateAirTemp() {
   }
 }
 
-// ─────────────────────────────────────────────
-// NAVIGATION
-// ─────────────────────────────────────────────
+// ─── NAVIGATION ───────────────────────────────
 function goPage(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -850,35 +906,45 @@ function goPage(name, btn) {
   if (name === 'chart') setTimeout(renderCharts, 50);
 }
 
-// ─────────────────────────────────────────────
-// FORM
-// ─────────────────────────────────────────────
+// ─── FORM ─────────────────────────────────────
 function openForm(id) {
   editingId = id || null;
   selSky = selWind = null;
+  pendingPhotoData = null;
 
   renderPicker('sky-picker',  SKY,  'sky');
   renderPicker('wind-picker', WIND, 'wind');
 
   const now   = new Date();
-  const local = new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+  const local = now.toISOString().slice(0,10);
   document.getElementById('f-dt').value    = local;
   document.getElementById('f-wt').value    = '';
   document.getElementById('f-at').value    = '';
   document.getElementById('f-notes').value = '';
   document.getElementById('f-id').value    = '';
+  clearPhoto();
 
   if (id) {
     const r = readings.find(x => x.id === id);
     if (r) {
       document.getElementById('form-title').textContent = 'Meting bewerken';
       document.getElementById('f-id').value    = r.id;
-      document.getElementById('f-dt').value    = r.datetime;
+      document.getElementById('f-dt').value    = r.datetime.slice(0,10);
       document.getElementById('f-wt').value    = r.waterTemp;
       document.getElementById('f-at').value    = r.airTemp ?? '';
       document.getElementById('f-notes').value = r.notes ?? '';
       if (r.sky)  pickIcon('sky',  r.sky);
       if (r.wind) pickIcon('wind', r.wind);
+      // Laad bestaande foto in preview
+      const existing = loadPhoto(r.id);
+      if (existing) {
+        pendingPhotoData = existing; // behoud foto bij opslaan
+        const prev = document.getElementById('photo-preview');
+        const clr  = document.getElementById('photo-clear');
+        prev.src = existing;
+        prev.style.display = 'block';
+        clr.style.display  = 'block';
+      }
     }
   } else {
     document.getElementById('form-title').textContent = 'Nieuwe meting';
@@ -891,15 +957,14 @@ function openForm(id) {
 function closeForm() {
   document.getElementById('form-overlay').classList.remove('open');
   editingId = null;
+  pendingPhotoData = null;
 }
 
 document.getElementById('form-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeForm();
 });
 
-// ─────────────────────────────────────────────
-// ICON PICKERS
-// ─────────────────────────────────────────────
+// ─── ICON PICKERS ─────────────────────────────
 function renderPicker(containerId, opts, type) {
   document.getElementById(containerId).innerHTML = opts.map(o =>
     `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')">
@@ -922,15 +987,14 @@ function pickIcon(type, val) {
 function emoji(opts, val) { return (opts.find(o => o.v === val) || {}).e || ''; }
 function label(opts, val) { return (opts.find(o => o.v === val) || {}).l || ''; }
 
-// ─────────────────────────────────────────────
-// CRUD
-// ─────────────────────────────────────────────
+// ─── CRUD ─────────────────────────────────────
 function saveReading(ev) {
   ev.preventDefault();
   const id = document.getElementById('f-id').value || uid();
+  const dateVal = document.getElementById('f-dt').value; // YYYY-MM-DD
   const r = {
     id,
-    datetime : document.getElementById('f-dt').value,
+    datetime : dateVal + 'T12:00',
     waterTemp: parseFloat(document.getElementById('f-wt').value),
     airTemp  : parseFloat(document.getElementById('f-at').value) || null,
     sky      : selSky,
@@ -941,6 +1005,9 @@ function saveReading(ev) {
   if (idx >= 0) readings[idx] = r;
   else          readings.push(r);
 
+  // Sla foto op
+  if (pendingPhotoData) savePhoto(id, pendingPhotoData);
+
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
   closeForm();
@@ -948,74 +1015,112 @@ function saveReading(ev) {
   showToast(idx >= 0 ? '✅ Meting bijgewerkt!' : '✅ Meting opgeslagen!');
 }
 
-function deleteReading(id) {
-  if (!confirm('Deze meting verwijderen?')) return;
+function deleteReadingDirect(id) {
   readings = readings.filter(r => r.id !== id);
+  deletePhoto(id);
   save();
   renderAll();
   showToast('🗑️ Meting verwijderd');
 }
 
-// ─────────────────────────────────────────────
-// RENDER HELPERS
-// ─────────────────────────────────────────────
+function deleteReading(id) {
+  if (!confirm('Deze meting verwijderen?')) return;
+  deleteReadingDirect(id);
+}
+
+// ─── SWIPE TO DELETE ──────────────────────────
+function setupSwipe(wrap, id) {
+  const card = wrap.querySelector('.reading-card');
+  if (!card) return;
+  let startX = 0, startY = 0, curX = 0, dragging = false, moved = false;
+
+  card.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    curX = 0; moved = false; dragging = true;
+    card.style.transition = 'none';
+  }, { passive: true });
+
+  card.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (!moved && dy > Math.abs(dx)) { dragging = false; return; }
+    if (dx >= 0) return;
+    moved = true;
+    curX = Math.max(dx, -80);
+    card.style.transform = `translateX(${curX}px)`;
+  }, { passive: true });
+
+  card.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    card.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+    if (curX < -55) {
+      card.style.transform = 'translateX(-110%)';
+      card.style.opacity = '0';
+      setTimeout(() => deleteReadingDirect(id), 260);
+    } else {
+      card.style.transform = 'translateX(0)';
+    }
+    curX = 0;
+  });
+}
+
+// ─── RENDER HELPERS ───────────────────────────
 function fmtDate(dt) {
-  return new Date(dt).toLocaleDateString('nl-NL',{
-    day:'numeric', month:'long', year:'numeric',
-    hour:'2-digit', minute:'2-digit'
+  return new Date(dt).toLocaleDateString('nl-NL', {
+    day:'numeric', month:'short', year:'numeric'
   });
 }
 
 function readingHTML(r) {
-  const se = emoji(SKY, r.sky),  sl = label(SKY, r.sky);
-  const we = emoji(WIND,r.wind), wl = label(WIND,r.wind);
-  const airHTML = r.airTemp != null ? `
-    <div class="rc-divider"></div>
-    <div class="rc-temp at">
-      <span class="tv">${r.airTemp}°</span>
-      <span class="tl">Lucht</span>
-    </div>` : '';
+  const se = emoji(SKY, r.sky);
+  const we = emoji(WIND, r.wind);
+  const icons = [se, we].filter(Boolean).join(' ');
+  const hasPhoto = !!loadPhoto(r.id);
+
+  const airHTML = r.airTemp != null
+    ? `<span class="rc-sep">|</span><span class="rc-air" style="color:${tempColor(r.airTemp)}">${r.airTemp}°</span>`
+    : '';
+  const iconsHTML = icons
+    ? `<span class="rc-icons">${icons}</span>` : '';
+  const photoHTML = hasPhoto
+    ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
+
   return `
-    <div class="reading-card">
-      <div class="rc-header">
-        <div class="rc-date">📅 ${fmtDate(r.datetime)}</div>
-        <div class="rc-actions">
-          <button class="icon-btn edit-btn" onclick="openForm('${r.id}')">✏️</button>
-          <button class="icon-btn del-btn"  onclick="deleteReading('${r.id}')">🗑️</button>
+    <div class="reading-wrap" id="wrap-${r.id}">
+      <div class="swipe-bg">🗑️</div>
+      <div class="reading-card" id="card-${r.id}">
+        <div class="rc-header">
+          <div class="rc-date">${fmtDate(r.datetime)}</div>
+          <button class="rc-edit" onclick="openForm('${r.id}')">✏️</button>
         </div>
-      </div>
-      <div class="rc-temps">
-        <div class="rc-temp wt">
-          <span class="tv">${r.waterTemp}°</span>
-          <span class="tl">🌊 Water</span>
+        <div class="rc-body">
+          <span class="rc-water" style="color:${tempColor(r.waterTemp)}">${r.waterTemp.toFixed(1)}°</span>
+          ${airHTML}
+          ${iconsHTML}
+          ${photoHTML}
         </div>
-        ${airHTML}
+        ${r.notes ? `<div class="rc-notes">${r.notes}</div>` : ''}
       </div>
-      <div class="rc-conds">
-        ${se ? `<span class="cond-badge">${se} ${sl}</span>` : ''}
-        ${we ? `<span class="cond-badge">${we} ${wl}</span>` : ''}
-      </div>
-      ${r.notes ? `<div class="rc-notes">"${r.notes}"</div>` : ''}
     </div>`;
 }
 
-// ── Water Hero ──────────────────────────────
+// ─── WATER HERO ───────────────────────────────
 function renderWaterHero() {
   const el = document.getElementById('water-hero-section');
-  const n  = readings.length;
-
-  if (n === 0) {
+  if (!readings.length) {
     el.innerHTML = `
       <div class="water-hero">
         <div class="wh-label">Watertemperatuur</div>
         <div class="wh-empty">
           <div class="wh-empty-num">--°</div>
-          <div style="font-size:13px;margin-top:8px;opacity:.7">Voeg je eerste meting toe via +</div>
+          <div style="font-size:12px;margin-top:6px;opacity:.7">Voeg je eerste meting toe via +</div>
         </div>
       </div>`;
     return;
   }
-
   const latest = readings[0];
   const prev   = readings[1];
   const status = waterStatus(latest.waterTemp);
@@ -1025,11 +1130,7 @@ function renderWaterHero() {
   if (delta !== null) {
     const cls   = delta >= 0 ? 'delta-pos' : 'delta-neg';
     const arrow = delta >= 0 ? '▲' : '▼';
-    deltaHTML = `
-      <div class="wh-delta">
-        <span class="${cls}">${arrow} ${Math.abs(delta).toFixed(1)}°</span>
-        <span style="opacity:.6;font-size:11px;font-weight:400">vs vorige meting</span>
-      </div>`;
+    deltaHTML = `<div class="wh-delta"><span class="${cls}">${arrow} ${Math.abs(delta).toFixed(1)}°</span><span style="opacity:.6;font-size:10px;font-weight:400"> vs vorige</span></div>`;
   }
 
   el.innerHTML = `
@@ -1038,98 +1139,68 @@ function renderWaterHero() {
       <div class="wh-temp">${latest.waterTemp.toFixed(1)}°</div>
       <div class="wh-status">${status.e} ${status.l}</div>
       <div class="wh-bottom">
-        <div class="wh-date">📅 ${fmtDate(latest.datetime)}</div>
+        <div class="wh-date">${fmtDate(latest.datetime)}</div>
         ${deltaHTML}
       </div>
     </div>`;
 }
 
-// ── Trend & statistieken ─────────────────────
+// ─── TREND ────────────────────────────────────
 function renderTrendSection() {
   const el = document.getElementById('trend-section');
-  const n  = readings.length;
-  if (n === 0) { el.innerHTML = ''; return; }
-
+  if (!readings.length) { el.innerHTML = ''; return; }
   const thisWeek = weekAvg(0);
   const lastWeek = weekAvg(1);
-  const now      = new Date();
-
+  const now = new Date();
   const thisMonth = readings.filter(r => {
     const d = new Date(r.datetime);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
-
-  const thisYear = readings.filter(r =>
-    new Date(r.datetime).getFullYear() === now.getFullYear()
-  ).length;
+  const thisYear = readings.filter(r => new Date(r.datetime).getFullYear() === now.getFullYear()).length;
 
   let rows = '';
-
   if (thisWeek !== null) {
-    let deltaHTML = '<span style="opacity:.4;font-size:11px">Eerste week met data</span>';
+    let deltaHTML = '<span style="opacity:.4;font-size:10px">Eerste week</span>';
     if (lastWeek !== null) {
-      const d     = thisWeek - lastWeek;
-      const cls   = d >= 0 ? 'trend-up' : 'trend-down';
+      const d = thisWeek - lastWeek;
+      const cls = d >= 0 ? 'trend-up' : 'trend-down';
       const arrow = d >= 0 ? '▲' : '▼';
-      deltaHTML = `<div class="trend-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}° t.o.v. vorige week</div>`;
+      deltaHTML = `<div class="trend-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}° vs vorige week</div>`;
     }
-    rows += `
-      <div class="trend-row">
-        <span class="trend-lbl">Gem. deze week</span>
-        <div>
-          <div class="trend-val">${thisWeek.toFixed(1)}°C</div>
-          ${deltaHTML}
-        </div>
-      </div>`;
+    rows += `<div class="trend-row"><span class="trend-lbl">Gem. deze week</span><div><div class="trend-val">${thisWeek.toFixed(1)}°C</div>${deltaHTML}</div></div>`;
   }
-
   rows += `
-    <div class="trend-row">
-      <span class="trend-lbl">Deze maand</span>
-      <span class="trend-val">${thisMonth} meting${thisMonth !== 1 ? 'en' : ''}</span>
-    </div>
-    <div class="trend-row">
-      <span class="trend-lbl">Dit jaar</span>
-      <span class="trend-val">${thisYear} meting${thisYear !== 1 ? 'en' : ''}</span>
-    </div>`;
+    <div class="trend-row"><span class="trend-lbl">Deze maand</span><span class="trend-val">${thisMonth} meting${thisMonth !== 1 ? 'en' : ''}</span></div>
+    <div class="trend-row"><span class="trend-lbl">Dit jaar</span><span class="trend-val">${thisYear} meting${thisYear !== 1 ? 'en' : ''}</span></div>`;
 
-  el.innerHTML = `
-    <div class="card">
-      <div class="card-title">Trend &amp; statistieken</div>
-      ${rows}
-    </div>`;
+  el.innerHTML = `<div class="card"><div class="card-title">Trend &amp; statistieken</div>${rows}</div>`;
 }
 
-// ── Beste zwemdag ────────────────────────────
+// ─── BEST SWIM DAY ────────────────────────────
 function renderBestDay() {
   const el   = document.getElementById('best-day-section');
   const best = bestSwimDay();
   if (!best) { el.innerHTML = ''; return; }
-
-  const se  = emoji(SKY,  best.sky);
-  const we  = emoji(WIND, best.wind);
-  const bs  = waterStatus(best.waterTemp);
-  const condHTML = (se || we)
-    ? `<div class="bd-conds">${[se, we].filter(Boolean).join(' ')}</div>` : '';
-
+  const se = emoji(SKY, best.sky), we = emoji(WIND, best.wind);
+  const bs = waterStatus(best.waterTemp);
+  const condHTML = (se || we) ? `<div class="bd-conds">${[se,we].filter(Boolean).join(' ')}</div>` : '';
   el.innerHTML = `
     <div class="best-day-card">
       <div class="bd-label">🏆 Beste zwemdag ooit</div>
       <div class="bd-body">
         <div>
-          <div class="bd-temp">${best.waterTemp.toFixed(1)}°C</div>
+          <div class="bd-temp" style="color:${tempColor(best.waterTemp)}">${best.waterTemp.toFixed(1)}°C</div>
           <div class="bd-date">${new Date(best.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}</div>
           ${condHTML}
         </div>
-        <div style="font-size:46px">${bs.e}</div>
+        <div style="font-size:40px">${bs.e}</div>
       </div>
     </div>`;
 }
 
-// ── Main renderAll ───────────────────────────
+// ─── RENDER ALL ───────────────────────────────
 function renderAll() {
   const n = readings.length;
-
   document.getElementById('s-count').textContent    = n;
   document.getElementById('badge-home').textContent = n;
   document.getElementById('badge-data').textContent = n;
@@ -1137,50 +1208,52 @@ function renderAll() {
   if (n > 0) {
     const wt     = readings.map(r => r.waterTemp);
     const avg    = wt.reduce((a,b) => a+b,0) / n;
-    const maxVal = Math.max(...wt);
-    const minVal = Math.min(...wt);
+    const maxVal = Math.max(...wt), minVal = Math.min(...wt);
     const maxR   = readings.find(r => r.waterTemp === maxVal);
     const minR   = readings.find(r => r.waterTemp === minVal);
-
-    document.getElementById('s-avg').textContent = avg.toFixed(1) + '°';
-    document.getElementById('s-max').textContent = maxVal.toFixed(1) + '°';
-    document.getElementById('s-min').textContent = minVal.toFixed(1) + '°';
+    const avgEl  = document.getElementById('s-avg');
+    const maxEl  = document.getElementById('s-max');
+    const minEl  = document.getElementById('s-min');
+    avgEl.textContent = avg.toFixed(1) + '°';
+    maxEl.textContent = maxVal.toFixed(1) + '°';
+    minEl.textContent = minVal.toFixed(1) + '°';
+    avgEl.style.color = tempColor(avg);
+    maxEl.style.color = tempColor(maxVal);
+    minEl.style.color = tempColor(minVal);
     if (maxR) document.getElementById('s-max-date').textContent = shortDate(maxR.datetime);
     if (minR) document.getElementById('s-min-date').textContent = shortDate(minR.datetime);
   } else {
-    ['s-avg','s-max','s-min'].forEach(id =>
-      document.getElementById(id).textContent = '--');
-    ['s-max-date','s-min-date'].forEach(id =>
-      document.getElementById(id).textContent = '');
+    ['s-avg','s-max','s-min'].forEach(id => {
+      const el = document.getElementById(id);
+      el.textContent = '--'; el.style.color = 'var(--primary)';
+    });
+    ['s-max-date','s-min-date'].forEach(id => document.getElementById(id).textContent = '');
   }
 
   renderWaterHero();
   renderTrendSection();
   renderBestDay();
 
-  const emptyHTML = `
-    <div class="empty">
-      <span class="ei">🌊</span>
-      <p>Nog geen metingen.<br>Tik op <strong>+</strong> om te beginnen!</p>
-    </div>`;
+  const emptyHTML = `<div class="empty"><span class="ei">🌊</span><p>Nog geen metingen.<br>Tik op <strong>+</strong> om te beginnen!</p></div>`;
 
-  document.getElementById('preview-list').innerHTML = n === 0
-    ? emptyHTML
-    : readings.slice(0,5).map(readingHTML).join('');
+  function renderList(containerId, items) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = items.length === 0 ? emptyHTML : items.map(readingHTML).join('');
+    // Koppel swipe aan elke kaart
+    items.forEach(r => {
+      const wrap = document.getElementById('wrap-' + r.id);
+      if (wrap) setupSwipe(wrap, r.id);
+    });
+  }
 
-  document.getElementById('all-list').innerHTML = n === 0
-    ? emptyHTML
-    : readings.map(readingHTML).join('');
+  renderList('preview-list', readings.slice(0,5));
+  renderList('all-list', readings);
 }
 
-// ─────────────────────────────────────────────
-// CHARTS
-// ─────────────────────────────────────────────
+// ─── CHARTS ───────────────────────────────────
 function renderCharts() {
   const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
-  const labels = sorted.map(r =>
-    new Date(r.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})
-  );
+  const labels = sorted.map(r => new Date(r.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}));
   const wt = sorted.map(r => r.waterTemp);
   const at = sorted.map(r => r.airTemp);
 
@@ -1190,69 +1263,63 @@ function renderCharts() {
 
   const baseOpts = {
     responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{ labels:{ color:tc } } },
+    plugins:{ legend:{ labels:{ color:tc, boxWidth:14, font:{size:11} } } },
     scales:{
-      x:{ ticks:{color:tc}, grid:{color:gc} },
-      y:{ ticks:{color:tc, callback:v=>v+'°C'}, grid:{color:gc} },
+      x:{ ticks:{ color:tc, font:{size:10} }, grid:{ color:gc } },
+      y:{ ticks:{ color:tc, callback:v=>v+'°C', font:{size:10} }, grid:{ color:gc } },
     }
   };
 
-  if (chartComb) chartComb.destroy();
+  if (chartComb)  chartComb.destroy();
+  if (chartWater) chartWater.destroy();
+
   chartComb = new Chart(document.getElementById('chart-combined'), {
     type:'line',
-    data:{
-      labels,
-      datasets:[
-        { label:'🌊 Water °C', data:wt, borderColor:'#0288d1',
-          backgroundColor:'rgba(2,136,209,.15)', borderWidth:3,
-          pointRadius:5, pointBackgroundColor:'#0288d1', fill:true, tension:.4 },
-        { label:'🌡️ Lucht °C', data:at, borderColor:'#e65100',
-          backgroundColor:'rgba(230,81,0,.04)', borderWidth:1.5,
-          pointRadius:3, pointBackgroundColor:'#e65100', fill:false, tension:.4 },
-      ]
-    },
+    data:{ labels, datasets:[
+      { label:'🌊 Water °C', data:wt, borderColor:'#0288d1',
+        backgroundColor:'rgba(2,136,209,.15)', borderWidth:2.5,
+        pointRadius:4, pointBackgroundColor:'#0288d1', fill:true, tension:.4 },
+      { label:'🌡️ Lucht °C', data:at, borderColor:'#e65100',
+        backgroundColor:'rgba(230,81,0,.04)', borderWidth:1.5,
+        pointRadius:3, pointBackgroundColor:'#e65100', fill:false, tension:.4 },
+    ]},
     options: baseOpts,
   });
 
-  if (chartWater) chartWater.destroy();
   chartWater = new Chart(document.getElementById('chart-water'), {
     type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'🌊 Water °C', data:wt, borderRadius:8,
-        backgroundColor: wt.map(t =>
-          t < 15 ? 'rgba(2,136,209,.7)' :
-          t < 20 ? 'rgba(0,150,136,.7)' :
-          t < 24 ? 'rgba(67,160,71,.7)' :
-                   'rgba(230,81,0,.7)'
-        ),
-      }]
-    },
+    data:{ labels, datasets:[{
+      label:'🌊 Water °C', data:wt, borderRadius:6,
+      backgroundColor: wt.map(t =>
+        t < 9  ? 'rgba(21,101,192,.75)' :
+        t < 14 ? 'rgba(2,136,209,.75)'  :
+        t < 18 ? 'rgba(0,131,143,.75)'  :
+        t < 22 ? 'rgba(46,125,50,.75)'  :
+        t < 26 ? 'rgba(230,81,0,.75)'   :
+                 'rgba(198,40,40,.75)'
+      ),
+    }]},
     options: baseOpts,
   });
 }
 
-// ─────────────────────────────────────────────
-// EXPORT / IMPORT
-// ─────────────────────────────────────────────
+// Herlaad grafieken bij scherm draaien
+window.addEventListener('resize', () => {
+  const page = document.getElementById('page-chart');
+  if (page && page.classList.contains('active')) {
+    setTimeout(renderCharts, 100);
+  }
+});
+
+// ─── EXPORT / IMPORT ──────────────────────────
 function exportCSV() {
   if (!readings.length) { showToast('Geen data om te exporteren'); return; }
-  const hdr  = ['Datum','Tijd','Water °C','Lucht °C','Hemel','Wind/gevoel','Notities'];
-  const rows = readings.map(r => {
-    const dt = new Date(r.datetime);
-    return [
-      dt.toLocaleDateString('nl-NL'),
-      dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}),
-      r.waterTemp,
-      r.airTemp ?? '',
-      label(SKY,  r.sky),
-      label(WIND, r.wind),
-      r.notes ?? '',
-    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
-  });
-  dlFile([hdr.join(','), ...rows].join('\n'),
-    `lentse-plas-${today()}.csv`, 'text/csv;charset=utf-8;');
+  const hdr  = ['Datum','Water °C','Lucht °C','Hemel','Wind/gevoel','Notities'];
+  const rows = readings.map(r => [
+    shortDate(r.datetime), r.waterTemp, r.airTemp ?? '',
+    label(SKY,r.sky), label(WIND,r.wind), r.notes ?? '',
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  dlFile([hdr.join(','), ...rows].join('\n'), `lentse-plas-${today()}.csv`, 'text/csv;charset=utf-8;');
   showToast('📊 CSV gedownload!');
 }
 
@@ -1263,9 +1330,7 @@ function exportJSON() {
   showToast('💾 JSON gedownload!');
 }
 
-function triggerImport() {
-  document.getElementById('import-file').click();
-}
+function triggerImport() { document.getElementById('import-file').click(); }
 
 function importJSON(ev) {
   const file = ev.target.files[0];
@@ -1278,8 +1343,7 @@ function importJSON(ev) {
       if (!Array.isArray(imported)) throw new Error();
       const existingIds = new Set(readings.map(r => r.id));
       const fresh = imported.filter(r => !existingIds.has(r.id));
-      readings = [...readings, ...fresh]
-        .sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+      readings = [...readings, ...fresh].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
       save();
       renderAll();
       showToast(`✅ ${fresh.length} nieuwe meting(en) geïmporteerd`);
@@ -1308,9 +1372,7 @@ function dlFile(content, filename, type) {
 
 function today() { return new Date().toISOString().slice(0,10); }
 
-// ─────────────────────────────────────────────
-// FIREBASE CONFIG
-// ─────────────────────────────────────────────
+// ─── FIREBASE CONFIG ──────────────────────────
 function saveFbConfig() {
   const pid = document.getElementById('fb-project').value.trim();
   const key = document.getElementById('fb-key').value.trim();
@@ -1318,7 +1380,6 @@ function saveFbConfig() {
   document.getElementById('fb-status').textContent =
     pid && key ? '⚠️ Herlaad de pagina om Firebase te activeren.' : '';
 }
-
 (function loadFbConfig() {
   try {
     const { pid, key } = JSON.parse(localStorage.getItem('lp-fb') || '{}');
@@ -1327,29 +1388,24 @@ function saveFbConfig() {
   } catch {}
 })();
 
-// ─────────────────────────────────────────────
-// HELP MODAL
-// ─────────────────────────────────────────────
+// ─── HELP MODAL ───────────────────────────────
 function openHelp()  { document.getElementById('help-overlay').classList.add('open'); }
 function closeHelp() { document.getElementById('help-overlay').classList.remove('open'); }
 document.getElementById('help-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeHelp();
 });
 
-// ─────────────────────────────────────────────
-// CLEAR ALL
-// ─────────────────────────────────────────────
+// ─── CLEAR ALL ────────────────────────────────
 function clearAll() {
   if (!confirm('Weet je zeker dat je ALLE metingen wilt wissen?')) return;
+  readings.forEach(r => deletePhoto(r.id));
   readings = [];
   save();
   renderAll();
   showToast('🗑️ Alle data gewist');
 }
 
-// ─────────────────────────────────────────────
-// TOAST
-// ─────────────────────────────────────────────
+// ─── TOAST ────────────────────────────────────
 function showToast(msg, ms = 2600) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1357,18 +1413,12 @@ function showToast(msg, ms = 2600) {
   setTimeout(() => t.classList.remove('show'), ms);
 }
 
-// ─────────────────────────────────────────────
-// SERVICE WORKER
-// ─────────────────────────────────────────────
+// ─── SERVICE WORKER ───────────────────────────
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  });
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
-// ─────────────────────────────────────────────
-// SEED DATA  –  eenmalig inladen bij eerste start
-// ─────────────────────────────────────────────
+// ─── SEED DATA ────────────────────────────────
 const SEED = [
   { id:'imp_20260221', datetime:'2026-02-21T12:00', waterTemp:6.1,  airTemp:7.5,  sky:null,    wind:null, notes:'' },
   { id:'imp_20260214', datetime:'2026-02-14T12:00', waterTemp:6.5,  airTemp:-0.5, sky:null,    wind:null, notes:'' },
@@ -1390,14 +1440,12 @@ const SEED = [
 ];
 
 function seedIfEmpty() {
-  if (readings.length > 0) return;          // al data aanwezig → niets doen
+  if (readings.length > 0) return;
   readings = [...SEED].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
 }
 
-// ─────────────────────────────────────────────
-// INIT
-// ─────────────────────────────────────────────
+// ─── INIT ─────────────────────────────────────
 load();
 seedIfEmpty();
 renderAll();
