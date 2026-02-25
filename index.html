@@ -1415,7 +1415,29 @@ function showToast(msg, ms = 2600) {
 
 // ─── SERVICE WORKER ───────────────────────────
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+
+    // Herlaad automatisch als de service worker een nieuwe versie installeert
+    navigator.serviceWorker.addEventListener('message', ev => {
+      if (ev.data && ev.data.type === 'SW_UPDATED') {
+        window.location.reload();
+      }
+    });
+
+    // Detecteer ook een nieuwe SW die wacht en activeer hem direct
+    navigator.serviceWorker.ready.then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        if (!newSW) return;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'activated') {
+            window.location.reload();
+          }
+        });
+      });
+    });
+  });
 }
 
 // ─── SEED DATA ────────────────────────────────
