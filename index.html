@@ -460,6 +460,70 @@
       .wh-temp { font-size:50px; }
     }
 
+    /* ── Period filter ── */
+    .period-filter { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+    .pf-btn {
+      padding:5px 14px; border-radius:20px; border:none;
+      font-size:12px; font-weight:600; cursor:pointer;
+      background:#eef2f5; color:var(--muted);
+      font-family:var(--font); transition:all .15s;
+    }
+    .pf-btn.active { background:var(--primary); color:white; }
+
+    /* ── Swipe hint ── */
+    .rc-swipe-hint {
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      font-size:10px; color:var(--muted); opacity:0; pointer-events:none;
+      animation: hint-slide 2.8s ease 1s forwards;
+      white-space:nowrap;
+    }
+    @keyframes hint-slide {
+      0%,15%  { opacity:0;  transform:translateY(-50%) translateX(0); }
+      35%,65% { opacity:.7; transform:translateY(-50%) translateX(-4px); }
+      100%    { opacity:0;  transform:translateY(-50%) translateX(-10px); }
+    }
+
+    /* ── See-all link ── */
+    .see-all-btn {
+      background:none; border:none; cursor:pointer;
+      font-size:12px; font-weight:600; color:var(--primary);
+      font-family:var(--font); padding:2px 0;
+      display:flex; align-items:center; gap:5px;
+    }
+
+    /* ── Air refresh ── */
+    .air-right { display:flex; align-items:center; gap:6px; }
+    .air-refresh-btn {
+      background:none; border:none; cursor:pointer;
+      color:var(--muted); padding:5px; border-radius:8px;
+      display:flex; align-items:center;
+      transition:color .2s, background .15s;
+    }
+    .air-refresh-btn:active { background:rgba(0,0,0,.06); }
+
+    /* ── Undo button inside toast ── */
+    .toast-undo {
+      margin-left:10px; background:rgba(255,255,255,.22);
+      border:1px solid rgba(255,255,255,.3); border-radius:12px;
+      padding:3px 10px; font-size:12px; font-weight:700;
+      color:white; cursor:pointer; font-family:var(--font);
+      white-space:nowrap; vertical-align:middle;
+    }
+
+    /* ── Firebase collapsible ── */
+    .firebase-details {
+      cursor:default;
+    }
+    .firebase-details > summary {
+      list-style:none; cursor:pointer;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .firebase-details > summary::-webkit-details-marker { display:none; }
+    .firebase-details > summary::marker { display:none; }
+    .toggle-icon { font-size:11px; transition:transform .2s; }
+    .firebase-details[open] .toggle-icon { transform:rotate(180deg); }
+    .firebase-inner { margin-top:12px; }
+
     /* ── Dark mode ── */
     @media (prefers-color-scheme: dark) {
       :root {
@@ -484,6 +548,9 @@
       .bd-date { color:#c5a565; }
       .swipe-bg { background:#c62828; }
       .photo-btn { background:#1a3a5c; border-color:#2e7d32; color:#81c784; }
+      .pf-btn { background:#1a3a5c; color:#90caf9; }
+      .pf-btn.active { background:var(--primary); color:white; }
+      .air-refresh-btn:active { background:rgba(255,255,255,.07); }
     }
   </style>
 </head>
@@ -522,7 +589,15 @@
         <div class="air-val" id="cur-air">--°C</div>
       </div>
     </div>
-    <div class="air-meta" id="cur-updated">Ophalen…</div>
+    <div class="air-right">
+      <div class="air-meta" id="cur-updated">Ophalen…</div>
+      <button class="air-refresh-btn" onclick="updateAirTemp()" aria-label="Verversen">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 1 0 .49-3.31"/>
+        </svg>
+      </button>
+    </div>
   </div>
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
@@ -548,7 +623,7 @@
   <div id="best-day-section"></div>
   <div class="section-hdr">
     <h2>Laatste metingen</h2>
-    <span class="badge" id="badge-home">0</span>
+    <button class="see-all-btn" onclick="goToAllReadings()">Toon alle <span class="badge" id="badge-home">0</span></button>
   </div>
   <div id="preview-list"></div>
 </div>
@@ -564,6 +639,11 @@
 
 <!-- CHART -->
 <div id="page-chart" class="page">
+  <div class="period-filter">
+    <button class="pf-btn active" onclick="setChartPeriod('all',this)">Alles</button>
+    <button class="pf-btn" onclick="setChartPeriod('year',this)">Dit jaar</button>
+    <button class="pf-btn" onclick="setChartPeriod('3m',this)">3 maanden</button>
+  </div>
   <div class="card">
     <div class="card-title">Water &amp; lucht over tijd</div>
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
@@ -597,25 +677,30 @@
   </div>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
-  <div class="card">
-    <div class="card-title">Cloud delen (optioneel)</div>
-    <div class="info-box">
-      Verbind met een gratis Firebase project om data te delen met anderen.<br>
-      Je hebt alleen een <strong>Google account</strong> nodig — geen extra kosten.
+  <details class="card firebase-details">
+    <summary>
+      <span class="card-title" style="margin-bottom:0">Geavanceerd: Cloud sync</span>
+      <span class="toggle-icon">▼</span>
+    </summary>
+    <div class="firebase-inner">
+      <div class="info-box">
+        Verbind met een gratis Firebase project om data te delen met anderen.<br>
+        Je hebt alleen een <strong>Google account</strong> nodig — geen extra kosten.
+      </div>
+      <div class="fg">
+        <label>Firebase Project ID</label>
+        <input type="text" id="fb-project" placeholder="mijn-project-id" oninput="saveFbConfig()">
+      </div>
+      <div class="fg">
+        <label>Firebase API Key</label>
+        <input type="text" id="fb-key" placeholder="AIzaSy..." oninput="saveFbConfig()">
+      </div>
+      <div id="fb-status" style="font-size:11px;color:var(--muted);margin-bottom:9px;"></div>
+      <button class="btn btn-plain" onclick="openHelp()" style="margin-bottom:7px;">
+        📖 Hoe maak ik gratis Firebase aan?
+      </button>
     </div>
-    <div class="fg">
-      <label>Firebase Project ID</label>
-      <input type="text" id="fb-project" placeholder="mijn-project-id" oninput="saveFbConfig()">
-    </div>
-    <div class="fg">
-      <label>Firebase API Key</label>
-      <input type="text" id="fb-key" placeholder="AIzaSy..." oninput="saveFbConfig()">
-    </div>
-    <div id="fb-status" style="font-size:11px;color:var(--muted);margin-bottom:9px;"></div>
-    <button class="btn btn-plain" onclick="openHelp()" style="margin-bottom:7px;">
-      📖 Hoe maak ik gratis Firebase aan?
-    </button>
-  </div>
+  </details>
 
   <div class="card" style="border:2px solid #ffcdd2;">
     <div class="card-title" style="color:var(--danger);">Data wissen</div>
@@ -691,7 +776,7 @@
       </div>
 
       <div class="fg">
-        <label>Wind &amp; gevoel</label>
+        <label>Gevoel &amp; conditie</label>
         <div class="icon-picker" id="wind-picker"></div>
       </div>
 
@@ -705,7 +790,7 @@
           <img id="photo-preview" class="photo-preview" alt="preview">
           <button type="button" id="photo-clear" class="photo-clear" onclick="clearPhoto()">✕</button>
         </div>
-        <input type="file" id="f-photo" accept="image/*" capture="environment" style="display:none"
+        <input type="file" id="f-photo" accept="image/*" style="display:none"
                onchange="handlePhotoSelect(event)">
       </div>
 
@@ -745,7 +830,10 @@
 </div>
 
 <!-- Toast -->
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">
+  <span id="toast-msg"></span>
+  <button id="toast-undo-btn" class="toast-undo" onclick="undoDelete()" style="display:none">Ongedaan</button>
+</div>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -780,6 +868,9 @@ let editingId  = null;
 let selSky     = null;
 let selWind    = null;
 let chartComb  = null;
+let chartPeriod = 'all';
+let undoBuffer  = null;
+let undoTimer   = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
 
 // ─── PERSISTENCE ─────────────────────────────
@@ -846,26 +937,25 @@ function closePhoto() {
 }
 
 // ─── TEMPERATURE COLOR ────────────────────────
+// Schaal per 10°C van < 0 t/m 20+, dan warm/heet
 function tempColor(t) {
   if (t == null || isNaN(t)) return 'inherit';
-  if (t <  4) return '#1565c0';  // ijskoud – donkerblauw
-  if (t <  9) return '#0288d1';  // koud – blauw
-  if (t < 14) return '#00838f';  // fris – teal
-  if (t < 18) return '#2e7d32';  // koel – groen
-  if (t < 22) return '#558b2f';  // aangenaam – lichtgroen
-  if (t < 26) return '#e65100';  // warm – oranje
-  return '#c62828';              // heet – rood
+  if (t <  0) return '#1a237e';  // sub-zero  – donkerindigo
+  if (t < 10) return '#0277bd';  // 0-10°C    – blauw
+  if (t < 15) return '#00838f';  // 10-15°C   – teal
+  if (t < 20) return '#2e7d32';  // 15-20°C   – groen
+  if (t < 26) return '#e65100';  // 20-26°C   – oranje
+  return '#c62828';              // > 26°C    – rood
 }
 
 // ─── HERO GRADIENT per temperatuur ────────────
 function heroGradient(t) {
   if (t == null || isNaN(t))
     return { grad:'linear-gradient(140deg,#01579b 0%,#0288d1 55%,#00acc1 100%)', shadow:'rgba(2,119,189,.35)' };
-  if (t <  4) return { grad:'linear-gradient(140deg,#0a1172 0%,#1a237e 60%,#283593 100%)', shadow:'rgba(26,35,126,.5)' };
-  if (t <  9) return { grad:'linear-gradient(140deg,#0d47a1 0%,#01579b 55%,#1976d2 100%)', shadow:'rgba(2,119,189,.4)' };
-  if (t < 14) return { grad:'linear-gradient(140deg,#004d40 0%,#00838f 55%,#0097a7 100%)', shadow:'rgba(0,131,143,.4)' };
-  if (t < 18) return { grad:'linear-gradient(140deg,#1b5e20 0%,#2e7d32 55%,#43a047 100%)', shadow:'rgba(46,125,50,.4)' };
-  if (t < 22) return { grad:'linear-gradient(140deg,#33691e 0%,#558b2f 55%,#7cb342 100%)', shadow:'rgba(85,139,47,.4)' };
+  if (t <  0) return { grad:'linear-gradient(140deg,#0a0e4a 0%,#1a237e 55%,#283593 100%)', shadow:'rgba(26,35,126,.55)' };
+  if (t < 10) return { grad:'linear-gradient(140deg,#0d47a1 0%,#0277bd 55%,#1976d2 100%)', shadow:'rgba(2,119,189,.4)' };
+  if (t < 15) return { grad:'linear-gradient(140deg,#004d40 0%,#00838f 55%,#0097a7 100%)', shadow:'rgba(0,131,143,.4)' };
+  if (t < 20) return { grad:'linear-gradient(140deg,#1b5e20 0%,#2e7d32 55%,#43a047 100%)', shadow:'rgba(46,125,50,.4)' };
   if (t < 26) return { grad:'linear-gradient(140deg,#bf360c 0%,#e64a19 55%,#ff7043 100%)', shadow:'rgba(230,81,0,.45)' };
   return             { grad:'linear-gradient(140deg,#7f0000 0%,#b71c1c 55%,#c62828 100%)', shadow:'rgba(198,40,40,.45)' };
 }
@@ -1053,12 +1143,42 @@ function saveReading(ev) {
   showToast(idx >= 0 ? '✅ Meting bijgewerkt!' : '✅ Meting opgeslagen!');
 }
 
+// Directe delete (geen undo) — voor "wis alles" en bevestigde deletes
 function deleteReadingDirect(id) {
   readings = readings.filter(r => r.id !== id);
   deletePhoto(id);
   save();
   renderAll();
-  showToast('🗑️ Meting verwijderd');
+  showToast('Meting verwijderd');
+}
+
+// Zachte delete met undo-venster van 4 seconden (voor swipe)
+function deleteWithUndo(id) {
+  const idx = readings.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  if (undoTimer) clearTimeout(undoTimer);
+  undoBuffer = readings[idx];
+  readings.splice(idx, 1);
+  save();
+  renderAll();
+  showToast('Meting verwijderd', 4200, true);
+  undoTimer = setTimeout(() => {
+    if (undoBuffer) { deletePhoto(undoBuffer.id); undoBuffer = null; }
+  }, 4200);
+}
+
+function undoDelete() {
+  if (!undoBuffer) return;
+  clearTimeout(undoTimer);
+  readings.push(undoBuffer);
+  readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  save();
+  undoBuffer = null;
+  renderAll();
+  // Verberg toast
+  const t = document.getElementById('toast');
+  t.classList.remove('show');
+  setTimeout(() => showToast('Meting hersteld'), 100);
 }
 
 function deleteReading(id) {
@@ -1095,9 +1215,10 @@ function setupSwipe(wrap, id) {
     dragging = false;
     card.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
     if (curX < -55) {
+      localStorage.setItem('lp-swipe-seen', '1');
       card.style.transform = 'translateX(-110%)';
       card.style.opacity = '0';
-      setTimeout(() => deleteReadingDirect(id), 260);
+      setTimeout(() => deleteWithUndo(id), 260);
     } else {
       card.style.transform = 'translateX(0)';
     }
@@ -1112,7 +1233,7 @@ function fmtDate(dt) {
   });
 }
 
-function readingHTML(r) {
+function readingHTML(r, showSwipeHint) {
   const se = emoji(SKY, r.sky);
   const we = emoji(WIND, r.wind);
   const icons = [se, we].filter(Boolean).join(' ');
@@ -1127,10 +1248,13 @@ function readingHTML(r) {
     ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
 
   const tc = tempColor(r.waterTemp);
+  const hintHTML = showSwipeHint ? `<div class="rc-swipe-hint">← veeg</div>` : '';
+
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
       <div class="swipe-bg">🗑️</div>
       <div class="reading-card" id="card-${r.id}" style="border-left-color:${tc}">
+        ${hintHTML}
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
           <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
@@ -1279,10 +1403,11 @@ function renderAll() {
 
   const emptyHTML = `<div class="empty"><span class="ei">🌊</span><p>Nog geen metingen.<br>Tik op <strong>+</strong> om te beginnen!</p></div>`;
 
+  const showHint = !localStorage.getItem('lp-swipe-seen');
   function renderList(containerId, items) {
     const el = document.getElementById(containerId);
-    el.innerHTML = items.length === 0 ? emptyHTML : items.map(readingHTML).join('');
-    // Koppel swipe aan elke kaart
+    el.innerHTML = items.length === 0 ? emptyHTML
+      : items.map((r, i) => readingHTML(r, i === 0 && showHint)).join('');
     items.forEach(r => {
       const wrap = document.getElementById('wrap-' + r.id);
       if (wrap) setupSwipe(wrap, r.id);
@@ -1294,8 +1419,24 @@ function renderAll() {
 }
 
 // ─── CHARTS ───────────────────────────────────
+function setChartPeriod(period, btn) {
+  chartPeriod = period;
+  document.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCharts();
+}
+
 function renderCharts() {
-  const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+  // Filter op periode
+  let sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+  if (chartPeriod === 'year') {
+    const y = new Date().getFullYear();
+    sorted = sorted.filter(r => new Date(r.datetime).getFullYear() === y);
+  } else if (chartPeriod === '3m') {
+    const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - 3);
+    sorted = sorted.filter(r => new Date(r.datetime) >= cutoff);
+  }
+
   const labels = sorted.map(r => new Date(r.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}));
   const wt = sorted.map(r => r.waterTemp);
   const at = sorted.map(r => r.airTemp);
@@ -1306,7 +1447,10 @@ function renderCharts() {
 
   const baseOpts = {
     responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{ labels:{ color:tc, boxWidth:14, font:{size:11} } } },
+    plugins:{
+      legend:{ labels:{ color:tc, boxWidth:12, font:{size:11},
+        filter: item => item.text !== 'Zwemgrens' } }
+    },
     scales:{
       x:{ ticks:{ color:tc, font:{size:10} }, grid:{ color:gc } },
       y:{ ticks:{ color:tc, callback:v=>v+'°C', font:{size:10} }, grid:{ color:gc } },
@@ -1320,10 +1464,13 @@ function renderCharts() {
     data:{ labels, datasets:[
       { label:'Water °C', data:wt, borderColor:'#0288d1',
         backgroundColor:'rgba(2,136,209,.15)', borderWidth:2.5,
-        pointRadius:4, pointBackgroundColor:'#0288d1', fill:true, tension:.4 },
+        pointRadius:4, pointBackgroundColor:'#0288d1', fill:true, tension:.4, order:1 },
       { label:'Lucht °C', data:at, borderColor:'#e65100',
         backgroundColor:'rgba(230,81,0,.04)', borderWidth:1.5,
-        pointRadius:3, pointBackgroundColor:'#e65100', fill:false, tension:.4 },
+        pointRadius:3, pointBackgroundColor:'#e65100', fill:false, tension:.4, order:2 },
+      { label:'Zwemgrens', data:labels.map(()=>18),
+        borderColor:'rgba(46,160,67,.55)', borderDash:[6,4], borderWidth:1.5,
+        pointRadius:0, fill:false, tension:0, order:3 },
     ]},
     options: baseOpts,
   });
@@ -1432,11 +1579,25 @@ function clearAll() {
 }
 
 // ─── TOAST ────────────────────────────────────
-function showToast(msg, ms = 2600) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
+function showToast(msg, ms = 2600, withUndo = false) {
+  const t    = document.getElementById('toast');
+  const msgEl = document.getElementById('toast-msg');
+  const undoEl = document.getElementById('toast-undo-btn');
+  msgEl.textContent = msg;
+  undoEl.style.display = withUndo ? 'inline-flex' : 'none';
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), ms);
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(() => {
+    t.classList.remove('show');
+    undoEl.style.display = 'none';
+  }, ms);
+}
+
+// ─── NAVIGATIE HELPER ─────────────────────────
+function goToAllReadings() {
+  const btn = document.querySelectorAll('.nav-btn')[1];
+  goPage('data', btn);
+  if (btn) btn.classList.add('active');
 }
 
 // ─── SERVICE WORKER ───────────────────────────
