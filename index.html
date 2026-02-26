@@ -84,18 +84,29 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 7px 0;
+      padding: 8px 0 6px;
       background: none;
       border: none;
       cursor: pointer;
       color: #90a4ae;
       font-size: 10px;
-      gap: 2px;
+      font-weight: 500;
+      gap: 3px;
       font-family: var(--font);
       transition: color .2s;
+      position: relative;
     }
-    .nav-btn .ni { font-size: 20px; }
-    .nav-btn.active { color: var(--primary); }
+    .nav-btn .ni { display:flex; align-items:center; justify-content:center; width:22px; height:22px; }
+    .nav-btn .ni svg { width:22px; height:22px; }
+    .nav-btn.active { color: var(--primary); font-weight: 600; }
+    .nav-btn.active::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 28px; height: 3px;
+      background: var(--primary);
+      border-radius: 0 0 4px 4px;
+    }
 
     /* ── Pages ── */
     .page { display:none; padding:10px 12px; max-width:600px; margin:0 auto; }
@@ -157,19 +168,19 @@
     /* ── Air – secondary ── */
     .air-secondary {
       background: var(--card);
-      border-radius: 10px;
-      padding: 8px 12px;
+      border-radius: 12px;
+      padding: 12px 16px;
       margin-bottom: 9px;
       box-shadow: var(--shadow);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    .air-left { display:flex; align-items:center; gap:8px; }
-    .air-icon { font-size:20px; }
-    .air-lbl  { font-size:10px; color:var(--muted); margin-bottom:1px; }
-    .air-val  { font-size:20px; font-weight:700; color:#e65100; line-height:1; }
-    .air-meta { font-size:10px; color:var(--muted); text-align:right; }
+    .air-left { display:flex; align-items:center; gap:12px; }
+    .air-icon { font-size:28px; line-height:1; }
+    .air-lbl  { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px; }
+    .air-val  { font-size:30px; font-weight:900; line-height:1; letter-spacing:-1px; color:var(--muted); }
+    .air-meta { font-size:10px; color:var(--muted); text-align:right; line-height:1.5; }
 
     /* ── Stats grid ── */
     .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:9px; }
@@ -223,17 +234,17 @@
     /* ── FAB ── */
     .fab {
       position: fixed;
-      bottom: 62px; right: 16px;
-      width: 52px; height: 52px;
-      border-radius: 26px;
+      bottom: 72px; right: 16px;
+      width: 56px; height: 56px;
+      border-radius: 28px;
       background: var(--accent);
       color: white; border: none;
-      box-shadow: 0 5px 15px rgba(255,111,0,.45);
-      font-size: 28px; cursor: pointer;
+      box-shadow: 0 4px 18px rgba(255,111,0,.5), 0 2px 6px rgba(0,0,0,.12);
+      cursor: pointer;
       display: flex; align-items:center; justify-content:center;
-      z-index: 90; transition: transform .15s;
+      z-index: 90; transition: transform .15s, box-shadow .15s;
     }
-    .fab:active { transform:scale(.93); }
+    .fab:active { transform:scale(.92); box-shadow: 0 2px 8px rgba(255,111,0,.4); }
 
     /* ── Reading cards (compact + swipe) ── */
     .reading-wrap {
@@ -255,9 +266,9 @@
     .reading-card {
       background: var(--card);
       border-radius: var(--radius);
-      padding: 9px 11px;
+      padding: 10px 12px;
       box-shadow: var(--shadow);
-      border-left: 3px solid var(--primary);
+      border-left: 4px solid var(--primary);
       position: relative;
       touch-action: pan-y;
       cursor: default;
@@ -265,11 +276,11 @@
     }
     .rc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
     .rc-date   { font-size:11px; color:var(--muted); font-weight:500; }
-    .rc-edit   { background:#e3f2fd; border:none; border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .rc-edit   { background:#e3f2fd; color:var(--primary); border:none; border-radius:6px; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .rc-body   { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .rc-water  { font-size:26px; font-weight:900; line-height:1; }
-    .rc-air    { font-size:16px; font-weight:700; line-height:1; opacity:.85; }
-    .rc-sep    { font-size:12px; color:#ccc; }
+    .rc-air    { font-size:20px; font-weight:700; line-height:1; }
+    .rc-sep    { font-size:12px; color:rgba(0,0,0,.2); }
     .rc-icons  { font-size:15px; margin-left:auto; letter-spacing:1px; }
     .rc-notes  { margin-top:5px; font-size:11px; color:var(--muted); font-style:italic; line-height:1.4; }
     .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:4px; }
@@ -386,9 +397,10 @@
 
     /* ── Landscape: grotere grafieken ── */
     @media (orientation: landscape) {
-      .chart-wrap { height: calc(50vh - 60px); min-height:160px; }
-      #page-chart { padding: 6px 10px; }
-      #page-chart .card { margin-bottom:6px; padding:8px 12px; }
+      .chart-wrap { height: calc(80vh - 80px); min-height:180px; }
+      #page-chart { padding: 4px 8px; }
+      #page-chart .card { margin-bottom:5px; padding:8px 12px; }
+      body { padding-bottom: 56px; }
     }
 
     /* ── Photo overlay / lightbox ── */
@@ -462,6 +474,7 @@
       .ico .il { color:#90caf9; }
       .close-btn { background:#1a3a5c; color:#e3f2fd; }
       .stat-card, .reading-card, .action-card, .modal, .air-secondary { background:#112136; }
+      .rc-sep { color:rgba(255,255,255,.18); }
       .rc-edit  { background:#0d3a60; }
       .fetch-btn { background:#0d3a60; }
       .btn-plain { background:#1a3a5c; color:#e3f2fd; }
@@ -492,7 +505,7 @@
     </a>
   </div>
   <svg class="wave-svg" viewBox="0 0 1200 20" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0,13 C200,20 400,5 600,13 C800,20 1000,5 1200,13 L1200,20 L0,20 Z" fill="#e8f4fd"/>
+    <path d="M0,13 C200,20 400,5 600,13 C800,20 1000,5 1200,13 L1200,20 L0,20 Z" fill="var(--bg)"/>
   </svg>
 </header>
 
@@ -511,23 +524,23 @@
     </div>
     <div class="air-meta" id="cur-updated">Ophalen…</div>
   </div>
-  <div class="stats-grid">
+  <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
       <div class="stat-value" id="s-count" style="color:var(--primary)">0</div>
       <div class="stat-label">Metingen</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-avg">--</div>
-      <div class="stat-label">🌊 Gem. water</div>
+      <div class="stat-label">Gem. water</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-max">--</div>
-      <div class="stat-label">🔥 Record hoog</div>
+      <div class="stat-label">Record hoog</div>
       <div class="stat-record" id="s-max-date"></div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-min">--</div>
-      <div class="stat-label">🥶 Record laag</div>
+      <div class="stat-label">Record laag</div>
       <div class="stat-record" id="s-min-date"></div>
     </div>
   </div>
@@ -552,12 +565,8 @@
 <!-- CHART -->
 <div id="page-chart" class="page">
   <div class="card">
-    <div class="card-title">Watertemperatuur over tijd</div>
+    <div class="card-title">Water &amp; lucht over tijd</div>
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Water per meting</div>
-    <div class="chart-wrap"><canvas id="chart-water"></canvas></div>
   </div>
 </div>
 
@@ -617,21 +626,38 @@
 
 <!-- BOTTOM NAV -->
 <nav class="nav">
-  <button class="nav-btn active"  onclick="goPage('home',this)">  <span class="ni">🏠</span><span>Home</span>    </button>
-  <button class="nav-btn"         onclick="goPage('data',this)">  <span class="ni">📋</span><span>Metingen</span></button>
-  <button class="nav-btn"         onclick="goPage('chart',this)"> <span class="ni">📈</span><span>Grafiek</span>  </button>
-  <button class="nav-btn"         onclick="goPage('export',this)"><span class="ni">📁</span><span>Data</span>     </button>
+  <button class="nav-btn active" onclick="goPage('home',this)">
+    <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+    <span>Home</span>
+  </button>
+  <button class="nav-btn" onclick="goPage('data',this)">
+    <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
+    <span>Metingen</span>
+  </button>
+  <button class="nav-btn" onclick="goPage('chart',this)">
+    <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+    <span>Grafiek</span>
+  </button>
+  <button class="nav-btn" onclick="goPage('export',this)">
+    <span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+    <span>Instellingen</span>
+  </button>
 </nav>
 
 <!-- FAB -->
-<button class="fab" onclick="openForm()">+</button>
+<button class="fab" onclick="openForm()" aria-label="Nieuwe meting toevoegen">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+</button>
 
 <!-- ADD / EDIT MODAL -->
 <div class="overlay" id="form-overlay">
   <div class="modal">
     <div class="modal-hdr">
       <h2 id="form-title">Nieuwe meting</h2>
-      <button class="close-btn" onclick="closeForm()">✕</button>
+      <button class="close-btn" onclick="closeForm()" aria-label="Sluiten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form onsubmit="saveReading(event)">
       <input type="hidden" id="f-id">
@@ -698,7 +724,7 @@
   <div class="modal">
     <div class="modal-hdr">
       <h2>Firebase instellen</h2>
-      <button class="close-btn" onclick="closeHelp()">✕</button>
+      <button class="close-btn" onclick="closeHelp()" aria-label="Sluiten"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div style="font-size:13px;line-height:1.75;color:var(--muted);">
       <p><strong style="color:var(--text)">1.</strong> Ga naar
@@ -754,7 +780,6 @@ let editingId  = null;
 let selSky     = null;
 let selWind    = null;
 let chartComb  = null;
-let chartWater = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
 
 // ─── PERSISTENCE ─────────────────────────────
@@ -830,6 +855,19 @@ function tempColor(t) {
   if (t < 22) return '#558b2f';  // aangenaam – lichtgroen
   if (t < 26) return '#e65100';  // warm – oranje
   return '#c62828';              // heet – rood
+}
+
+// ─── HERO GRADIENT per temperatuur ────────────
+function heroGradient(t) {
+  if (t == null || isNaN(t))
+    return { grad:'linear-gradient(140deg,#01579b 0%,#0288d1 55%,#00acc1 100%)', shadow:'rgba(2,119,189,.35)' };
+  if (t <  4) return { grad:'linear-gradient(140deg,#0a1172 0%,#1a237e 60%,#283593 100%)', shadow:'rgba(26,35,126,.5)' };
+  if (t <  9) return { grad:'linear-gradient(140deg,#0d47a1 0%,#01579b 55%,#1976d2 100%)', shadow:'rgba(2,119,189,.4)' };
+  if (t < 14) return { grad:'linear-gradient(140deg,#004d40 0%,#00838f 55%,#0097a7 100%)', shadow:'rgba(0,131,143,.4)' };
+  if (t < 18) return { grad:'linear-gradient(140deg,#1b5e20 0%,#2e7d32 55%,#43a047 100%)', shadow:'rgba(46,125,50,.4)' };
+  if (t < 22) return { grad:'linear-gradient(140deg,#33691e 0%,#558b2f 55%,#7cb342 100%)', shadow:'rgba(85,139,47,.4)' };
+  if (t < 26) return { grad:'linear-gradient(140deg,#bf360c 0%,#e64a19 55%,#ff7043 100%)', shadow:'rgba(230,81,0,.45)' };
+  return             { grad:'linear-gradient(140deg,#7f0000 0%,#b71c1c 55%,#c62828 100%)', shadow:'rgba(198,40,40,.45)' };
 }
 
 // ─── WATER STATUS ─────────────────────────────
@@ -1088,16 +1126,19 @@ function readingHTML(r) {
   const photoHTML = hasPhoto
     ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
 
+  const tc = tempColor(r.waterTemp);
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
       <div class="swipe-bg">🗑️</div>
-      <div class="reading-card" id="card-${r.id}">
+      <div class="reading-card" id="card-${r.id}" style="border-left-color:${tc}">
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
-          <button class="rc-edit" onclick="openForm('${r.id}')">✏️</button>
+          <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
         </div>
         <div class="rc-body">
-          <span class="rc-water" style="color:${tempColor(r.waterTemp)}">${r.waterTemp.toFixed(1)}°</span>
+          <span class="rc-water" style="color:${tc}">${r.waterTemp.toFixed(1)}°</span>
           ${airHTML}
           ${iconsHTML}
           ${photoHTML}
@@ -1133,8 +1174,9 @@ function renderWaterHero() {
     deltaHTML = `<div class="wh-delta"><span class="${cls}">${arrow} ${Math.abs(delta).toFixed(1)}°</span><span style="opacity:.6;font-size:10px;font-weight:400"> vs vorige</span></div>`;
   }
 
+  const hg = heroGradient(latest.waterTemp);
   el.innerHTML = `
-    <div class="water-hero">
+    <div class="water-hero" style="background:${hg.grad};box-shadow:0 6px 24px ${hg.shadow}">
       <div class="wh-label">Watertemperatuur</div>
       <div class="wh-temp">${latest.waterTemp.toFixed(1)}°</div>
       <div class="wh-status">${status.e} ${status.l}</div>
@@ -1204,6 +1246,7 @@ function renderAll() {
   document.getElementById('s-count').textContent    = n;
   document.getElementById('badge-home').textContent = n;
   document.getElementById('badge-data').textContent = n;
+  document.getElementById('stats-grid').style.display = n > 0 ? 'grid' : 'none';
 
   if (n > 0) {
     const wt     = readings.map(r => r.waterTemp);
@@ -1270,35 +1313,18 @@ function renderCharts() {
     }
   };
 
-  if (chartComb)  chartComb.destroy();
-  if (chartWater) chartWater.destroy();
+  if (chartComb) chartComb.destroy();
 
   chartComb = new Chart(document.getElementById('chart-combined'), {
     type:'line',
     data:{ labels, datasets:[
-      { label:'🌊 Water °C', data:wt, borderColor:'#0288d1',
+      { label:'Water °C', data:wt, borderColor:'#0288d1',
         backgroundColor:'rgba(2,136,209,.15)', borderWidth:2.5,
         pointRadius:4, pointBackgroundColor:'#0288d1', fill:true, tension:.4 },
-      { label:'🌡️ Lucht °C', data:at, borderColor:'#e65100',
+      { label:'Lucht °C', data:at, borderColor:'#e65100',
         backgroundColor:'rgba(230,81,0,.04)', borderWidth:1.5,
         pointRadius:3, pointBackgroundColor:'#e65100', fill:false, tension:.4 },
     ]},
-    options: baseOpts,
-  });
-
-  chartWater = new Chart(document.getElementById('chart-water'), {
-    type:'bar',
-    data:{ labels, datasets:[{
-      label:'🌊 Water °C', data:wt, borderRadius:6,
-      backgroundColor: wt.map(t =>
-        t < 9  ? 'rgba(21,101,192,.75)' :
-        t < 14 ? 'rgba(2,136,209,.75)'  :
-        t < 18 ? 'rgba(0,131,143,.75)'  :
-        t < 22 ? 'rgba(46,125,50,.75)'  :
-        t < 26 ? 'rgba(230,81,0,.75)'   :
-                 'rgba(198,40,40,.75)'
-      ),
-    }]},
     options: baseOpts,
   });
 }
