@@ -35,6 +35,30 @@
       padding-bottom: 64px;
     }
 
+    /* ── Update banner ── */
+    #update-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #1b5e20;
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    #update-banner button {
+      background: #fff;
+      color: #1b5e20;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
     /* ── Header ── */
     header {
       background: linear-gradient(150deg, #01579b 0%, #0288d1 60%, #0097a7 100%);
@@ -555,6 +579,12 @@
   </style>
 </head>
 <body>
+
+<!-- UPDATE BANNER -->
+<div id="update-banner">
+  <span>Nieuwe versie beschikbaar</span>
+  <button onclick="applyUpdate()">Nu bijwerken</button>
+</div>
 
 <!-- HEADER -->
 <header>
@@ -1660,28 +1690,41 @@ function goToAllReadings() {
 
 // ─── SERVICE WORKER ───────────────────────────
 if ('serviceWorker' in navigator) {
+  let waitingSW = null;
+
+  function showUpdateBanner() {
+    document.getElementById('update-banner').style.display = 'flex';
+  }
+
+  // Gebruiker klikt "Nu bijwerken" → stuur signaal naar wachtende SW
+  window.applyUpdate = function() {
+    if (waitingSW) waitingSW.postMessage({ type: 'SKIP_WAITING' });
+  };
+
+  // Na SW-wissel → pagina herladen om nieuwe versie te laden
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-
-    // Herlaad automatisch als de service worker een nieuwe versie installeert
-    navigator.serviceWorker.addEventListener('message', ev => {
-      if (ev.data && ev.data.type === 'SW_UPDATED') {
-        window.location.reload();
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // Al een wachtende SW aanwezig bij registratie?
+      if (reg.waiting) {
+        waitingSW = reg.waiting;
+        showUpdateBanner();
       }
-    });
-
-    // Detecteer ook een nieuwe SW die wacht en activeer hem direct
-    navigator.serviceWorker.ready.then(reg => {
+      // Nieuwe SW gevonden tijdens gebruik
       reg.addEventListener('updatefound', () => {
         const newSW = reg.installing;
         if (!newSW) return;
         newSW.addEventListener('statechange', () => {
-          if (newSW.state === 'activated') {
-            window.location.reload();
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            waitingSW = newSW;
+            showUpdateBanner();
           }
         });
       });
-    });
+    }).catch(() => {});
   });
 }
 
