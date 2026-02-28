@@ -835,6 +835,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
+  import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ",
@@ -848,9 +849,37 @@
 
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
+  const db = getFirestore(app);
 
   window.firebaseApp = app;
   window.firebaseAnalytics = analytics;
+
+  // Firestore helpers
+  window.fsSetDoc = (id, data) => setDoc(doc(db, 'readings', id), data);
+  window.fsDeleteDoc = (id) => deleteDoc(doc(db, 'readings', id));
+  window.fsBatchUpload = async (items) => {
+    const batch = writeBatch(db);
+    items.forEach(item => batch.set(doc(db, 'readings', item.id), item));
+    await batch.commit();
+  };
+
+  // Real-time sync
+  let firstSnapshot = true;
+  onSnapshot(collection(db, 'readings'), snapshot => {
+    if (firstSnapshot && snapshot.size === 0) {
+      // Firestore leeg: upload lokale data
+      firstSnapshot = false;
+      const local = window.getLocalReadings ? window.getLocalReadings() : [];
+      if (local.length) window.fsBatchUpload(local).catch(console.error);
+      return;
+    }
+    firstSnapshot = false;
+    if (window.onFirestoreUpdate) {
+      const fsReadings = [];
+      snapshot.forEach(d => fsReadings.push(d.data()));
+      window.onFirestoreUpdate(fsReadings);
+    }
+  });
 </script>
 
 <!-- Chart.js -->
@@ -1156,6 +1185,7 @@ function saveReading(ev) {
 
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
+  if (window.fsSetDoc) window.fsSetDoc(r.id, r).catch(console.error);
   closeForm();
   renderAll();
   showToast(idx >= 0 ? '✅ Meting bijgewerkt!' : '✅ Meting opgeslagen!');
@@ -1166,6 +1196,7 @@ function deleteReadingDirect(id) {
   readings = readings.filter(r => r.id !== id);
   deletePhoto(id);
   save();
+  if (window.fsDeleteDoc) window.fsDeleteDoc(id).catch(console.error);
   renderAll();
   showToast('Meting verwijderd');
 }
@@ -1178,6 +1209,7 @@ function deleteWithUndo(id) {
   undoBuffer = readings[idx];
   readings.splice(idx, 1);
   save();
+  if (window.fsDeleteDoc) window.fsDeleteDoc(id).catch(console.error);
   renderAll();
   showToast('Meting verwijderd', 4200, true);
   undoTimer = setTimeout(() => {
@@ -1191,6 +1223,7 @@ function undoDelete() {
   readings.push(undoBuffer);
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
+  if (window.fsSetDoc) window.fsSetDoc(undoBuffer.id, undoBuffer).catch(console.error);
   undoBuffer = null;
   renderAll();
   // Verberg toast
@@ -1536,6 +1569,7 @@ function importJSON(ev) {
       const fresh = imported.filter(r => !existingIds.has(r.id));
       readings = [...readings, ...fresh].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
       save();
+      if (window.fsSetDoc) fresh.forEach(r => window.fsSetDoc(r.id, r).catch(console.error));
       renderAll();
       showToast(`✅ ${fresh.length} nieuwe meting(en) geïmporteerd`);
     } catch { showToast('❌ Ongeldig JSON bestand'); }
@@ -1563,11 +1597,22 @@ function dlFile(content, filename, type) {
 
 function today() { return new Date().toISOString().slice(0,10); }
 
-// ─── FIREBASE CONFIG ──────────────────────────
+// ─── FIREBASE / FIRESTORE SYNC ─────────────────
 function saveFbConfig() { /* config is pre-ingesteld */ }
 (function loadFbConfig() {
-  document.getElementById('fb-status').textContent = '✅ Firebase actief — Analytics ingeschakeld.';
+  document.getElementById('fb-status').textContent = '☁️ Verbinding met cloud…';
 })();
+
+// Geeft lokale readings terug voor initiële Firestore upload
+window.getLocalReadings = () => readings;
+
+// Wordt aangeroepen door de Firestore real-time listener
+window.onFirestoreUpdate = function(fsReadings) {
+  readings = fsReadings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  save(); // ook lokaal bijhouden
+  renderAll();
+  document.getElementById('fb-status').textContent = '✅ Cloud sync actief — ' + readings.length + ' metingen gesynchroniseerd.';
+};
 
 // ─── HELP MODAL ───────────────────────────────
 function openHelp()  { document.getElementById('help-overlay').classList.add('open'); }
@@ -1579,11 +1624,13 @@ document.getElementById('help-overlay').addEventListener('click', function(e) {
 // ─── CLEAR ALL ────────────────────────────────
 function clearAll() {
   if (!confirm('Weet je zeker dat je ALLE metingen wilt wissen?')) return;
+  const toDelete = readings.map(r => r.id);
   readings.forEach(r => deletePhoto(r.id));
   readings = [];
   save();
   renderAll();
   showToast('🗑️ Alle data gewist');
+  if (window.fsDeleteDoc) toDelete.forEach(id => window.fsDeleteDoc(id).catch(console.error));
 }
 
 // ─── TOAST ────────────────────────────────────
