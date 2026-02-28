@@ -863,20 +863,23 @@
     await batch.commit();
   };
 
-  // Real-time sync
-  let firstSnapshot = true;
+  // Real-time sync — altijd mergen: lokale items die niet in Firestore staan worden geüpload
   onSnapshot(collection(db, 'readings'), snapshot => {
-    if (firstSnapshot && snapshot.size === 0) {
-      // Firestore leeg: upload lokale data
-      firstSnapshot = false;
-      const local = window.getLocalReadings ? window.getLocalReadings() : [];
-      if (local.length) window.fsBatchUpload(local).catch(console.error);
+    const fsReadings = [];
+    snapshot.forEach(d => fsReadings.push(d.data()));
+
+    const local = window.getLocalReadings ? window.getLocalReadings() : [];
+    const fsIds = new Set(fsReadings.map(r => r.id));
+    const toUpload = local.filter(r => !fsIds.has(r.id));
+
+    if (toUpload.length) {
+      // Lokale metingen die nog niet in Firestore staan → uploaden
+      // De upload triggert een nieuwe snapshot die onFirestoreUpdate aanroept
+      window.fsBatchUpload(toUpload).catch(console.error);
       return;
     }
-    firstSnapshot = false;
+
     if (window.onFirestoreUpdate) {
-      const fsReadings = [];
-      snapshot.forEach(d => fsReadings.push(d.data()));
       window.onFirestoreUpdate(fsReadings);
     }
   });
