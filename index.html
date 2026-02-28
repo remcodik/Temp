@@ -683,22 +683,18 @@
       <span class="toggle-icon">▼</span>
     </summary>
     <div class="firebase-inner">
-      <div class="info-box">
-        Verbind met een gratis Firebase project om data te delen met anderen.<br>
-        Je hebt alleen een <strong>Google account</strong> nodig — geen extra kosten.
+      <div class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;">
+        ✅ Firebase is verbonden met project <strong>lentse-plas</strong>.
       </div>
       <div class="fg">
         <label>Firebase Project ID</label>
-        <input type="text" id="fb-project" placeholder="mijn-project-id" oninput="saveFbConfig()">
+        <input type="text" id="fb-project" value="lentse-plas" readonly style="opacity:0.7;cursor:default;">
       </div>
       <div class="fg">
         <label>Firebase API Key</label>
-        <input type="text" id="fb-key" placeholder="AIzaSy..." oninput="saveFbConfig()">
+        <input type="text" id="fb-key" value="AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ" readonly style="opacity:0.7;cursor:default;">
       </div>
       <div id="fb-status" style="font-size:11px;color:var(--muted);margin-bottom:9px;"></div>
-      <button class="btn btn-plain" onclick="openHelp()" style="margin-bottom:7px;">
-        📖 Hoe maak ik gratis Firebase aan?
-      </button>
     </div>
   </details>
 
@@ -834,6 +830,28 @@
   <span id="toast-msg"></span>
   <button id="toast-undo-btn" class="toast-undo" onclick="undoDelete()" style="display:none">Ongedaan</button>
 </div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ",
+    authDomain: "lentse-plas.firebaseapp.com",
+    projectId: "lentse-plas",
+    storageBucket: "lentse-plas.firebasestorage.app",
+    messagingSenderId: "125141693588",
+    appId: "1:125141693588:web:7ef553efa047090f54f081",
+    measurementId: "G-D1V1H56NZS"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+
+  window.firebaseApp = app;
+  window.firebaseAnalytics = analytics;
+</script>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -1546,19 +1564,9 @@ function dlFile(content, filename, type) {
 function today() { return new Date().toISOString().slice(0,10); }
 
 // ─── FIREBASE CONFIG ──────────────────────────
-function saveFbConfig() {
-  const pid = document.getElementById('fb-project').value.trim();
-  const key = document.getElementById('fb-key').value.trim();
-  localStorage.setItem('lp-fb', JSON.stringify({ pid, key }));
-  document.getElementById('fb-status').textContent =
-    pid && key ? '⚠️ Herlaad de pagina om Firebase te activeren.' : '';
-}
+function saveFbConfig() { /* config is pre-ingesteld */ }
 (function loadFbConfig() {
-  try {
-    const { pid, key } = JSON.parse(localStorage.getItem('lp-fb') || '{}');
-    if (pid) document.getElementById('fb-project').value = pid;
-    if (key) document.getElementById('fb-key').value     = key;
-  } catch {}
+  document.getElementById('fb-status').textContent = '✅ Firebase actief — Analytics ingeschakeld.';
 })();
 
 // ─── HELP MODAL ───────────────────────────────
