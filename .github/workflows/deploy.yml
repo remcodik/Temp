@@ -2,7 +2,11 @@ name: Deploy naar GitHub Pages
 
 on:
   push:
-    branches: [main, master, claude/iphone-temperature-tracker-app-YTAye]
+    branches:
+      - main
+      - master
+      - claude/iphone-temperature-tracker-app-YTAye
+      - claude/add-firebase-setup-2se16
 
 permissions:
   contents: read
