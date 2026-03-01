@@ -1880,7 +1880,9 @@ if ('serviceWorker' in navigator) {
   });
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
+      // Direct controleren op nieuwe versie (niet wachten op browser-interval)
+      reg.update().catch(() => {});
       // Al een wachtende SW aanwezig bij registratie?
       if (reg.waiting) {
         waitingSW = reg.waiting;
