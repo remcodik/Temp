@@ -385,10 +385,11 @@
 
     /* ── Photo input ── */
     .topday-btn {
-      width:100%; padding:10px 14px; border-radius:10px;
+      padding:9px 10px; border-radius:10px;
       border:2px dashed #bbb; background:#f5f5f5; color:#555;
       font-size:13px; font-weight:600; font-family:var(--font);
-      cursor:pointer; text-align:left; transition: all .2s;
+      cursor:pointer; text-align:center; transition: all .2s;
+      white-space:nowrap;
     }
     .topday-btn.active {
       background:#fff8e1; border-color:#f9a825; color:#e65100;
@@ -428,6 +429,8 @@
 
     /* ── Charts ── */
     .chart-wrap { position:relative; height:200px; }
+    .chart-scroll-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .chart-scroll-inner { position:relative; height:200px; min-width:100%; }
 
     /* ── Landscape: grotere grafieken ── */
     @media (orientation: landscape) {
@@ -582,6 +585,8 @@
       .bd-date { color:#c5a565; }
       .swipe-bg { background:#c62828; }
       .photo-btn { background:#1a3a5c; border-color:#2e7d32; color:#81c784; }
+      .topday-btn { background:#1a3a5c; border-color:#555; color:#90caf9; }
+      .topday-btn.active { background:#2a1e00; border-color:#f9a825; color:#ffb74d; }
       .pf-btn { background:#1a3a5c; color:#90caf9; }
       .pf-btn.active { background:var(--primary); color:white; }
       .air-refresh-btn:active { background:rgba(255,255,255,.07); }
@@ -689,11 +694,12 @@
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
   </div>
   <div class="card" style="margin-top:10px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="card-title" style="margin:0">Gem. water per maand</div>
-      <select id="month-chart-year" onchange="renderMonthChart()" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid #ccc;background:var(--surface);color:var(--text);font-family:var(--font)"></select>
+    <div class="card-title">Gem. water per maand</div>
+    <div class="chart-scroll-outer">
+      <div class="chart-scroll-inner" id="chart-monthly-wrap">
+        <canvas id="chart-monthly"></canvas>
+      </div>
     </div>
-    <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
   </div>
 </div>
 
@@ -751,7 +757,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.2 &nbsp;·&nbsp; 2026-03-01 13:00
+    Versie 2.3 &nbsp;·&nbsp; 2026-03-01 16:00
   </div>
 </div>
 
@@ -822,30 +828,25 @@
       </div>
 
       <div class="fg">
-        <label>Gevoel &amp; conditie</label>
+        <label>🌬️ Wind &amp; gevoel</label>
         <div class="icon-picker" id="wind-picker"></div>
       </div>
 
-      <!-- Foto -->
+      <!-- Foto + Top dag naast elkaar -->
       <div class="fg">
-        <label>📷 Foto (optioneel)</label>
+        <label>📷 Foto &amp; top dag</label>
         <div class="photo-input-wrap">
           <button type="button" class="photo-btn" onclick="document.getElementById('f-photo').click()">
-            📷 Foto maken / kiezen
+            📷 Foto
+          </button>
+          <button type="button" id="f-topday-btn" onclick="toggleTopDay()" class="topday-btn" style="flex:1">
+            🏅 Top dag
           </button>
           <img id="photo-preview" class="photo-preview" alt="preview">
           <button type="button" id="photo-clear" class="photo-clear" onclick="clearPhoto()">✕</button>
         </div>
         <input type="file" id="f-photo" accept="image/*" style="display:none"
                onchange="handlePhotoSelect(event)">
-      </div>
-
-      <!-- Top dag toggle -->
-      <div class="fg">
-        <label>Top dag</label>
-        <button type="button" id="f-topday-btn" onclick="toggleTopDay()" class="topday-btn">
-          🏅 Markeer als top dag
-        </button>
       </div>
 
       <div class="fg">
@@ -1149,10 +1150,10 @@ function setTopDayUI(val) {
   selTopDay = !!val;
   const btn = document.getElementById('f-topday-btn');
   if (selTopDay) {
-    btn.textContent = '🏅 Top dag! (klik om te verwijderen)';
+    btn.textContent = '🏅 Top dag!';
     btn.classList.add('active');
   } else {
-    btn.textContent = '🏅 Markeer als top dag';
+    btn.textContent = '🏅 Top dag';
     btn.classList.remove('active');
   }
 }
@@ -1559,6 +1560,7 @@ function setChartPeriod(period, btn) {
   document.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderCharts();
+  renderMonthChart();
 }
 
 function renderCharts() {
@@ -1612,70 +1614,93 @@ function renderCharts() {
 }
 
 function renderMonthChart() {
-  const sel   = document.getElementById('month-chart-year');
-  // Bouw jaar-opties op als ze er nog niet zijn
-  const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>b-a);
-  if (!years.length) { if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; } return; }
-  // Vul jaar-select bij als leeg of verouderd
-  const existing = Array.from(sel.options).map(o => parseInt(o.value));
-  if (JSON.stringify(existing) !== JSON.stringify(years)) {
-    sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if (!readings.length) {
+    if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
+    return;
   }
-  const year = parseInt(sel.value) || years[0];
 
-  const MONTHS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-  const avgs = MONTHS.map((_, m) => {
-    const sub = readings.filter(r => {
-      const d = new Date(r.datetime);
-      return d.getFullYear() === year && d.getMonth() === m;
+  const MONTH_NAMES = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  let labels = [], avgs = [];
+
+  if (chartPeriod === 'year') {
+    // 12 vaste maanden van huidig jaar
+    const year = new Date().getFullYear();
+    labels = MONTH_NAMES;
+    avgs = MONTH_NAMES.map((_, m) => {
+      const sub = readings.filter(r => {
+        const d = new Date(r.datetime);
+        return d.getFullYear() === year && d.getMonth() === m;
+      });
+      return sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null;
     });
-    return sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null;
-  });
+
+  } else if (chartPeriod === '3m') {
+    // Laatste 3 maanden
+    const now = new Date();
+    for (let i = 2; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(MONTH_NAMES[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
+      const sub = readings.filter(r => {
+        const rd = new Date(r.datetime);
+        return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
+      });
+      avgs.push(sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null);
+    }
+
+  } else {
+    // Alles — alle jaar+maand combinaties gesorteerd
+    const yearSet = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>a-b);
+    yearSet.forEach(year => {
+      MONTH_NAMES.forEach((mn, m) => {
+        const sub = readings.filter(r => {
+          const d = new Date(r.datetime);
+          return d.getFullYear() === year && d.getMonth() === m;
+        });
+        labels.push(mn + ' \'' + String(year).slice(2));
+        avgs.push(sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null);
+      });
+    });
+  }
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
   const gc   = dark ? 'rgba(144,202,249,.1)' : 'rgba(0,0,0,.05)';
 
   const bgColors = avgs.map(v => {
-    if (v === null) return 'rgba(180,180,180,.2)';
-    if (v < 12) return 'rgba(100,181,246,.6)';
-    if (v < 18) return 'rgba(38,166,154,.6)';
-    if (v < 22) return 'rgba(102,187,106,.6)';
-    return 'rgba(255,167,38,.75)';
+    if (v === null) return 'rgba(180,180,180,.15)';
+    if (v < 12) return 'rgba(100,181,246,.65)';
+    if (v < 18) return 'rgba(38,166,154,.65)';
+    if (v < 22) return 'rgba(102,187,106,.65)';
+    return 'rgba(255,167,38,.8)';
   });
+
+  // Stel canvas breedte in voor horizontaal scrollen bij veel maanden
+  const wrap = document.getElementById('chart-monthly-wrap');
+  const barW = 40;
+  const canvasW = Math.max(wrap.clientWidth || 300, labels.length * barW);
+  wrap.style.width = canvasW + 'px';
 
   if (chartMonthly) chartMonthly.destroy();
   chartMonthly = new Chart(document.getElementById('chart-monthly'), {
     type: 'bar',
     data: {
-      labels: MONTHS,
+      labels,
       datasets: [{
-        label: `Gem. water °C (${year})`,
+        label: 'Gem. water °C',
         data: avgs,
         backgroundColor: bgColors,
-        borderRadius: 6,
+        borderRadius: 5,
         borderSkipped: false,
-      }, {
-        label: 'Zwemgrens',
-        data: MONTHS.map(() => 18),
-        type: 'line',
-        borderColor: 'rgba(46,160,67,.55)',
-        borderDash: [6,4],
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: false,
-        tension: 0,
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: tc, boxWidth: 12, font: { size: 11 } } },
+        legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.dataset.type === 'line'
-              ? `Zwemgrens: 18°C`
-              : ctx.parsed.y !== null ? `${ctx.parsed.y.toFixed(1)}°C` : 'Geen data',
+            label: ctx => ctx.parsed.y !== null ? `${ctx.parsed.y.toFixed(1)}°C` : 'Geen data',
           }
         }
       },
