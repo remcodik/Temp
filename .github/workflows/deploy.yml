@@ -2,7 +2,7 @@ name: Deploy naar GitHub Pages
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, claude/iphone-temperature-tracker-app-YTAye]
 
 permissions:
   contents: read
