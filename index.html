@@ -707,31 +707,27 @@
   </div>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
-  <details class="card firebase-details">
-    <summary>
-      <span class="card-title" style="margin-bottom:0">Geavanceerd: Cloud sync</span>
-      <span class="toggle-icon">▼</span>
-    </summary>
-    <div class="firebase-inner">
-      <div class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;">
-        ✅ Firebase is verbonden met project <strong>lentse-plas</strong>.
-      </div>
-      <div class="fg">
-        <label>Firebase Project ID</label>
-        <input type="text" id="fb-project" value="lentse-plas" readonly style="opacity:0.7;cursor:default;">
-      </div>
-      <div class="fg">
-        <label>Firebase API Key</label>
-        <input type="text" id="fb-key" value="AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ" readonly style="opacity:0.7;cursor:default;">
-      </div>
-      <div id="fb-status" style="font-size:11px;color:var(--muted);margin-bottom:9px;"></div>
+  <div class="card" style="border:2px solid #a5d6a7;">
+    <div class="card-title" style="color:#2e7d32;">☁️ Cloud sync (Firebase)</div>
+    <div class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:12px;">
+      ✅ Verbonden en actief
     </div>
-  </details>
+    <div style="font-size:13px;color:var(--muted);line-height:2;">
+      <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
+      <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
+      <div><strong style="color:var(--text);">Auth domein:</strong> lentse-plas.firebaseapp.com</div>
+      <div style="word-break:break-all;"><strong style="color:var(--text);">API Key:</strong> AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ</div>
+    </div>
+  </div>
 
   <div class="card" style="border:2px solid #ffcdd2;">
     <div class="card-title" style="color:var(--danger);">Data wissen</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Wist alle lokale metingen permanent.</p>
     <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
+  </div>
+
+  <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
+    Versie 2.1 &nbsp;·&nbsp; 2026-03-01 12:00
   </div>
 </div>
 
