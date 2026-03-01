@@ -1,5 +1,5 @@
 // Service Worker — Lentse Plas Temperatuur Tracker
-const CACHE = 'lentse-plas-v4';
+const CACHE = 'lentse-plas-__CACHE_VER__';  // Ingevuld door CI/CD bij elke deploy
 const ASSETS = [
   './',
   './index.html',
@@ -7,34 +7,31 @@ const ASSETS = [
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
 ];
 
-// Install: cache alle bestanden + activeer direct
+// Install: cache bestanden — wacht op signaal van app voor activatie
 self.addEventListener('install', ev => {
   ev.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.addAll(ASSETS))
-      .then(() => self.skipWaiting())  // wacht niet op oude tabs
+    caches.open(CACHE).then(c => c.addAll(ASSETS))
+    // Geen skipWaiting() — gebruiker kiest zelf wanneer hij bijwerkt
   );
 });
 
-// Activate: verwijder oude caches + claim alle open tabs direct
+// Activate: verwijder oude caches
 self.addEventListener('activate', ev => {
   ev.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
         keys.filter(k => k !== CACHE).map(k => caches.delete(k))
       ))
-      .then(() => self.clients.claim())  // nieuwe SW neemt direct over
+      .then(() => self.clients.claim())
   );
 });
 
-// Na activeren: stuur alle open tabs een reload-signaal
-self.addEventListener('activate', () => {
-  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-    clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
-  });
+// App stuurt SKIP_WAITING bericht → nieuwe versie activeren
+self.addEventListener('message', ev => {
+  if (ev.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Fetch: network-first voor app-bestanden zodat updates direct zichtbaar zijn
+// Fetch: network-first voor app-bestanden, cache-first voor CDN
 self.addEventListener('fetch', ev => {
   const url = ev.request.url;
 
@@ -50,9 +47,7 @@ self.addEventListener('fetch', ev => {
     return;
   }
 
-  // Network-first voor eigen bestanden (index.html, manifest.json)
-  // → nieuwe versie komt altijd direct binnen
-  // → bij geen internet valt het terug op de cache
+  // Network-first voor eigen bestanden
   if (url.includes(self.location.origin) || url.startsWith('./')) {
     ev.respondWith(
       fetch(ev.request)

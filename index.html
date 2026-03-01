@@ -35,6 +35,30 @@
       padding-bottom: 64px;
     }
 
+    /* ── Update banner ── */
+    #update-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #1b5e20;
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    #update-banner button {
+      background: #fff;
+      color: #1b5e20;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
     /* ── Header ── */
     header {
       background: linear-gradient(150deg, #01579b 0%, #0288d1 60%, #0097a7 100%);
@@ -556,6 +580,12 @@
 </head>
 <body>
 
+<!-- UPDATE BANNER -->
+<div id="update-banner">
+  <span>Nieuwe versie beschikbaar</span>
+  <button onclick="applyUpdate()">Nu bijwerken</button>
+</div>
+
 <!-- HEADER -->
 <header>
   <div class="hdr-inner">
@@ -677,35 +707,34 @@
   </div>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
-  <details class="card firebase-details">
-    <summary>
-      <span class="card-title" style="margin-bottom:0">Geavanceerd: Cloud sync</span>
-      <span class="toggle-icon">▼</span>
-    </summary>
-    <div class="firebase-inner">
-      <div class="info-box">
-        Verbind met een gratis Firebase project om data te delen met anderen.<br>
-        Je hebt alleen een <strong>Google account</strong> nodig — geen extra kosten.
-      </div>
-      <div class="fg">
-        <label>Firebase Project ID</label>
-        <input type="text" id="fb-project" placeholder="mijn-project-id" oninput="saveFbConfig()">
-      </div>
-      <div class="fg">
-        <label>Firebase API Key</label>
-        <input type="text" id="fb-key" placeholder="AIzaSy..." oninput="saveFbConfig()">
-      </div>
-      <div id="fb-status" style="font-size:11px;color:var(--muted);margin-bottom:9px;"></div>
-      <button class="btn btn-plain" onclick="openHelp()" style="margin-bottom:7px;">
-        📖 Hoe maak ik gratis Firebase aan?
-      </button>
+  <div class="card" style="border:2px solid #a5d6a7;">
+    <div class="card-title" style="color:#2e7d32;">☁️ Cloud sync (Firebase)</div>
+    <div class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:12px;">
+      ✅ Verbonden en actief
     </div>
-  </details>
+    <div style="font-size:13px;color:var(--muted);line-height:2;">
+      <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
+      <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
+      <div><strong style="color:var(--text);">Auth domein:</strong> lentse-plas.firebaseapp.com</div>
+      <div style="word-break:break-all;"><strong style="color:var(--text);">API Key:</strong> AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ</div>
+      <div style="word-break:break-all;"><strong style="color:var(--text);">App ID:</strong> 1:125141693588:web:7ef553efa047090f54f081</div>
+    </div>
+  </div>
 
   <div class="card" style="border:2px solid #ffcdd2;">
     <div class="card-title" style="color:var(--danger);">Data wissen</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Wist alle lokale metingen permanent.</p>
     <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
+  </div>
+
+  <div class="card" style="border:2px solid #b3e5fc;">
+    <div class="card-title" style="color:var(--primary);">App bijwerken</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Haal de nieuwste versie op en wis de cache.</p>
+    <button class="btn btn-primary" onclick="forceUpdate()">🔄 Nieuwe versie ophalen</button>
+  </div>
+
+  <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
+    Versie 2.2 &nbsp;·&nbsp; 2026-03-01 13:00
   </div>
 </div>
 
@@ -834,6 +863,60 @@
   <span id="toast-msg"></span>
   <button id="toast-undo-btn" class="toast-undo" onclick="undoDelete()" style="display:none">Ongedaan</button>
 </div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
+  import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ",
+    authDomain: "lentse-plas.firebaseapp.com",
+    projectId: "lentse-plas",
+    storageBucket: "lentse-plas.firebasestorage.app",
+    messagingSenderId: "125141693588",
+    appId: "1:125141693588:web:7ef553efa047090f54f081",
+    measurementId: "G-D1V1H56NZS"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getFirestore(app);
+
+  window.firebaseApp = app;
+  window.firebaseAnalytics = analytics;
+
+  // Firestore helpers
+  window.fsSetDoc = (id, data) => setDoc(doc(db, 'readings', id), data);
+  window.fsDeleteDoc = (id) => deleteDoc(doc(db, 'readings', id));
+  window.fsBatchUpload = async (items) => {
+    const batch = writeBatch(db);
+    items.forEach(item => batch.set(doc(db, 'readings', item.id), item));
+    await batch.commit();
+  };
+
+  // Real-time sync — altijd mergen: lokale items die niet in Firestore staan worden geüpload
+  onSnapshot(collection(db, 'readings'), snapshot => {
+    const fsReadings = [];
+    snapshot.forEach(d => fsReadings.push(d.data()));
+
+    const local = window.getLocalReadings ? window.getLocalReadings() : [];
+    const fsIds = new Set(fsReadings.map(r => r.id));
+    const toUpload = local.filter(r => !fsIds.has(r.id));
+
+    if (toUpload.length) {
+      // Lokale metingen die nog niet in Firestore staan → uploaden
+      // De upload triggert een nieuwe snapshot die onFirestoreUpdate aanroept
+      window.fsBatchUpload(toUpload).catch(console.error);
+      return;
+    }
+
+    if (window.onFirestoreUpdate) {
+      window.onFirestoreUpdate(fsReadings);
+    }
+  });
+</script>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -1138,6 +1221,7 @@ function saveReading(ev) {
 
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
+  if (window.fsSetDoc) window.fsSetDoc(r.id, r).catch(console.error);
   closeForm();
   renderAll();
   showToast(idx >= 0 ? '✅ Meting bijgewerkt!' : '✅ Meting opgeslagen!');
@@ -1148,6 +1232,7 @@ function deleteReadingDirect(id) {
   readings = readings.filter(r => r.id !== id);
   deletePhoto(id);
   save();
+  if (window.fsDeleteDoc) window.fsDeleteDoc(id).catch(console.error);
   renderAll();
   showToast('Meting verwijderd');
 }
@@ -1160,6 +1245,7 @@ function deleteWithUndo(id) {
   undoBuffer = readings[idx];
   readings.splice(idx, 1);
   save();
+  if (window.fsDeleteDoc) window.fsDeleteDoc(id).catch(console.error);
   renderAll();
   showToast('Meting verwijderd', 4200, true);
   undoTimer = setTimeout(() => {
@@ -1173,6 +1259,7 @@ function undoDelete() {
   readings.push(undoBuffer);
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
+  if (window.fsSetDoc) window.fsSetDoc(undoBuffer.id, undoBuffer).catch(console.error);
   undoBuffer = null;
   renderAll();
   // Verberg toast
@@ -1518,6 +1605,7 @@ function importJSON(ev) {
       const fresh = imported.filter(r => !existingIds.has(r.id));
       readings = [...readings, ...fresh].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
       save();
+      if (window.fsSetDoc) fresh.forEach(r => window.fsSetDoc(r.id, r).catch(console.error));
       renderAll();
       showToast(`✅ ${fresh.length} nieuwe meting(en) geïmporteerd`);
     } catch { showToast('❌ Ongeldig JSON bestand'); }
@@ -1545,21 +1633,22 @@ function dlFile(content, filename, type) {
 
 function today() { return new Date().toISOString().slice(0,10); }
 
-// ─── FIREBASE CONFIG ──────────────────────────
-function saveFbConfig() {
-  const pid = document.getElementById('fb-project').value.trim();
-  const key = document.getElementById('fb-key').value.trim();
-  localStorage.setItem('lp-fb', JSON.stringify({ pid, key }));
-  document.getElementById('fb-status').textContent =
-    pid && key ? '⚠️ Herlaad de pagina om Firebase te activeren.' : '';
-}
+// ─── FIREBASE / FIRESTORE SYNC ─────────────────
+function saveFbConfig() { /* config is pre-ingesteld */ }
 (function loadFbConfig() {
-  try {
-    const { pid, key } = JSON.parse(localStorage.getItem('lp-fb') || '{}');
-    if (pid) document.getElementById('fb-project').value = pid;
-    if (key) document.getElementById('fb-key').value     = key;
-  } catch {}
+  document.getElementById('fb-status').textContent = '☁️ Verbinding met cloud…';
 })();
+
+// Geeft lokale readings terug voor initiële Firestore upload
+window.getLocalReadings = () => readings;
+
+// Wordt aangeroepen door de Firestore real-time listener
+window.onFirestoreUpdate = function(fsReadings) {
+  readings = fsReadings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  save(); // ook lokaal bijhouden
+  renderAll();
+  document.getElementById('fb-status').textContent = '✅ Cloud sync actief — ' + readings.length + ' metingen gesynchroniseerd.';
+};
 
 // ─── HELP MODAL ───────────────────────────────
 function openHelp()  { document.getElementById('help-overlay').classList.add('open'); }
@@ -1571,11 +1660,26 @@ document.getElementById('help-overlay').addEventListener('click', function(e) {
 // ─── CLEAR ALL ────────────────────────────────
 function clearAll() {
   if (!confirm('Weet je zeker dat je ALLE metingen wilt wissen?')) return;
+  const toDelete = readings.map(r => r.id);
   readings.forEach(r => deletePhoto(r.id));
   readings = [];
   save();
   renderAll();
   showToast('🗑️ Alle data gewist');
+  if (window.fsDeleteDoc) toDelete.forEach(id => window.fsDeleteDoc(id).catch(console.error));
+}
+
+// ─── FORCE UPDATE ─────────────────────────────
+async function forceUpdate() {
+  showToast('🔄 Cache wissen en herladen…');
+  if ('serviceWorker' in navigator) {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    if (reg) await reg.unregister();
+  }
+  const keys = await caches.keys();
+  await Promise.all(keys.map(k => caches.delete(k)));
+  location.reload();
 }
 
 // ─── TOAST ────────────────────────────────────
@@ -1602,28 +1706,41 @@ function goToAllReadings() {
 
 // ─── SERVICE WORKER ───────────────────────────
 if ('serviceWorker' in navigator) {
+  let waitingSW = null;
+
+  function showUpdateBanner() {
+    document.getElementById('update-banner').style.display = 'flex';
+  }
+
+  // Gebruiker klikt "Nu bijwerken" → stuur signaal naar wachtende SW
+  window.applyUpdate = function() {
+    if (waitingSW) waitingSW.postMessage({ type: 'SKIP_WAITING' });
+  };
+
+  // Na SW-wissel → pagina herladen om nieuwe versie te laden
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-
-    // Herlaad automatisch als de service worker een nieuwe versie installeert
-    navigator.serviceWorker.addEventListener('message', ev => {
-      if (ev.data && ev.data.type === 'SW_UPDATED') {
-        window.location.reload();
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // Al een wachtende SW aanwezig bij registratie?
+      if (reg.waiting) {
+        waitingSW = reg.waiting;
+        showUpdateBanner();
       }
-    });
-
-    // Detecteer ook een nieuwe SW die wacht en activeer hem direct
-    navigator.serviceWorker.ready.then(reg => {
+      // Nieuwe SW gevonden tijdens gebruik
       reg.addEventListener('updatefound', () => {
         const newSW = reg.installing;
         if (!newSW) return;
         newSW.addEventListener('statechange', () => {
-          if (newSW.state === 'activated') {
-            window.location.reload();
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            waitingSW = newSW;
+            showUpdateBanner();
           }
         });
       });
-    });
+    }).catch(() => {});
   });
 }
 
