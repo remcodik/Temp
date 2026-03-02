@@ -308,6 +308,27 @@
     .rc-icons  { font-size:15px; margin-left:auto; letter-spacing:1px; }
     .rc-notes  { margin-top:5px; font-size:11px; color:var(--muted); font-style:italic; line-height:1.4; }
     .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:4px; }
+    .rc-conditions { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .wind-badge {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:3px 9px; border-radius:12px;
+      font-size:11px; font-weight:700; white-space:nowrap;
+    }
+    .sky-badge {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:3px 9px; border-radius:12px;
+      font-size:11px; font-weight:600; white-space:nowrap;
+      background:#e0f2fe; color:#0369a1;
+    }
+    /* ── Year filter (maandgrafiek) ── */
+    .year-filter { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+    .yf-btn {
+      padding:4px 12px; border-radius:16px; border:none;
+      font-size:11px; font-weight:600; cursor:pointer;
+      background:#eef2f5; color:var(--muted);
+      font-family:var(--font); transition:all .15s;
+    }
+    .yf-btn.active { background:#0288d1; color:white; }
 
     /* ── Photo thumbnail in card ── */
     .rc-thumb {
@@ -589,6 +610,9 @@
       .topday-btn.active { background:#2a1e00; border-color:#f9a825; color:#ffb74d; }
       .pf-btn { background:#1a3a5c; color:#90caf9; }
       .pf-btn.active { background:var(--primary); color:white; }
+      .yf-btn { background:#1a3a5c; color:#90caf9; }
+      .yf-btn.active { background:#0288d1; color:white; }
+      .sky-badge { background:#0c2e48; color:#7ecfff; }
       .air-refresh-btn:active { background:rgba(255,255,255,.07); }
     }
   </style>
@@ -695,6 +719,7 @@
   </div>
   <div class="card" style="margin-top:10px">
     <div class="card-title">Gem. water per maand</div>
+    <div class="year-filter" id="year-filter-btns"></div>
     <div class="chart-scroll-outer">
       <div class="chart-scroll-inner" id="chart-monthly-wrap">
         <canvas id="chart-monthly"></canvas>
@@ -757,7 +782,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.4 &nbsp;·&nbsp; __BUILD_TIME__
+    Versie 2.5 &nbsp;·&nbsp; __BUILD_TIME__
   </div>
 </div>
 
@@ -932,14 +957,14 @@
     const toUpload = local.filter(r => !fsIds.has(r.id));
 
     if (toUpload.length) {
-      // Lokale metingen die nog niet in Firestore staan → uploaden
-      // De upload triggert een nieuwe snapshot die onFirestoreUpdate aanroept
+      // Lokale metingen die nog niet in Firestore staan → uploaden (geen return, UI altijd bijwerken)
       window.fsBatchUpload(toUpload).catch(console.error);
-      return;
     }
 
+    // Altijd UI bijwerken: merge Firestore data + nog-niet-geüploade lokale items
     if (window.onFirestoreUpdate) {
-      window.onFirestoreUpdate(fsReadings);
+      const merged = [...fsReadings, ...toUpload];
+      window.onFirestoreUpdate(merged);
     }
   });
 </script>
@@ -979,6 +1004,7 @@ let selWind    = null;
 let chartComb    = null;
 let chartMonthly = null;
 let chartPeriod  = 'all';
+let chartYearFilter = 'all'; // 'all' of een jaarnummer
 let undoBuffer  = null;
 let undoTimer   = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
@@ -1242,6 +1268,21 @@ function pickIcon(type, val) {
 function emoji(opts, val) { return (opts.find(o => o.v === val) || {}).e || ''; }
 function label(opts, val) { return (opts.find(o => o.v === val) || {}).l || ''; }
 
+const WIND_COLORS = {
+  freezing: { bg:'#dbeafe', c:'#1e40af' },
+  cold:     { bg:'#e0f7fa', c:'#00695c' },
+  fresh:    { bg:'#dcfce7', c:'#166534' },
+  pleasant: { bg:'#f3e8ff', c:'#7e22ce' },
+  warm:     { bg:'#fff7ed', c:'#c2410c' },
+  hot:      { bg:'#fee2e2', c:'#991b1b' },
+};
+function windBadge(val) {
+  const w = WIND.find(o => o.v === val);
+  if (!w) return '';
+  const col = WIND_COLORS[val] || { bg:'#eee', c:'#333' };
+  return `<span class="wind-badge" style="background:${col.bg};color:${col.c}">${w.e} ${w.l}</span>`;
+}
+
 // ─── CRUD ─────────────────────────────────────
 function saveReading(ev) {
   ev.preventDefault();
@@ -1266,7 +1307,12 @@ function saveReading(ev) {
 
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
-  if (window.fsSetDoc) window.fsSetDoc(r.id, r).catch(console.error);
+  if (window.fsSetDoc) {
+    window.fsSetDoc(r.id, r).catch(err => {
+      console.error('Firestore save failed:', err);
+      showToast('⚠️ Lokaal opgeslagen – cloud sync zodra verbinding hersteld');
+    });
+  }
   closeForm();
   renderAll();
   showToast(idx >= 0 ? '✅ Meting bijgewerkt!' : '✅ Meting opgeslagen!');
@@ -1366,21 +1412,21 @@ function fmtDate(dt) {
 }
 
 function readingHTML(r, showSwipeHint) {
-  const se = emoji(SKY, r.sky);
-  const we = emoji(WIND, r.wind);
-  const icons = [se, we].filter(Boolean).join(' ');
   const hasPhoto = !!loadPhoto(r.id);
+  const tc = tempColor(r.waterTemp);
+  const hintHTML = showSwipeHint ? `<div class="rc-swipe-hint">← veeg</div>` : '';
 
   const airHTML = r.airTemp != null
     ? `<span class="rc-sep">|</span><span class="rc-air" style="color:${tempColor(r.airTemp)}">${r.airTemp}°</span>`
     : '';
-  const iconsHTML = icons
-    ? `<span class="rc-icons">${icons}</span>` : '';
   const photoHTML = hasPhoto
     ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
 
-  const tc = tempColor(r.waterTemp);
-  const hintHTML = showSwipeHint ? `<div class="rc-swipe-hint">← veeg</div>` : '';
+  const skyBadge = r.sky
+    ? `<span class="sky-badge">${emoji(SKY, r.sky)} ${label(SKY, r.sky)}</span>` : '';
+  const windBadgeHTML = r.wind ? windBadge(r.wind) : '';
+  const condRow = (skyBadge || windBadgeHTML)
+    ? `<div class="rc-conditions">${skyBadge}${windBadgeHTML}</div>` : '';
 
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
@@ -1396,9 +1442,9 @@ function readingHTML(r, showSwipeHint) {
         <div class="rc-body">
           <span class="rc-water" style="color:${tc}">${r.waterTemp.toFixed(1)}°</span>
           ${airHTML}
-          ${iconsHTML}
           ${photoHTML}
         </div>
+        ${condRow}
         ${r.notes ? `<div class="rc-notes">${r.notes}</div>` : ''}
       </div>
     </div>`;
@@ -1479,9 +1525,10 @@ function renderBestDay() {
   const el   = document.getElementById('best-day-section');
   const best = bestSwimDay();
   if (!best) { el.innerHTML = ''; return; }
-  const se = emoji(SKY, best.sky), we = emoji(WIND, best.wind);
   const bs = waterStatus(best.waterTemp);
-  const condHTML = (se || we) ? `<div class="bd-conds">${[se,we].filter(Boolean).join(' ')}</div>` : '';
+  const skyB = best.sky ? `<span class="sky-badge" style="font-size:10px">${emoji(SKY,best.sky)} ${label(SKY,best.sky)}</span>` : '';
+  const wndB = best.wind ? windBadge(best.wind) : '';
+  const condHTML = (skyB || wndB) ? `<div class="rc-conditions" style="margin-top:5px">${skyB}${wndB}</div>` : '';
   el.innerHTML = `
     <div class="best-day-card">
       <div class="bd-label">🏆 Beste zwemdag ooit</div>
@@ -1563,6 +1610,24 @@ function setChartPeriod(period, btn) {
   renderMonthChart();
 }
 
+function setYearFilter(year, btn) {
+  chartYearFilter = year;
+  document.querySelectorAll('.yf-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderMonthChart();
+}
+
+function renderYearFilterButtons() {
+  const container = document.getElementById('year-filter-btns');
+  if (!container) return;
+  const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b) => b - a);
+  let html = `<button class="yf-btn ${chartYearFilter === 'all' ? 'active' : ''}" onclick="setYearFilter('all',this)">Alles</button>`;
+  years.forEach(y => {
+    html += `<button class="yf-btn ${chartYearFilter === y ? 'active' : ''}" onclick="setYearFilter(${y},this)">${y}</button>`;
+  });
+  container.innerHTML = html;
+}
+
 function renderCharts() {
   // Filter op periode
   let sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
@@ -1619,36 +1684,25 @@ function renderMonthChart() {
     return;
   }
 
+  renderYearFilterButtons();
+
   const MONTH_NAMES = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
   let labels = [], avgs = [];
 
-  if (chartPeriod === 'year') {
-    // 12 vaste maanden van huidig jaar
-    const year = new Date().getFullYear();
+  if (chartYearFilter !== 'all') {
+    // Specifiek jaar geselecteerd — altijd alle 12 maanden tonen
+    const year = chartYearFilter;
     labels = MONTH_NAMES;
     avgs = MONTH_NAMES.map((_, m) => {
       const sub = readings.filter(r => {
         const d = new Date(r.datetime);
         return d.getFullYear() === year && d.getMonth() === m;
       });
-      return sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null;
+      return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
     });
 
-  } else if (chartPeriod === '3m') {
-    // Laatste 3 maanden
-    const now = new Date();
-    for (let i = 2; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      labels.push(MONTH_NAMES[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
-      const sub = readings.filter(r => {
-        const rd = new Date(r.datetime);
-        return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
-      });
-      avgs.push(sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null);
-    }
-
   } else {
-    // Alles — alle jaar+maand combinaties gesorteerd
+    // Alles — per jaar alle 12 maanden tonen
     const yearSet = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>a-b);
     yearSet.forEach(year => {
       MONTH_NAMES.forEach((mn, m) => {
@@ -1657,7 +1711,7 @@ function renderMonthChart() {
           return d.getFullYear() === year && d.getMonth() === m;
         });
         labels.push(mn + ' \'' + String(year).slice(2));
-        avgs.push(sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null);
+        avgs.push(sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null);
       });
     });
   }
