@@ -305,20 +305,12 @@
     .rc-water  { font-size:26px; font-weight:900; line-height:1; }
     .rc-air    { font-size:20px; font-weight:700; line-height:1; }
     .rc-sep    { font-size:12px; color:rgba(0,0,0,.2); }
-    .rc-icons  { font-size:15px; margin-left:auto; letter-spacing:1px; }
     .rc-notes  { margin-top:5px; font-size:11px; color:var(--muted); font-style:italic; line-height:1.4; }
-    .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:4px; }
-    .rc-conditions { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
-    .wind-badge {
-      display:inline-flex; align-items:center; gap:4px;
-      padding:3px 9px; border-radius:12px;
-      font-size:11px; font-weight:700; white-space:nowrap;
-    }
-    .sky-badge {
-      display:inline-flex; align-items:center; gap:4px;
-      padding:3px 9px; border-radius:12px;
-      font-size:11px; font-weight:600; white-space:nowrap;
-      background:#e0f2fe; color:#0369a1;
+    .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:2px; }
+    .rc-cond-icons { display:flex; gap:5px; align-items:center; margin:0 6px; }
+    .rc-cond-icon  {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:32px; height:32px; border-radius:50%; flex-shrink:0;
     }
     /* ── Year filter (maandgrafiek) ── */
     .year-filter { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
@@ -401,7 +393,7 @@
       transition:all .15s;
     }
     .ico:hover, .ico.sel { border-color:var(--primary); background:var(--primary-light); }
-    .ico .ie { font-size:20px; }
+    .ico .ie { font-size:20px; display:flex; align-items:center; justify-content:center; }
     .ico .il { font-size:8px; color:var(--muted); text-align:center; line-height:1.2; }
 
     /* ── Photo input ── */
@@ -612,7 +604,7 @@
       .pf-btn.active { background:var(--primary); color:white; }
       .yf-btn { background:#1a3a5c; color:#90caf9; }
       .yf-btn.active { background:#0288d1; color:white; }
-      .sky-badge { background:#0c2e48; color:#7ecfff; }
+      .rc-cond-icon { filter: brightness(0.8) saturate(1.3); }
       .air-refresh-btn:active { background:rgba(255,255,255,.07); }
     }
   </style>
@@ -782,7 +774,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.5 &nbsp;·&nbsp; __BUILD_TIME__
+    Versie 2.6 &nbsp;·&nbsp; __BUILD_TIME__
   </div>
 </div>
 
@@ -853,8 +845,13 @@
       </div>
 
       <div class="fg">
-        <label>🌬️ Wind &amp; gevoel</label>
-        <div class="icon-picker" id="wind-picker"></div>
+        <label>🌡️ Gevoel</label>
+        <div class="icon-picker" id="feeling-picker"></div>
+      </div>
+
+      <div class="fg">
+        <label>🌬️ Windkracht</label>
+        <div class="icon-picker" id="windstr-picker"></div>
       </div>
 
       <!-- Foto + Top dag naast elkaar -->
@@ -980,27 +977,70 @@ const WEATHER_API =
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
 const SKY = [
-  { v:'sunny',         e:'☀️',  l:'Zonnig'       },
-  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt' },
-  { v:'cloudy',        e:'☁️',  l:'Bewolkt'      },
-  { v:'misty',         e:'🌫️', l:'Mistig'       },
-  { v:'rainy',         e:'🌧️', l:'Regen'        },
-  { v:'stormy',        e:'⛈️', l:'Onweer'       },
+  { v:'sunny',         e:'☀️',  l:'Zonnig',       bg:'#fef9c3' },
+  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  bg:'#e0f2fe' },
+  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       bg:'#f1f5f9' },
+  { v:'misty',         e:'🌫️', l:'Mistig',        bg:'#f8fafc' },
+  { v:'rainy',         e:'🌧️', l:'Regen',         bg:'#eff6ff' },
+  { v:'stormy',        e:'⛈️', l:'Onweer',        bg:'#fdf4ff' },
 ];
-const WIND = [
-  { v:'freezing', e:'🥶',  l:'IJskoud'   },
-  { v:'cold',     e:'🌬️', l:'Koud'      },
-  { v:'fresh',    e:'🍃',  l:'Fris'      },
-  { v:'pleasant', e:'😊',  l:'Aangenaam' },
-  { v:'warm',     e:'🌞',  l:'Warm'      },
-  { v:'hot',      e:'🔥',  l:'Heet'      },
+// Gevoel (opgeslagen als 'wind' voor backward compat)
+const FEELING = [
+  { v:'freezing', l:'IJskoud',   c:'#1d4ed8', bg:'#dbeafe' },
+  { v:'cold',     l:'Koud',      c:'#0284c7', bg:'#e0f2fe' },
+  { v:'fresh',    l:'Fris',      c:'#15803d', bg:'#dcfce7' },
+  { v:'pleasant', l:'Aangenaam', c:'#9333ea', bg:'#f3e8ff' },
+  { v:'warm',     l:'Warm',      c:'#ea580c', bg:'#fff7ed' },
+  { v:'hot',      l:'Heet',      c:'#dc2626', bg:'#fee2e2' },
 ];
+// Windkracht (nieuw veld 'windStr')
+const WIND_STR = [
+  { v:'calm',     l:'Windstil', c:'#4b5563', bg:'#f3f4f6' },
+  { v:'gentle',   l:'Zacht',    c:'#0369a1', bg:'#e0f2fe' },
+  { v:'moderate', l:'Matig',    c:'#0891b2', bg:'#ecfeff' },
+  { v:'strong',   l:'Hard',     c:'#7c3aed', bg:'#ede9fe' },
+  { v:'storm',    l:'Storm',    c:'#b91c1c', bg:'#fee2e2' },
+];
+
+// SVG icon paden (inner content, zonder wrapper)
+const SVG_ICONS = {
+  // ─ Gevoel ─
+  freezing: `<line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/><line x1="19.1" y1="4.9" x2="4.9" y2="19.1"/>`,
+  cold:     `<rect x="9" y="3" width="6" height="14" rx="3" fill="none"/><rect x="10.5" y="13" width="3" height="4" rx="1.5" fill="currentColor"/><circle cx="12" cy="19" r="3" fill="currentColor" fill-opacity="0.4"/><circle cx="12" cy="19" r="3"/>`,
+  fresh:    `<path d="M20 3C20 3 12 3 7 8c-4 4-4 10-4 10s6 0 10-4c5-5 7-11 7-11z" fill="currentColor" fill-opacity="0.2"/><path d="M20 3C20 3 12 3 7 8c-4 4-4 10-4 10s6 0 10-4c5-5 7-11 7-11z"/><line x1="4" y1="20" x2="14" y2="9"/>`,
+  pleasant: `<circle cx="12" cy="12" r="4" fill="currentColor" fill-opacity="0.2"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="16.2" y2="7.8"/><line x1="7.8" y1="16.2" x2="5.6" y2="18.4"/>`,
+  warm:     `<circle cx="12" cy="12" r="5" fill="currentColor" fill-opacity="0.2"/><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="19.8" y1="4.2" x2="17.7" y2="6.3"/><line x1="6.3" y1="17.7" x2="4.2" y2="19.8"/>`,
+  hot:      `<path d="M12 2c0 5-5 7-4 12a5 5 0 0 0 10 0c0-5-4-7-4-12" fill="currentColor" fill-opacity="0.2"/><path d="M12 2c0 5-5 7-4 12a5 5 0 0 0 10 0c0-5-4-7-4-12"/><path d="M10.5 16c0-2 1.5-3 1.5-5 0 2 1.5 3 1.5 5"/>`,
+  // ─ Windkracht ─
+  calm:     `<line x1="4" y1="12" x2="20" y2="12" stroke-width="3.5"/>`,
+  gentle:   `<path d="M3 12 Q7.5 6 12 12 Q16.5 18 21 12" fill="none" stroke-width="2.5"/>`,
+  moderate: `<path d="M3 9 Q7.5 3 12 9 Q16.5 15 21 9" fill="none"/><path d="M3 15 Q7.5 9 12 15 Q16.5 21 21 15" fill="none"/>`,
+  strong:   `<path d="M3 7 Q7 2 12 7 Q17 12 21 7" fill="none"/><path d="M3 12 Q7 7 12 12 Q17 17 21 12" fill="none"/><path d="M3 17 Q7 12 12 17 Q17 22 21 17" fill="none"/>`,
+  storm:    `<polygon points="13,2 4,14 11,14 10,22 21,10 14,10" fill="currentColor" fill-opacity="0.2"/><polygon points="13,2 4,14 11,14 10,22 21,10 14,10"/>`,
+};
+
+function mkIcon(key, color, size) {
+  const inner = SVG_ICONS[key] || '';
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
+function condIconCircle(opts, val, size=20) {
+  const o = opts.find(x => x.v === val);
+  if (!o) return '';
+  const bg = o.bg || '#f3f4f6';
+  if (o.c) {
+    // SVG icon (FEELING, WIND_STR)
+    return `<span class="rc-cond-icon" style="background:${bg}" title="${o.l}">${mkIcon(val, o.c, size)}</span>`;
+  }
+  // Emoji fallback (SKY)
+  return `<span class="rc-cond-icon" style="background:${bg};font-size:${Math.round(size*0.85)}px" title="${o.l}">${o.e || ''}</span>`;
+}
 
 // ─── STATE ────────────────────────────────────
 let readings   = [];
 let editingId  = null;
 let selSky     = null;
-let selWind    = null;
+let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
+let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
 let chartPeriod  = 'all';
@@ -1188,12 +1228,13 @@ function toggleTopDay() { setTopDayUI(!selTopDay); }
 
 function openForm(id) {
   editingId = id || null;
-  selSky = selWind = null;
+  selSky = selWind = selWindStr = null;
   pendingPhotoData = null;
   setTopDayUI(false);
 
-  renderPicker('sky-picker',  SKY,  'sky');
-  renderPicker('wind-picker', WIND, 'wind');
+  renderPicker('sky-picker',     SKY,     'sky');
+  renderPicker('feeling-picker', FEELING, 'feeling');
+  renderPicker('windstr-picker', WIND_STR,'windstr');
 
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
@@ -1214,8 +1255,9 @@ function openForm(id) {
       document.getElementById('f-at').value    = r.airTemp ?? '';
       document.getElementById('f-notes').value = r.notes ?? '';
       setTopDayUI(r.isTopDay || false);
-      if (r.sky)  pickIcon('sky',  r.sky);
-      if (r.wind) pickIcon('wind', r.wind);
+      if (r.sky)     pickIcon('sky',     r.sky);
+      if (r.wind)    pickIcon('feeling', r.wind);
+      if (r.windStr) pickIcon('windstr', r.windStr);
       // Laad bestaande foto in preview
       const existing = loadPhoto(r.id);
       if (existing) {
@@ -1247,18 +1289,22 @@ document.getElementById('form-overlay').addEventListener('click', function(e) {
 
 // ─── ICON PICKERS ─────────────────────────────
 function renderPicker(containerId, opts, type) {
-  document.getElementById(containerId).innerHTML = opts.map(o =>
-    `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')">
-       <span class="ie">${o.e}</span>
+  document.getElementById(containerId).innerHTML = opts.map(o => {
+    const icon = o.c  // heeft kleur → SVG icon
+      ? mkIcon(o.v, o.c, 22)
+      : `<span style="font-size:20px">${o.e || ''}</span>`;
+    return `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')">
+       <span class="ie">${icon}</span>
        <span class="il">${o.l}</span>
-     </div>`
-  ).join('');
+     </div>`;
+  }).join('');
 }
 
 function pickIcon(type, val) {
-  if (type === 'sky')  selSky  = val;
-  if (type === 'wind') selWind = val;
-  const opts = type === 'sky' ? SKY : WIND;
+  if (type === 'sky')     selSky     = val;
+  if (type === 'feeling') selWind    = val;  // opgeslagen als 'wind'
+  if (type === 'windstr') selWindStr = val;
+  const opts = type === 'sky' ? SKY : type === 'feeling' ? FEELING : WIND_STR;
   opts.forEach(o => {
     const el = document.getElementById(`ico-${type}-${o.v}`);
     if (el) el.classList.toggle('sel', o.v === val);
@@ -1268,20 +1314,6 @@ function pickIcon(type, val) {
 function emoji(opts, val) { return (opts.find(o => o.v === val) || {}).e || ''; }
 function label(opts, val) { return (opts.find(o => o.v === val) || {}).l || ''; }
 
-const WIND_COLORS = {
-  freezing: { bg:'#dbeafe', c:'#1e40af' },
-  cold:     { bg:'#e0f7fa', c:'#00695c' },
-  fresh:    { bg:'#dcfce7', c:'#166534' },
-  pleasant: { bg:'#f3e8ff', c:'#7e22ce' },
-  warm:     { bg:'#fff7ed', c:'#c2410c' },
-  hot:      { bg:'#fee2e2', c:'#991b1b' },
-};
-function windBadge(val) {
-  const w = WIND.find(o => o.v === val);
-  if (!w) return '';
-  const col = WIND_COLORS[val] || { bg:'#eee', c:'#333' };
-  return `<span class="wind-badge" style="background:${col.bg};color:${col.c}">${w.e} ${w.l}</span>`;
-}
 
 // ─── CRUD ─────────────────────────────────────
 function saveReading(ev) {
@@ -1294,7 +1326,8 @@ function saveReading(ev) {
     waterTemp : parseFloat(document.getElementById('f-wt').value),
     airTemp   : parseFloat(document.getElementById('f-at').value) || null,
     sky       : selSky,
-    wind      : selWind,
+    wind      : selWind,    // gevoel (backward compat)
+    windStr   : selWindStr, // windkracht
     notes     : document.getElementById('f-notes').value.trim(),
     isTopDay  : selTopDay,
   };
@@ -1422,11 +1455,14 @@ function readingHTML(r, showSwipeHint) {
   const photoHTML = hasPhoto
     ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
 
-  const skyBadge = r.sky
-    ? `<span class="sky-badge">${emoji(SKY, r.sky)} ${label(SKY, r.sky)}</span>` : '';
-  const windBadgeHTML = r.wind ? windBadge(r.wind) : '';
-  const condRow = (skyBadge || windBadgeHTML)
-    ? `<div class="rc-conditions">${skyBadge}${windBadgeHTML}</div>` : '';
+  // Gevoel-icon (opgeslagen als 'wind')
+  const feelIcon  = r.wind    ? condIconCircle(FEELING,  r.wind,    20) : '';
+  // Sky-icon
+  const skyIcon   = r.sky     ? condIconCircle(SKY,      r.sky,     20) : '';
+  // Windkracht-icon
+  const windIcon  = r.windStr ? condIconCircle(WIND_STR, r.windStr, 20) : '';
+  const iconsHTML = (skyIcon || feelIcon || windIcon)
+    ? `<div class="rc-cond-icons">${skyIcon}${feelIcon}${windIcon}</div>` : '';
 
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
@@ -1435,6 +1471,7 @@ function readingHTML(r, showSwipeHint) {
         ${hintHTML}
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
+          ${iconsHTML}
           <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -1444,8 +1481,6 @@ function readingHTML(r, showSwipeHint) {
           ${airHTML}
           ${photoHTML}
         </div>
-        ${condRow}
-        ${r.notes ? `<div class="rc-notes">${r.notes}</div>` : ''}
       </div>
     </div>`;
 }
@@ -1526,9 +1561,11 @@ function renderBestDay() {
   const best = bestSwimDay();
   if (!best) { el.innerHTML = ''; return; }
   const bs = waterStatus(best.waterTemp);
-  const skyB = best.sky ? `<span class="sky-badge" style="font-size:10px">${emoji(SKY,best.sky)} ${label(SKY,best.sky)}</span>` : '';
-  const wndB = best.wind ? windBadge(best.wind) : '';
-  const condHTML = (skyB || wndB) ? `<div class="rc-conditions" style="margin-top:5px">${skyB}${wndB}</div>` : '';
+  const skyIc  = best.sky     ? condIconCircle(SKY,     best.sky,     18) : '';
+  const feelIc = best.wind    ? condIconCircle(FEELING, best.wind,    18) : '';
+  const windIc = best.windStr ? condIconCircle(WIND_STR,best.windStr, 18) : '';
+  const condHTML = (skyIc || feelIc || windIc)
+    ? `<div class="rc-cond-icons" style="margin-top:5px;justify-content:flex-start">${skyIc}${feelIc}${windIc}</div>` : '';
   el.innerHTML = `
     <div class="best-day-card">
       <div class="bd-label">🏆 Beste zwemdag ooit</div>
@@ -1777,10 +1814,10 @@ window.addEventListener('resize', () => {
 // ─── EXPORT / IMPORT ──────────────────────────
 function exportCSV() {
   if (!readings.length) { showToast('Geen data om te exporteren'); return; }
-  const hdr  = ['Datum','Water °C','Lucht °C','Hemel','Wind/gevoel','Notities'];
+  const hdr  = ['Datum','Water °C','Lucht °C','Hemel','Gevoel','Windkracht','Notities'];
   const rows = readings.map(r => [
     shortDate(r.datetime), r.waterTemp, r.airTemp ?? '',
-    label(SKY,r.sky), label(WIND,r.wind), r.notes ?? '',
+    label(SKY,r.sky), label(FEELING,r.wind), label(WIND_STR,r.windStr), r.notes ?? '',
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
   dlFile([hdr.join(','), ...rows].join('\n'), `lentse-plas-${today()}.csv`, 'text/csv;charset=utf-8;');
   showToast('📊 CSV gedownload!');
@@ -1959,23 +1996,23 @@ if ('serviceWorker' in navigator) {
 
 // ─── SEED DATA ────────────────────────────────
 const SEED = [
-  { id:'imp_20260221', datetime:'2026-02-21T12:00', waterTemp:6.1,  airTemp:7.5,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20260214', datetime:'2026-02-14T12:00', waterTemp:6.5,  airTemp:-0.5, sky:null,    wind:null, notes:'' },
-  { id:'imp_20260111', datetime:'2026-01-11T12:00', waterTemp:2.7,  airTemp:-8,   sky:null,    wind:null, notes:'' },
-  { id:'imp_20260107', datetime:'2026-01-07T12:00', waterTemp:3.0,  airTemp:-1.1, sky:null,    wind:null, notes:'' },
-  { id:'imp_20260103', datetime:'2026-01-03T12:00', waterTemp:3.6,  airTemp:0,    sky:null,    wind:null, notes:'' },
-  { id:'imp_20260101', datetime:'2026-01-01T12:00', waterTemp:4.2,  airTemp:null, sky:null,    wind:null, notes:'' },
-  { id:'imp_20251229', datetime:'2025-12-29T12:00', waterTemp:4.3,  airTemp:0.3,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251228', datetime:'2025-12-28T12:00', waterTemp:4.1,  airTemp:2.8,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251220', datetime:'2025-12-20T12:00', waterTemp:8.3,  airTemp:3.2,  sky:'misty', wind:null, notes:'' },
-  { id:'imp_20251213', datetime:'2025-12-13T12:00', waterTemp:8.6,  airTemp:8.7,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251129', datetime:'2025-11-29T12:00', waterTemp:7.3,  airTemp:8,    sky:null,    wind:null, notes:'' },
-  { id:'imp_20251122', datetime:'2025-11-22T12:00', waterTemp:8.2,  airTemp:-1.5, sky:null,    wind:null, notes:'' },
-  { id:'imp_20251114', datetime:'2025-11-14T12:00', waterTemp:10.9, airTemp:7,    sky:null,    wind:null, notes:'' },
-  { id:'imp_20251108', datetime:'2025-11-08T12:00', waterTemp:11.6, airTemp:10,   sky:null,    wind:null, notes:'' },
-  { id:'imp_20251101', datetime:'2025-11-01T12:00', waterTemp:12.0, airTemp:11,   sky:null,    wind:null, notes:'' },
-  { id:'imp_20251025', datetime:'2025-10-25T12:00', waterTemp:12.7, airTemp:9.5,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251011', datetime:'2025-10-11T12:00', waterTemp:14.9, airTemp:null, sky:null,    wind:null, notes:'' },
+  { id:'imp_20260221', datetime:'2026-02-21T12:00', waterTemp:6.1,  airTemp:7.5,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260214', datetime:'2026-02-14T12:00', waterTemp:6.5,  airTemp:-0.5, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260111', datetime:'2026-01-11T12:00', waterTemp:2.7,  airTemp:-8,   sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260107', datetime:'2026-01-07T12:00', waterTemp:3.0,  airTemp:-1.1, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260103', datetime:'2026-01-03T12:00', waterTemp:3.6,  airTemp:0,    sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260101', datetime:'2026-01-01T12:00', waterTemp:4.2,  airTemp:null, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251229', datetime:'2025-12-29T12:00', waterTemp:4.3,  airTemp:0.3,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251228', datetime:'2025-12-28T12:00', waterTemp:4.1,  airTemp:2.8,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251220', datetime:'2025-12-20T12:00', waterTemp:8.3,  airTemp:3.2,  sky:'misty', wind:null, windStr:null, notes:'' },
+  { id:'imp_20251213', datetime:'2025-12-13T12:00', waterTemp:8.6,  airTemp:8.7,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251129', datetime:'2025-11-29T12:00', waterTemp:7.3,  airTemp:8,    sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251122', datetime:'2025-11-22T12:00', waterTemp:8.2,  airTemp:-1.5, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251114', datetime:'2025-11-14T12:00', waterTemp:10.9, airTemp:7,    sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251108', datetime:'2025-11-08T12:00', waterTemp:11.6, airTemp:10,   sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251101', datetime:'2025-11-01T12:00', waterTemp:12.0, airTemp:11,   sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251025', datetime:'2025-10-25T12:00', waterTemp:12.7, airTemp:9.5,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251011', datetime:'2025-10-11T12:00', waterTemp:14.9, airTemp:null, sky:null,    wind:null, windStr:null, notes:'' },
 ];
 
 function seedIfEmpty() {
