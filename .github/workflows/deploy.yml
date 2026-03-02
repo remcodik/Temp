@@ -7,6 +7,7 @@ on:
       - master
       - claude/iphone-temperature-tracker-app-YTAye
       - claude/add-firebase-setup-2se16
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +20,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
