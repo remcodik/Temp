@@ -7,14 +7,20 @@ on:
       - master
       - claude/iphone-temperature-tracker-app-YTAye
       - claude/add-firebase-setup-2se16
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -22,10 +28,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Vervang cache versie in sw.js met commit SHA
+      - name: Vervang cache versie en build tijd
         run: |
           CACHE_VER=$(git rev-parse --short HEAD)
           sed -i "s/__CACHE_VER__/${CACHE_VER}/" sw.js
+          BUILD_TIME=$(TZ='Europe/Amsterdam' date '+%Y-%m-%d %H:%M')
+          sed -i "s/__BUILD_TIME__/${BUILD_TIME}/" index.html
 
       - uses: actions/configure-pages@v4
 

@@ -305,9 +305,22 @@
     .rc-water  { font-size:26px; font-weight:900; line-height:1; }
     .rc-air    { font-size:20px; font-weight:700; line-height:1; }
     .rc-sep    { font-size:12px; color:rgba(0,0,0,.2); }
-    .rc-icons  { font-size:15px; margin-left:auto; letter-spacing:1px; }
     .rc-notes  { margin-top:5px; font-size:11px; color:var(--muted); font-style:italic; line-height:1.4; }
-    .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:4px; }
+    .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:2px; }
+    .rc-cond-icons { display:flex; gap:5px; align-items:center; margin:0 6px; }
+    .rc-cond-icon  {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:32px; height:32px; border-radius:50%; flex-shrink:0;
+    }
+    /* ── Year filter (maandgrafiek) ── */
+    .year-filter { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+    .yf-btn {
+      padding:4px 12px; border-radius:16px; border:none;
+      font-size:11px; font-weight:600; cursor:pointer;
+      background:#eef2f5; color:var(--muted);
+      font-family:var(--font); transition:all .15s;
+    }
+    .yf-btn.active { background:#0288d1; color:white; }
 
     /* ── Photo thumbnail in card ── */
     .rc-thumb {
@@ -380,15 +393,16 @@
       transition:all .15s;
     }
     .ico:hover, .ico.sel { border-color:var(--primary); background:var(--primary-light); }
-    .ico .ie { font-size:20px; }
+    .ico .ie { font-size:20px; display:flex; align-items:center; justify-content:center; }
     .ico .il { font-size:8px; color:var(--muted); text-align:center; line-height:1.2; }
 
     /* ── Photo input ── */
     .topday-btn {
-      width:100%; padding:10px 14px; border-radius:10px;
+      padding:9px 10px; border-radius:10px;
       border:2px dashed #bbb; background:#f5f5f5; color:#555;
       font-size:13px; font-weight:600; font-family:var(--font);
-      cursor:pointer; text-align:left; transition: all .2s;
+      cursor:pointer; text-align:center; transition: all .2s;
+      white-space:nowrap;
     }
     .topday-btn.active {
       background:#fff8e1; border-color:#f9a825; color:#e65100;
@@ -428,10 +442,13 @@
 
     /* ── Charts ── */
     .chart-wrap { position:relative; height:200px; }
+    .chart-scroll-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .chart-scroll-inner { position:relative; height:200px; min-width:100%; }
 
     /* ── Landscape: grotere grafieken ── */
     @media (orientation: landscape) {
       .chart-wrap { height: calc(80vh - 80px); min-height:180px; }
+      .chart-scroll-inner { height: calc(80vh - 80px); min-height:180px; }
       #page-chart { padding: 4px 8px; }
       #page-chart .card { margin-bottom:5px; padding:8px 12px; }
       body { padding-bottom: 56px; }
@@ -582,8 +599,13 @@
       .bd-date { color:#c5a565; }
       .swipe-bg { background:#c62828; }
       .photo-btn { background:#1a3a5c; border-color:#2e7d32; color:#81c784; }
+      .topday-btn { background:#1a3a5c; border-color:#555; color:#90caf9; }
+      .topday-btn.active { background:#2a1e00; border-color:#f9a825; color:#ffb74d; }
       .pf-btn { background:#1a3a5c; color:#90caf9; }
       .pf-btn.active { background:var(--primary); color:white; }
+      .yf-btn { background:#1a3a5c; color:#90caf9; }
+      .yf-btn.active { background:#0288d1; color:white; }
+      .rc-cond-icon { filter: brightness(0.8) saturate(1.3); }
       .air-refresh-btn:active { background:rgba(255,255,255,.07); }
     }
   </style>
@@ -689,17 +711,23 @@
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
   </div>
   <div class="card" style="margin-top:10px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="card-title" style="margin:0">Gem. water per maand</div>
-      <select id="month-chart-year" onchange="renderMonthChart()" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid #ccc;background:var(--surface);color:var(--text);font-family:var(--font)"></select>
+    <div class="card-title">Gem. water per maand</div>
+    <div class="year-filter" id="year-filter-btns"></div>
+    <div class="chart-scroll-outer">
+      <div class="chart-scroll-inner" id="chart-monthly-wrap">
+        <canvas id="chart-monthly"></canvas>
+      </div>
     </div>
-    <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
   </div>
 </div>
 
 <!-- EXPORT / SETTINGS -->
 <div id="page-export" class="page">
   <div class="section-hdr"><h2>Data &amp; instellingen</h2></div>
+
+  <!-- Update knop bovenaan -->
+  <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px">🔄 Nieuwe versie ophalen</button>
+
   <div class="action-grid" style="margin-bottom:13px">
     <button class="action-card" onclick="exportCSV()">
       <span class="ai">📊</span>
@@ -724,19 +752,26 @@
   </div>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
-  <div class="card" style="border:2px solid #a5d6a7;">
-    <div class="card-title" style="color:#2e7d32;">☁️ Cloud sync (Firebase)</div>
-    <div class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:12px;">
-      ✅ Verbonden en actief
+  <!-- Firebase — inklapmenu -->
+  <details class="card" style="border:2px solid #a5d6a7;margin-bottom:8px">
+    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e7d32">
+      ☁️ Cloud sync (Firebase)
+      <span style="margin-left:auto;font-size:16px;color:#2e7d32">▾</span>
+    </summary>
+    <div style="margin-top:10px">
+      <div id="fb-status" class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:6px;">
+        ☁️ Verbinding met cloud…
+      </div>
+      <button onclick="fsSyncNow()" style="width:100%;margin-bottom:12px;padding:8px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;">🔄 Sync nu</button>
+      <div style="font-size:13px;color:var(--muted);line-height:2;">
+        <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
+        <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
+        <div><strong style="color:var(--text);">Auth domein:</strong> lentse-plas.firebaseapp.com</div>
+        <div style="word-break:break-all;"><strong style="color:var(--text);">API Key:</strong> AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ</div>
+        <div style="word-break:break-all;"><strong style="color:var(--text);">App ID:</strong> 1:125141693588:web:7ef553efa047090f54f081</div>
+      </div>
     </div>
-    <div style="font-size:13px;color:var(--muted);line-height:2;">
-      <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
-      <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
-      <div><strong style="color:var(--text);">Auth domein:</strong> lentse-plas.firebaseapp.com</div>
-      <div style="word-break:break-all;"><strong style="color:var(--text);">API Key:</strong> AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ</div>
-      <div style="word-break:break-all;"><strong style="color:var(--text);">App ID:</strong> 1:125141693588:web:7ef553efa047090f54f081</div>
-    </div>
-  </div>
+  </details>
 
   <div class="card" style="border:2px solid #ffcdd2;">
     <div class="card-title" style="color:var(--danger);">Data wissen</div>
@@ -744,14 +779,8 @@
     <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
   </div>
 
-  <div class="card" style="border:2px solid #b3e5fc;">
-    <div class="card-title" style="color:var(--primary);">App bijwerken</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Haal de nieuwste versie op en wis de cache.</p>
-    <button class="btn btn-primary" onclick="forceUpdate()">🔄 Nieuwe versie ophalen</button>
-  </div>
-
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.2 &nbsp;·&nbsp; 2026-03-01 13:00
+    Versie 2.12 &nbsp;·&nbsp; __BUILD_TIME__
   </div>
 </div>
 
@@ -822,35 +851,30 @@
       </div>
 
       <div class="fg">
-        <label>Gevoel &amp; conditie</label>
-        <div class="icon-picker" id="wind-picker"></div>
+        <label>🌡️ Gevoel</label>
+        <div class="icon-picker" id="feeling-picker"></div>
       </div>
 
-      <!-- Foto -->
       <div class="fg">
-        <label>📷 Foto (optioneel)</label>
+        <label>🌬️ Windkracht</label>
+        <div class="icon-picker" id="windstr-picker"></div>
+      </div>
+
+      <!-- Foto + Top dag naast elkaar -->
+      <div class="fg">
+        <label>📷 Foto &amp; top dag</label>
         <div class="photo-input-wrap">
           <button type="button" class="photo-btn" onclick="document.getElementById('f-photo').click()">
-            📷 Foto maken / kiezen
+            📷 Foto
+          </button>
+          <button type="button" id="f-topday-btn" onclick="toggleTopDay()" class="topday-btn" style="flex:1">
+            🏅 Top dag
           </button>
           <img id="photo-preview" class="photo-preview" alt="preview">
           <button type="button" id="photo-clear" class="photo-clear" onclick="clearPhoto()">✕</button>
         </div>
         <input type="file" id="f-photo" accept="image/*" style="display:none"
                onchange="handlePhotoSelect(event)">
-      </div>
-
-      <!-- Top dag toggle -->
-      <div class="fg">
-        <label>Top dag</label>
-        <button type="button" id="f-topday-btn" onclick="toggleTopDay()" class="topday-btn">
-          🏅 Markeer als top dag
-        </button>
-      </div>
-
-      <div class="fg">
-        <label>Notities (optioneel)</label>
-        <textarea id="f-notes" rows="2" placeholder="Bijv. water was helder…"></textarea>
       </div>
 
       <button type="submit" class="btn btn-primary">Opslaan</button>
@@ -921,26 +945,18 @@
     await batch.commit();
   };
 
-  // Real-time sync — altijd mergen: lokale items die niet in Firestore staan worden geüpload
-  onSnapshot(collection(db, 'readings'), snapshot => {
-    const fsReadings = [];
-    snapshot.forEach(d => fsReadings.push(d.data()));
-
-    const local = window.getLocalReadings ? window.getLocalReadings() : [];
-    const fsIds = new Set(fsReadings.map(r => r.id));
-    const toUpload = local.filter(r => !fsIds.has(r.id));
-
-    if (toUpload.length) {
-      // Lokale metingen die nog niet in Firestore staan → uploaden
-      // De upload triggert een nieuwe snapshot die onFirestoreUpdate aanroept
-      window.fsBatchUpload(toUpload).catch(console.error);
-      return;
+  // Real-time sync — merge-logica zit in onFirestoreUpdate (main script)
+  onSnapshot(
+    collection(db, 'readings'),
+    snapshot => {
+      const fsReadings = [];
+      snapshot.forEach(d => fsReadings.push(d.data()));
+      if (window.onFirestoreUpdate) window.onFirestoreUpdate(fsReadings);
+    },
+    error => {
+      if (window.onFirestoreError) window.onFirestoreError(error);
     }
-
-    if (window.onFirestoreUpdate) {
-      window.onFirestoreUpdate(fsReadings);
-    }
-  });
+  );
 </script>
 
 <!-- Chart.js -->
@@ -954,30 +970,104 @@ const WEATHER_API =
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
 const SKY = [
-  { v:'sunny',         e:'☀️',  l:'Zonnig'       },
-  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt' },
-  { v:'cloudy',        e:'☁️',  l:'Bewolkt'      },
-  { v:'misty',         e:'🌫️', l:'Mistig'       },
-  { v:'rainy',         e:'🌧️', l:'Regen'        },
-  { v:'stormy',        e:'⛈️', l:'Onweer'       },
+  { v:'sunny',         e:'☀️',  l:'Zonnig',       bg:'#fef9c3' },
+  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  bg:'#e0f2fe' },
+  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       bg:'#f1f5f9' },
+  { v:'misty',         e:'🌫️', l:'Mistig',        bg:'#f8fafc' },
+  { v:'rainy',         e:'🌧️', l:'Regen',         bg:'#eff6ff' },
+  { v:'stormy',        e:'⛈️', l:'Onweer',        bg:'#fdf4ff' },
 ];
-const WIND = [
-  { v:'freezing', e:'🥶',  l:'IJskoud'   },
-  { v:'cold',     e:'🌬️', l:'Koud'      },
-  { v:'fresh',    e:'🍃',  l:'Fris'      },
-  { v:'pleasant', e:'😊',  l:'Aangenaam' },
-  { v:'warm',     e:'🌞',  l:'Warm'      },
-  { v:'hot',      e:'🔥',  l:'Heet'      },
+// Gevoel (opgeslagen als 'wind' voor backward compat)
+const FEELING = [
+  { v:'freezing', l:'IJskoud',   c:'#1d4ed8', bg:'#dbeafe' },
+  { v:'cold',     l:'Koud',      c:'#0284c7', bg:'#e0f2fe' },
+  { v:'fresh',    l:'Fris',      c:'#15803d', bg:'#dcfce7' },
+  { v:'pleasant', l:'Aangenaam', c:'#9333ea', bg:'#f3e8ff' },
+  { v:'warm',     l:'Warm',      c:'#ea580c', bg:'#fff7ed' },
+  { v:'hot',      l:'Heet',      c:'#dc2626', bg:'#fee2e2' },
 ];
+// Windkracht (nieuw veld 'windStr')
+const WIND_STR = [
+  { v:'calm',     l:'Windstil', c:'#4b5563', bg:'#f3f4f6' },
+  { v:'gentle',   l:'Zacht',    c:'#0369a1', bg:'#e0f2fe' },
+  { v:'moderate', l:'Matig',    c:'#0891b2', bg:'#ecfeff' },
+  { v:'strong',   l:'Hard',     c:'#7c3aed', bg:'#ede9fe' },
+  { v:'storm',    l:'Storm',    c:'#b91c1c', bg:'#fee2e2' },
+];
+
+// SVG icon paden (inner content, zonder wrapper)
+// Thermometer helper: buisje + gekleurde vulling + bol onderaan
+const _T = (fy, fh) =>
+  `<rect x="10" y="3" width="4" height="13" rx="2"/>` +
+  `<rect x="10.5" y="${fy}" width="3" height="${fh}" rx="1" fill="currentColor" stroke="none"/>` +
+  `<circle cx="12" cy="19" r="3"/>` +
+  `<circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>`;
+
+// Wind-windmolen helper: windmolen links + golvende windlijnen rechts
+const _W = (lines) => {
+  // 4 wieken in X-patroon, naaf (hub), mast, sokkel
+  const mill =
+    `<line x1="8" y1="10" x2="3"  y2="5"/>` +   // wiek NW
+    `<line x1="8" y1="10" x2="13" y2="5"/>` +   // wiek NO
+    `<line x1="8" y1="10" x2="13" y2="15"/>` +  // wiek ZO
+    `<line x1="8" y1="10" x2="3"  y2="15"/>` +  // wiek ZW
+    `<circle cx="8" cy="10" r="1.5"/>` +         // naaf
+    `<line x1="8" y1="11" x2="8"  y2="22"/>` +  // mast
+    `<line x1="5" y1="22" x2="11" y2="22"/>`;   // sokkel
+  // Golvende windlijnen rechts — S-golven (stripstijl), 0–4 golven
+  const ws = [
+    `<path d="M15 10 Q17 8  19 10 Q21 12 23 10"/>`,  // midden
+    `<path d="M15 7  Q17 5  19 7  Q21 9  23 7"/>`,   // boven
+    `<path d="M15 14 Q17 12 19 14 Q21 16 23 14"/>`,  // onder
+    `<path d="M15 4  Q17 2  19 4  Q21 6  23 4"/>`,   // extra boven (storm)
+  ];
+  return mill + ws.slice(0, lines).join('');
+};
+
+const SVG_ICONS = {
+  // ─ Gevoel: thermometer, vulling geeft temperatuurgevoel aan ─
+  freezing: _T(15,   1),   // nauwelijks gevuld — ijskoud
+  cold:     _T(13,   3),   // 25% — koud
+  fresh:    _T(11,   5),   // 42% — fris
+  pleasant: _T(9,    7),   // 58% — aangenaam
+  warm:     _T(7,    9),   // 75% — warm
+  hot:      _T(5,   11),   // 92% — heet
+
+  // ─ Windkracht: wolkje blaast streepjes, storm = tornado ─
+  calm:     _W(0),   // windstil: enkel wolkje, geen streepjes
+  gentle:   _W(1),   // zacht: 1 streepje
+  moderate: _W(2),   // matig: 2 streepjes
+  strong:   _W(3),   // hard: 3 golven
+  storm:    _W(4),   // storm: windmolen + 4 golven
+};
+
+function mkIcon(key, color, size) {
+  const inner = SVG_ICONS[key] || '';
+  // style="color:${color}" zorgt dat fill="currentColor" in child-elementen werkt
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" style="color:${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
+function condIconCircle(opts, val, size=20) {
+  const o = opts.find(x => x.v === val);
+  if (!o) return '';
+  const bg = o.bg || '#f3f4f6';
+  if (o.c) {
+    // SVG icon (FEELING, WIND_STR)
+    return `<span class="rc-cond-icon" style="background:${bg}" title="${o.l}">${mkIcon(val, o.c, size)}</span>`;
+  }
+  // Emoji fallback (SKY)
+  return `<span class="rc-cond-icon" style="background:${bg};font-size:${Math.round(size*0.85)}px" title="${o.l}">${o.e || ''}</span>`;
+}
 
 // ─── STATE ────────────────────────────────────
 let readings   = [];
 let editingId  = null;
 let selSky     = null;
-let selWind    = null;
+let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
+let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
 let chartPeriod  = 'all';
+let chartYearFilter = 'all'; // 'all' of een jaarnummer
 let undoBuffer  = null;
 let undoTimer   = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
@@ -1149,10 +1239,10 @@ function setTopDayUI(val) {
   selTopDay = !!val;
   const btn = document.getElementById('f-topday-btn');
   if (selTopDay) {
-    btn.textContent = '🏅 Top dag! (klik om te verwijderen)';
+    btn.textContent = '🏅 Top dag!';
     btn.classList.add('active');
   } else {
-    btn.textContent = '🏅 Markeer als top dag';
+    btn.textContent = '🏅 Top dag';
     btn.classList.remove('active');
   }
 }
@@ -1161,20 +1251,20 @@ function toggleTopDay() { setTopDayUI(!selTopDay); }
 
 function openForm(id) {
   editingId = id || null;
-  selSky = selWind = null;
+  selSky = selWind = selWindStr = null;
   pendingPhotoData = null;
   setTopDayUI(false);
 
-  renderPicker('sky-picker',  SKY,  'sky');
-  renderPicker('wind-picker', WIND, 'wind');
+  renderPicker('sky-picker',     SKY,     'sky');
+  renderPicker('feeling-picker', FEELING, 'feeling');
+  renderPicker('windstr-picker', WIND_STR,'windstr');
 
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
-  document.getElementById('f-dt').value    = local;
-  document.getElementById('f-wt').value    = '';
-  document.getElementById('f-at').value    = '';
-  document.getElementById('f-notes').value = '';
-  document.getElementById('f-id').value    = '';
+  document.getElementById('f-dt').value = local;
+  document.getElementById('f-wt').value = '';
+  document.getElementById('f-at').value = '';
+  document.getElementById('f-id').value = '';
   clearPhoto();
 
   if (id) {
@@ -1183,12 +1273,12 @@ function openForm(id) {
       document.getElementById('form-title').textContent = 'Meting bewerken';
       document.getElementById('f-id').value    = r.id;
       document.getElementById('f-dt').value    = r.datetime.slice(0,10);
-      document.getElementById('f-wt').value    = r.waterTemp;
-      document.getElementById('f-at').value    = r.airTemp ?? '';
-      document.getElementById('f-notes').value = r.notes ?? '';
+      document.getElementById('f-wt').value = r.waterTemp;
+      document.getElementById('f-at').value = r.airTemp ?? '';
       setTopDayUI(r.isTopDay || false);
-      if (r.sky)  pickIcon('sky',  r.sky);
-      if (r.wind) pickIcon('wind', r.wind);
+      if (r.sky)     pickIcon('sky',     r.sky);
+      if (r.wind)    pickIcon('feeling', r.wind);
+      if (r.windStr) pickIcon('windstr', r.windStr);
       // Laad bestaande foto in preview
       const existing = loadPhoto(r.id);
       if (existing) {
@@ -1220,18 +1310,22 @@ document.getElementById('form-overlay').addEventListener('click', function(e) {
 
 // ─── ICON PICKERS ─────────────────────────────
 function renderPicker(containerId, opts, type) {
-  document.getElementById(containerId).innerHTML = opts.map(o =>
-    `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')">
-       <span class="ie">${o.e}</span>
+  document.getElementById(containerId).innerHTML = opts.map(o => {
+    const icon = o.c  // heeft kleur → SVG icon
+      ? mkIcon(o.v, o.c, 22)
+      : `<span style="font-size:20px">${o.e || ''}</span>`;
+    return `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')">
+       <span class="ie">${icon}</span>
        <span class="il">${o.l}</span>
-     </div>`
-  ).join('');
+     </div>`;
+  }).join('');
 }
 
 function pickIcon(type, val) {
-  if (type === 'sky')  selSky  = val;
-  if (type === 'wind') selWind = val;
-  const opts = type === 'sky' ? SKY : WIND;
+  if (type === 'sky')     selSky     = val;
+  if (type === 'feeling') selWind    = val;  // opgeslagen als 'wind'
+  if (type === 'windstr') selWindStr = val;
+  const opts = type === 'sky' ? SKY : type === 'feeling' ? FEELING : WIND_STR;
   opts.forEach(o => {
     const el = document.getElementById(`ico-${type}-${o.v}`);
     if (el) el.classList.toggle('sel', o.v === val);
@@ -1240,6 +1334,7 @@ function pickIcon(type, val) {
 
 function emoji(opts, val) { return (opts.find(o => o.v === val) || {}).e || ''; }
 function label(opts, val) { return (opts.find(o => o.v === val) || {}).l || ''; }
+
 
 // ─── CRUD ─────────────────────────────────────
 function saveReading(ev) {
@@ -1252,8 +1347,9 @@ function saveReading(ev) {
     waterTemp : parseFloat(document.getElementById('f-wt').value),
     airTemp   : parseFloat(document.getElementById('f-at').value) || null,
     sky       : selSky,
-    wind      : selWind,
-    notes     : document.getElementById('f-notes').value.trim(),
+    wind      : selWind,    // gevoel (backward compat)
+    windStr   : selWindStr, // windkracht
+    notes     : (readings.find(x => x.id === id) || {}).notes || '',
     isTopDay  : selTopDay,
   };
   const idx = readings.findIndex(x => x.id === id);
@@ -1265,7 +1361,12 @@ function saveReading(ev) {
 
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
-  if (window.fsSetDoc) window.fsSetDoc(r.id, r).catch(console.error);
+  if (window.fsSetDoc) {
+    window.fsSetDoc(r.id, r).catch(err => {
+      console.error('Firestore save failed:', err);
+      showToast('⚠️ Lokaal opgeslagen – cloud sync zodra verbinding hersteld');
+    });
+  }
   closeForm();
   renderAll();
   showToast(idx >= 0 ? '✅ Meting bijgewerkt!' : '✅ Meting opgeslagen!');
@@ -1365,21 +1466,24 @@ function fmtDate(dt) {
 }
 
 function readingHTML(r, showSwipeHint) {
-  const se = emoji(SKY, r.sky);
-  const we = emoji(WIND, r.wind);
-  const icons = [se, we].filter(Boolean).join(' ');
   const hasPhoto = !!loadPhoto(r.id);
+  const tc = tempColor(r.waterTemp);
+  const hintHTML = showSwipeHint ? `<div class="rc-swipe-hint">← veeg</div>` : '';
 
   const airHTML = r.airTemp != null
     ? `<span class="rc-sep">|</span><span class="rc-air" style="color:${tempColor(r.airTemp)}">${r.airTemp}°</span>`
     : '';
-  const iconsHTML = icons
-    ? `<span class="rc-icons">${icons}</span>` : '';
   const photoHTML = hasPhoto
     ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
 
-  const tc = tempColor(r.waterTemp);
-  const hintHTML = showSwipeHint ? `<div class="rc-swipe-hint">← veeg</div>` : '';
+  // Gevoel-icon (opgeslagen als 'wind')
+  const feelIcon  = r.wind    ? condIconCircle(FEELING,  r.wind,    20) : '';
+  // Sky-icon
+  const skyIcon   = r.sky     ? condIconCircle(SKY,      r.sky,     20) : '';
+  // Windkracht-icon
+  const windIcon  = r.windStr ? condIconCircle(WIND_STR, r.windStr, 20) : '';
+  const iconsHTML = (skyIcon || feelIcon || windIcon)
+    ? `<div class="rc-cond-icons">${skyIcon}${feelIcon}${windIcon}</div>` : '';
 
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
@@ -1388,6 +1492,7 @@ function readingHTML(r, showSwipeHint) {
         ${hintHTML}
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
+          ${iconsHTML}
           <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -1395,10 +1500,8 @@ function readingHTML(r, showSwipeHint) {
         <div class="rc-body">
           <span class="rc-water" style="color:${tc}">${r.waterTemp.toFixed(1)}°</span>
           ${airHTML}
-          ${iconsHTML}
           ${photoHTML}
         </div>
-        ${r.notes ? `<div class="rc-notes">${r.notes}</div>` : ''}
       </div>
     </div>`;
 }
@@ -1478,9 +1581,12 @@ function renderBestDay() {
   const el   = document.getElementById('best-day-section');
   const best = bestSwimDay();
   if (!best) { el.innerHTML = ''; return; }
-  const se = emoji(SKY, best.sky), we = emoji(WIND, best.wind);
   const bs = waterStatus(best.waterTemp);
-  const condHTML = (se || we) ? `<div class="bd-conds">${[se,we].filter(Boolean).join(' ')}</div>` : '';
+  const skyIc  = best.sky     ? condIconCircle(SKY,     best.sky,     18) : '';
+  const feelIc = best.wind    ? condIconCircle(FEELING, best.wind,    18) : '';
+  const windIc = best.windStr ? condIconCircle(WIND_STR,best.windStr, 18) : '';
+  const condHTML = (skyIc || feelIc || windIc)
+    ? `<div class="rc-cond-icons" style="margin-top:5px;justify-content:flex-start">${skyIc}${feelIc}${windIc}</div>` : '';
   el.innerHTML = `
     <div class="best-day-card">
       <div class="bd-label">🏆 Beste zwemdag ooit</div>
@@ -1559,6 +1665,25 @@ function setChartPeriod(period, btn) {
   document.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderCharts();
+  renderMonthChart();
+}
+
+function setYearFilter(year, btn) {
+  chartYearFilter = year;
+  document.querySelectorAll('.yf-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderMonthChart();
+}
+
+function renderYearFilterButtons() {
+  const container = document.getElementById('year-filter-btns');
+  if (!container) return;
+  const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b) => b - a);
+  let html = `<button class="yf-btn ${chartYearFilter === 'all' ? 'active' : ''}" onclick="setYearFilter('all',this)">Alles</button>`;
+  years.forEach(y => {
+    html += `<button class="yf-btn ${chartYearFilter === y ? 'active' : ''}" onclick="setYearFilter(${y},this)">${y}</button>`;
+  });
+  container.innerHTML = html;
 }
 
 function renderCharts() {
@@ -1612,70 +1737,89 @@ function renderCharts() {
 }
 
 function renderMonthChart() {
-  const sel   = document.getElementById('month-chart-year');
-  // Bouw jaar-opties op als ze er nog niet zijn
-  const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>b-a);
-  if (!years.length) { if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; } return; }
-  // Vul jaar-select bij als leeg of verouderd
-  const existing = Array.from(sel.options).map(o => parseInt(o.value));
-  if (JSON.stringify(existing) !== JSON.stringify(years)) {
-    sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if (!readings.length) {
+    if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
+    return;
   }
-  const year = parseInt(sel.value) || years[0];
 
-  const MONTHS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-  const avgs = MONTHS.map((_, m) => {
-    const sub = readings.filter(r => {
-      const d = new Date(r.datetime);
-      return d.getFullYear() === year && d.getMonth() === m;
+  renderYearFilterButtons();
+
+  const MONTH_NAMES = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  let labels = [], avgs = [];
+
+  if (chartYearFilter !== 'all') {
+    // Specifiek jaar geselecteerd — altijd alle 12 maanden tonen
+    const year = chartYearFilter;
+    labels = MONTH_NAMES;
+    avgs = MONTH_NAMES.map((_, m) => {
+      const sub = readings.filter(r => {
+        const d = new Date(r.datetime);
+        return d.getFullYear() === year && d.getMonth() === m;
+      });
+      return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
     });
-    return sub.length ? sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length : null;
-  });
+
+  } else {
+    // Alles — per jaar alle 12 maanden tonen
+    const yearSet = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>a-b);
+    yearSet.forEach(year => {
+      MONTH_NAMES.forEach((mn, m) => {
+        const sub = readings.filter(r => {
+          const d = new Date(r.datetime);
+          return d.getFullYear() === year && d.getMonth() === m;
+        });
+        labels.push(mn + ' \'' + String(year).slice(2));
+        avgs.push(sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null);
+      });
+    });
+  }
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
   const gc   = dark ? 'rgba(144,202,249,.1)' : 'rgba(0,0,0,.05)';
 
   const bgColors = avgs.map(v => {
-    if (v === null) return 'rgba(180,180,180,.2)';
-    if (v < 12) return 'rgba(100,181,246,.6)';
-    if (v < 18) return 'rgba(38,166,154,.6)';
-    if (v < 22) return 'rgba(102,187,106,.6)';
-    return 'rgba(255,167,38,.75)';
+    if (v === null) return 'rgba(180,180,180,.15)';
+    if (v < 12) return 'rgba(100,181,246,.65)';
+    if (v < 18) return 'rgba(38,166,154,.65)';
+    if (v < 22) return 'rgba(102,187,106,.65)';
+    return 'rgba(255,167,38,.8)';
   });
+
+  // Stel canvas breedte in: bij specifiek jaar altijd passend in viewport (geen scroll)
+  const wrap = document.getElementById('chart-monthly-wrap');
+  const containerW = wrap.parentElement.clientWidth || 300;
+  let canvasW;
+  if (chartYearFilter !== 'all') {
+    // 12 vaste maanden — passen altijd in beeld, geen horizontale scroll
+    canvasW = containerW;
+  } else {
+    // Alles — bij veel maanden wél horizontaal scrollen
+    canvasW = Math.max(containerW, labels.length * 40);
+  }
+  wrap.style.width = canvasW + 'px';
 
   if (chartMonthly) chartMonthly.destroy();
   chartMonthly = new Chart(document.getElementById('chart-monthly'), {
     type: 'bar',
     data: {
-      labels: MONTHS,
+      labels,
       datasets: [{
-        label: `Gem. water °C (${year})`,
+        label: 'Gem. water °C',
         data: avgs,
         backgroundColor: bgColors,
-        borderRadius: 6,
+        borderRadius: 5,
         borderSkipped: false,
-      }, {
-        label: 'Zwemgrens',
-        data: MONTHS.map(() => 18),
-        type: 'line',
-        borderColor: 'rgba(46,160,67,.55)',
-        borderDash: [6,4],
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: false,
-        tension: 0,
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: tc, boxWidth: 12, font: { size: 11 } } },
+        legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.dataset.type === 'line'
-              ? `Zwemgrens: 18°C`
-              : ctx.parsed.y !== null ? `${ctx.parsed.y.toFixed(1)}°C` : 'Geen data',
+            label: ctx => ctx.parsed.y !== null ? `${ctx.parsed.y.toFixed(1)}°C` : 'Geen data',
           }
         }
       },
@@ -1688,20 +1832,23 @@ function renderMonthChart() {
 }
 
 // Herlaad grafieken bij scherm draaien
-window.addEventListener('resize', () => {
+const _reloadCharts = () => {
   const page = document.getElementById('page-chart');
   if (page && page.classList.contains('active')) {
-    setTimeout(() => { renderCharts(); renderMonthChart(); }, 100);
+    setTimeout(() => { renderCharts(); renderMonthChart(); }, 200);
   }
-});
+};
+window.addEventListener('resize', _reloadCharts);
+// iOS vuurt resize niet altijd bij draaien — orientationchange als fallback
+window.addEventListener('orientationchange', () => setTimeout(_reloadCharts, 300));
 
 // ─── EXPORT / IMPORT ──────────────────────────
 function exportCSV() {
   if (!readings.length) { showToast('Geen data om te exporteren'); return; }
-  const hdr  = ['Datum','Water °C','Lucht °C','Hemel','Wind/gevoel','Notities'];
+  const hdr  = ['Datum','Water °C','Lucht °C','Hemel','Gevoel','Windkracht','Notities'];
   const rows = readings.map(r => [
     shortDate(r.datetime), r.waterTemp, r.airTemp ?? '',
-    label(SKY,r.sky), label(WIND,r.wind), r.notes ?? '',
+    label(SKY,r.sky), label(FEELING,r.wind), label(WIND_STR,r.windStr), r.notes ?? '',
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
   dlFile([hdr.join(','), ...rows].join('\n'), `lentse-plas-${today()}.csv`, 'text/csv;charset=utf-8;');
   showToast('📊 CSV gedownload!');
@@ -1763,15 +1910,70 @@ function saveFbConfig() { /* config is pre-ingesteld */ }
   document.getElementById('fb-status').textContent = '☁️ Verbinding met cloud…';
 })();
 
-// Geeft lokale readings terug voor initiële Firestore upload
+// Geeft lokale readings terug (niet meer nodig voor snapshot, maar bruikbaar elders)
 window.getLocalReadings = () => readings;
 
 // Wordt aangeroepen door de Firestore real-time listener
 window.onFirestoreUpdate = function(fsReadings) {
-  readings = fsReadings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
-  save(); // ook lokaal bijhouden
+  // Merge: bewaar lokale metingen die nog niet in Firestore staan
+  const fsIds = new Set(fsReadings.map(r => r.id));
+  const localOnly = readings.filter(r => !fsIds.has(r.id));
+  const el = document.getElementById('fb-status');
+  if (localOnly.length && window.fsBatchUpload) {
+    if (el) el.textContent = `⬆️ ${localOnly.length} meting${localOnly.length !== 1 ? 'en' : ''} uploaden…`;
+    window.fsBatchUpload(localOnly).catch(err => {
+      const msg = err.code === 'permission-denied'
+        ? '❌ Firebase: geen toegang — controleer Firestore-beveiligingsregels.'
+        : `❌ Upload mislukt (${err.code || err.message}) — druk op Sync nu`;
+      if (el) el.textContent = msg;
+    });
+  }
+  const merged = [...fsReadings, ...localOnly];
+  merged.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  readings = merged;
+  save();
   renderAll();
-  document.getElementById('fb-status').textContent = '✅ Cloud sync actief — ' + readings.length + ' metingen gesynchroniseerd.';
+  if (!localOnly.length) {
+    if (el) el.textContent = fsReadings.length > 0
+      ? `✅ Cloud sync actief — ${merged.length} meting${merged.length !== 1 ? 'en' : ''}`
+      : '⚠️ Firestore leeg — data lokaal opgeslagen';
+  }
+};
+
+// Handmatige sync: upload alle lokale metingen opnieuw naar Firestore
+window.fsSyncNow = function() {
+  if (!window.fsBatchUpload) {
+    showToast('⚠️ Geen verbinding met Firebase');
+    return;
+  }
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = `⬆️ ${readings.length} meting${readings.length !== 1 ? 'en' : ''} uploaden…`;
+  window.fsBatchUpload(readings)
+    .then(() => {
+      if (el) el.textContent = `✅ Sync klaar — ${readings.length} meting${readings.length !== 1 ? 'en' : ''} gesynchroniseerd`;
+      showToast('✅ Alle metingen gesynchroniseerd');
+    })
+    .catch(err => {
+      const msg = err.code === 'permission-denied'
+        ? '❌ Firebase: geen toegang — controleer Firestore-beveiligingsregels.'
+        : `❌ Upload mislukt (${err.code || err.message})`;
+      if (el) el.textContent = msg;
+      showToast('❌ Sync mislukt');
+    });
+};
+
+// Automatisch re-syncen bij herstel internetverbinding
+window.addEventListener('online', () => {
+  if (window.fsBatchUpload && readings.length) window.fsSyncNow();
+});
+
+// Foutafhandeling Firestore (bijv. verlopen beveiligingsregels)
+window.onFirestoreError = function(error) {
+  const msg = error.code === 'permission-denied'
+    ? '❌ Firebase: geen toegang. Controleer de Firestore-beveiligingsregels.'
+    : `❌ Firebase fout: ${error.code || error.message}`;
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = msg;
 };
 
 // ─── HELP MODAL ───────────────────────────────
@@ -1855,7 +2057,9 @@ if ('serviceWorker' in navigator) {
   });
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => {
+      // Direct controleren op nieuwe versie (niet wachten op browser-interval)
+      reg.update().catch(() => {});
       // Al een wachtende SW aanwezig bij registratie?
       if (reg.waiting) {
         waitingSW = reg.waiting;
@@ -1878,28 +2082,31 @@ if ('serviceWorker' in navigator) {
 
 // ─── SEED DATA ────────────────────────────────
 const SEED = [
-  { id:'imp_20260221', datetime:'2026-02-21T12:00', waterTemp:6.1,  airTemp:7.5,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20260214', datetime:'2026-02-14T12:00', waterTemp:6.5,  airTemp:-0.5, sky:null,    wind:null, notes:'' },
-  { id:'imp_20260111', datetime:'2026-01-11T12:00', waterTemp:2.7,  airTemp:-8,   sky:null,    wind:null, notes:'' },
-  { id:'imp_20260107', datetime:'2026-01-07T12:00', waterTemp:3.0,  airTemp:-1.1, sky:null,    wind:null, notes:'' },
-  { id:'imp_20260103', datetime:'2026-01-03T12:00', waterTemp:3.6,  airTemp:0,    sky:null,    wind:null, notes:'' },
-  { id:'imp_20260101', datetime:'2026-01-01T12:00', waterTemp:4.2,  airTemp:null, sky:null,    wind:null, notes:'' },
-  { id:'imp_20251229', datetime:'2025-12-29T12:00', waterTemp:4.3,  airTemp:0.3,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251228', datetime:'2025-12-28T12:00', waterTemp:4.1,  airTemp:2.8,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251220', datetime:'2025-12-20T12:00', waterTemp:8.3,  airTemp:3.2,  sky:'misty', wind:null, notes:'' },
-  { id:'imp_20251213', datetime:'2025-12-13T12:00', waterTemp:8.6,  airTemp:8.7,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251129', datetime:'2025-11-29T12:00', waterTemp:7.3,  airTemp:8,    sky:null,    wind:null, notes:'' },
-  { id:'imp_20251122', datetime:'2025-11-22T12:00', waterTemp:8.2,  airTemp:-1.5, sky:null,    wind:null, notes:'' },
-  { id:'imp_20251114', datetime:'2025-11-14T12:00', waterTemp:10.9, airTemp:7,    sky:null,    wind:null, notes:'' },
-  { id:'imp_20251108', datetime:'2025-11-08T12:00', waterTemp:11.6, airTemp:10,   sky:null,    wind:null, notes:'' },
-  { id:'imp_20251101', datetime:'2025-11-01T12:00', waterTemp:12.0, airTemp:11,   sky:null,    wind:null, notes:'' },
-  { id:'imp_20251025', datetime:'2025-10-25T12:00', waterTemp:12.7, airTemp:9.5,  sky:null,    wind:null, notes:'' },
-  { id:'imp_20251011', datetime:'2025-10-11T12:00', waterTemp:14.9, airTemp:null, sky:null,    wind:null, notes:'' },
+  { id:'imp_20260221', datetime:'2026-02-21T12:00', waterTemp:6.1,  airTemp:7.5,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260214', datetime:'2026-02-14T12:00', waterTemp:6.5,  airTemp:-0.5, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260111', datetime:'2026-01-11T12:00', waterTemp:2.7,  airTemp:-8,   sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260107', datetime:'2026-01-07T12:00', waterTemp:3.0,  airTemp:-1.1, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260103', datetime:'2026-01-03T12:00', waterTemp:3.6,  airTemp:0,    sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20260101', datetime:'2026-01-01T12:00', waterTemp:4.2,  airTemp:null, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251229', datetime:'2025-12-29T12:00', waterTemp:4.3,  airTemp:0.3,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251228', datetime:'2025-12-28T12:00', waterTemp:4.1,  airTemp:2.8,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251220', datetime:'2025-12-20T12:00', waterTemp:8.3,  airTemp:3.2,  sky:'misty', wind:null, windStr:null, notes:'' },
+  { id:'imp_20251213', datetime:'2025-12-13T12:00', waterTemp:8.6,  airTemp:8.7,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251129', datetime:'2025-11-29T12:00', waterTemp:7.3,  airTemp:8,    sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251122', datetime:'2025-11-22T12:00', waterTemp:8.2,  airTemp:-1.5, sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251114', datetime:'2025-11-14T12:00', waterTemp:10.9, airTemp:7,    sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251108', datetime:'2025-11-08T12:00', waterTemp:11.6, airTemp:10,   sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251101', datetime:'2025-11-01T12:00', waterTemp:12.0, airTemp:11,   sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251025', datetime:'2025-10-25T12:00', waterTemp:12.7, airTemp:9.5,  sky:null,    wind:null, windStr:null, notes:'' },
+  { id:'imp_20251011', datetime:'2025-10-11T12:00', waterTemp:14.9, airTemp:null, sky:null,    wind:null, windStr:null, notes:'' },
 ];
 
 function seedIfEmpty() {
-  if (readings.length > 0) return;
-  readings = [...SEED].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  // Voeg altijd historische seed-metingen toe die nog niet aanwezig zijn
+  const existingIds = new Set(readings.map(r => r.id));
+  const missing = SEED.filter(s => !existingIds.has(s.id));
+  if (!missing.length) return;
+  readings = [...readings, ...missing].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
 }
 
