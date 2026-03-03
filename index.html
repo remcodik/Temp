@@ -779,7 +779,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.7 &nbsp;·&nbsp; __BUILD_TIME__
+    Versie 2.8 &nbsp;·&nbsp; 3 mrt 2026
   </div>
 </div>
 
@@ -874,11 +874,6 @@
         </div>
         <input type="file" id="f-photo" accept="image/*" style="display:none"
                onchange="handlePhotoSelect(event)">
-      </div>
-
-      <div class="fg">
-        <label>Notities (optioneel)</label>
-        <textarea id="f-notes" rows="2" placeholder="Bijv. water was helder…"></textarea>
       </div>
 
       <button type="submit" class="btn btn-primary">Opslaan</button>
@@ -1000,25 +995,49 @@ const WIND_STR = [
 ];
 
 // SVG icon paden (inner content, zonder wrapper)
+// Thermometer helper: buisje + gekleurde vulling + bol onderaan
+const _T = (fy, fh) =>
+  `<rect x="10" y="3" width="4" height="13" rx="2"/>` +
+  `<rect x="10.5" y="${fy}" width="3" height="${fh}" rx="1" fill="currentColor" stroke="none"/>` +
+  `<circle cx="12" cy="19" r="3"/>` +
+  `<circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>`;
+
+// Wind-wolk helper: wolk links + n streepjes rechts
+const _W = (lines) => {
+  const cloud = `<path d="M2 15A3.5 3.5 0 0 1 5.5 11.5 A4.5 4.5 0 0 1 14 13.5 A2 2 0 0 1 12 17.5 H4.5 A2.5 2.5 0 0 1 2 15Z"/>`;
+  const lineY = [10, 14, 18];
+  const linesSVG = lineY.slice(0, lines).map(y =>
+    `<line x1="15" y1="${y}" x2="22" y2="${y}"/>`
+  ).join('');
+  return cloud + linesSVG;
+};
+
 const SVG_ICONS = {
-  // ─ Gevoel ─
-  freezing: `<line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/><line x1="19.1" y1="4.9" x2="4.9" y2="19.1"/>`,
-  cold:     `<rect x="9" y="3" width="6" height="14" rx="3" fill="none"/><rect x="10.5" y="13" width="3" height="4" rx="1.5" fill="currentColor"/><circle cx="12" cy="19" r="3" fill="currentColor" fill-opacity="0.4"/><circle cx="12" cy="19" r="3"/>`,
-  fresh:    `<path d="M20 3C20 3 12 3 7 8c-4 4-4 10-4 10s6 0 10-4c5-5 7-11 7-11z" fill="currentColor" fill-opacity="0.2"/><path d="M20 3C20 3 12 3 7 8c-4 4-4 10-4 10s6 0 10-4c5-5 7-11 7-11z"/><line x1="4" y1="20" x2="14" y2="9"/>`,
-  pleasant: `<circle cx="12" cy="12" r="4" fill="currentColor" fill-opacity="0.2"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="16.2" y2="7.8"/><line x1="7.8" y1="16.2" x2="5.6" y2="18.4"/>`,
-  warm:     `<circle cx="12" cy="12" r="5" fill="currentColor" fill-opacity="0.2"/><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/><line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/><line x1="19.8" y1="4.2" x2="17.7" y2="6.3"/><line x1="6.3" y1="17.7" x2="4.2" y2="19.8"/>`,
-  hot:      `<path d="M12 2c0 5-5 7-4 12a5 5 0 0 0 10 0c0-5-4-7-4-12" fill="currentColor" fill-opacity="0.2"/><path d="M12 2c0 5-5 7-4 12a5 5 0 0 0 10 0c0-5-4-7-4-12"/><path d="M10.5 16c0-2 1.5-3 1.5-5 0 2 1.5 3 1.5 5"/>`,
-  // ─ Windkracht ─
-  calm:     `<line x1="4" y1="12" x2="20" y2="12" stroke-width="3.5"/>`,
-  gentle:   `<path d="M3 12 Q7.5 6 12 12 Q16.5 18 21 12" fill="none" stroke-width="2.5"/>`,
-  moderate: `<path d="M3 9 Q7.5 3 12 9 Q16.5 15 21 9" fill="none"/><path d="M3 15 Q7.5 9 12 15 Q16.5 21 21 15" fill="none"/>`,
-  strong:   `<path d="M3 7 Q7 2 12 7 Q17 12 21 7" fill="none"/><path d="M3 12 Q7 7 12 12 Q17 17 21 12" fill="none"/><path d="M3 17 Q7 12 12 17 Q17 22 21 17" fill="none"/>`,
-  storm:    `<polygon points="13,2 4,14 11,14 10,22 21,10 14,10" fill="currentColor" fill-opacity="0.2"/><polygon points="13,2 4,14 11,14 10,22 21,10 14,10"/>`,
+  // ─ Gevoel: thermometer, vulling geeft temperatuurgevoel aan ─
+  freezing: _T(15,   1),   // nauwelijks gevuld — ijskoud
+  cold:     _T(13,   3),   // 25% — koud
+  fresh:    _T(11,   5),   // 42% — fris
+  pleasant: _T(9,    7),   // 58% — aangenaam
+  warm:     _T(7,    9),   // 75% — warm
+  hot:      _T(5,   11),   // 92% — heet
+
+  // ─ Windkracht: wolkje blaast streepjes, storm = tornado ─
+  calm:     _W(0),   // windstil: enkel wolkje, geen streepjes
+  gentle:   _W(1),   // zacht: 1 streepje
+  moderate: _W(2),   // matig: 2 streepjes
+  strong:   _W(3),   // hard: 3 streepjes
+  // Tornado: trechter, breder boven, punt onderaan
+  storm: `<path d="M4 3L20 3L15 11L13 17L12 21L11 17L9 11Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>` +
+         `<line x1="4"  y1="3"  x2="20" y2="3"/>` +
+         `<line x1="6"  y1="8"  x2="18" y2="8"/>` +
+         `<line x1="9"  y1="13" x2="15" y2="13"/>` +
+         `<line x1="11" y1="18" x2="13" y2="18"/>`,
 };
 
 function mkIcon(key, color, size) {
   const inner = SVG_ICONS[key] || '';
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  // style="color:${color}" zorgt dat fill="currentColor" in child-elementen werkt
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" style="color:${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
 function condIconCircle(opts, val, size=20) {
   const o = opts.find(x => x.v === val);
@@ -1235,11 +1254,10 @@ function openForm(id) {
 
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
-  document.getElementById('f-dt').value    = local;
-  document.getElementById('f-wt').value    = '';
-  document.getElementById('f-at').value    = '';
-  document.getElementById('f-notes').value = '';
-  document.getElementById('f-id').value    = '';
+  document.getElementById('f-dt').value = local;
+  document.getElementById('f-wt').value = '';
+  document.getElementById('f-at').value = '';
+  document.getElementById('f-id').value = '';
   clearPhoto();
 
   if (id) {
@@ -1248,9 +1266,8 @@ function openForm(id) {
       document.getElementById('form-title').textContent = 'Meting bewerken';
       document.getElementById('f-id').value    = r.id;
       document.getElementById('f-dt').value    = r.datetime.slice(0,10);
-      document.getElementById('f-wt').value    = r.waterTemp;
-      document.getElementById('f-at').value    = r.airTemp ?? '';
-      document.getElementById('f-notes').value = r.notes ?? '';
+      document.getElementById('f-wt').value = r.waterTemp;
+      document.getElementById('f-at').value = r.airTemp ?? '';
       setTopDayUI(r.isTopDay || false);
       if (r.sky)     pickIcon('sky',     r.sky);
       if (r.wind)    pickIcon('feeling', r.wind);
@@ -1325,7 +1342,7 @@ function saveReading(ev) {
     sky       : selSky,
     wind      : selWind,    // gevoel (backward compat)
     windStr   : selWindStr, // windkracht
-    notes     : document.getElementById('f-notes').value.trim(),
+    notes     : (readings.find(x => x.id === id) || {}).notes || '',
     isTopDay  : selTopDay,
   };
   const idx = readings.findIndex(x => x.id === id);
@@ -1808,12 +1825,15 @@ function renderMonthChart() {
 }
 
 // Herlaad grafieken bij scherm draaien
-window.addEventListener('resize', () => {
+const _reloadCharts = () => {
   const page = document.getElementById('page-chart');
   if (page && page.classList.contains('active')) {
-    setTimeout(() => { renderCharts(); renderMonthChart(); }, 100);
+    setTimeout(() => { renderCharts(); renderMonthChart(); }, 200);
   }
-});
+};
+window.addEventListener('resize', _reloadCharts);
+// iOS vuurt resize niet altijd bij draaien — orientationchange als fallback
+window.addEventListener('orientationchange', () => setTimeout(_reloadCharts, 300));
 
 // ─── EXPORT / IMPORT ──────────────────────────
 function exportCSV() {
