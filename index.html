@@ -448,6 +448,7 @@
     /* ── Landscape: grotere grafieken ── */
     @media (orientation: landscape) {
       .chart-wrap { height: calc(80vh - 80px); min-height:180px; }
+      .chart-scroll-inner { height: calc(80vh - 80px); min-height:180px; }
       #page-chart { padding: 4px 8px; }
       #page-chart .card { margin-bottom:5px; padding:8px 12px; }
       body { padding-bottom: 56px; }
@@ -723,6 +724,10 @@
 <!-- EXPORT / SETTINGS -->
 <div id="page-export" class="page">
   <div class="section-hdr"><h2>Data &amp; instellingen</h2></div>
+
+  <!-- Update knop bovenaan -->
+  <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px">🔄 Nieuwe versie ophalen</button>
+
   <div class="action-grid" style="margin-bottom:13px">
     <button class="action-card" onclick="exportCSV()">
       <span class="ai">📊</span>
@@ -747,19 +752,25 @@
   </div>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
-  <div class="card" style="border:2px solid #a5d6a7;">
-    <div class="card-title" style="color:#2e7d32;">☁️ Cloud sync (Firebase)</div>
-    <div class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:12px;">
-      ✅ Verbonden en actief
+  <!-- Firebase — inklapmenu -->
+  <details class="card" style="border:2px solid #a5d6a7;margin-bottom:8px">
+    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e7d32">
+      ☁️ Cloud sync (Firebase)
+      <span style="margin-left:auto;font-size:16px;color:#2e7d32">▾</span>
+    </summary>
+    <div style="margin-top:10px">
+      <div id="fb-status" class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:12px;">
+        ☁️ Verbinding met cloud…
+      </div>
+      <div style="font-size:13px;color:var(--muted);line-height:2;">
+        <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
+        <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
+        <div><strong style="color:var(--text);">Auth domein:</strong> lentse-plas.firebaseapp.com</div>
+        <div style="word-break:break-all;"><strong style="color:var(--text);">API Key:</strong> AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ</div>
+        <div style="word-break:break-all;"><strong style="color:var(--text);">App ID:</strong> 1:125141693588:web:7ef553efa047090f54f081</div>
+      </div>
     </div>
-    <div style="font-size:13px;color:var(--muted);line-height:2;">
-      <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
-      <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
-      <div><strong style="color:var(--text);">Auth domein:</strong> lentse-plas.firebaseapp.com</div>
-      <div style="word-break:break-all;"><strong style="color:var(--text);">API Key:</strong> AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ</div>
-      <div style="word-break:break-all;"><strong style="color:var(--text);">App ID:</strong> 1:125141693588:web:7ef553efa047090f54f081</div>
-    </div>
-  </div>
+  </details>
 
   <div class="card" style="border:2px solid #ffcdd2;">
     <div class="card-title" style="color:var(--danger);">Data wissen</div>
@@ -767,14 +778,8 @@
     <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
   </div>
 
-  <div class="card" style="border:2px solid #b3e5fc;">
-    <div class="card-title" style="color:var(--primary);">App bijwerken</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Haal de nieuwste versie op en wis de cache.</p>
-    <button class="btn btn-primary" onclick="forceUpdate()">🔄 Nieuwe versie ophalen</button>
-  </div>
-
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.6 &nbsp;·&nbsp; __BUILD_TIME__
+    Versie 2.7 &nbsp;·&nbsp; __BUILD_TIME__
   </div>
 </div>
 
@@ -944,26 +949,18 @@
     await batch.commit();
   };
 
-  // Real-time sync — altijd mergen: lokale items die niet in Firestore staan worden geüpload
-  onSnapshot(collection(db, 'readings'), snapshot => {
-    const fsReadings = [];
-    snapshot.forEach(d => fsReadings.push(d.data()));
-
-    const local = window.getLocalReadings ? window.getLocalReadings() : [];
-    const fsIds = new Set(fsReadings.map(r => r.id));
-    const toUpload = local.filter(r => !fsIds.has(r.id));
-
-    if (toUpload.length) {
-      // Lokale metingen die nog niet in Firestore staan → uploaden (geen return, UI altijd bijwerken)
-      window.fsBatchUpload(toUpload).catch(console.error);
+  // Real-time sync — merge-logica zit in onFirestoreUpdate (main script)
+  onSnapshot(
+    collection(db, 'readings'),
+    snapshot => {
+      const fsReadings = [];
+      snapshot.forEach(d => fsReadings.push(d.data()));
+      if (window.onFirestoreUpdate) window.onFirestoreUpdate(fsReadings);
+    },
+    error => {
+      if (window.onFirestoreError) window.onFirestoreError(error);
     }
-
-    // Altijd UI bijwerken: merge Firestore data + nog-niet-geüploade lokale items
-    if (window.onFirestoreUpdate) {
-      const merged = [...fsReadings, ...toUpload];
-      window.onFirestoreUpdate(merged);
-    }
-  });
+  );
 </script>
 
 <!-- Chart.js -->
@@ -1765,10 +1762,17 @@ function renderMonthChart() {
     return 'rgba(255,167,38,.8)';
   });
 
-  // Stel canvas breedte in voor horizontaal scrollen bij veel maanden
+  // Stel canvas breedte in: bij specifiek jaar altijd passend in viewport (geen scroll)
   const wrap = document.getElementById('chart-monthly-wrap');
-  const barW = 40;
-  const canvasW = Math.max(wrap.clientWidth || 300, labels.length * barW);
+  const containerW = wrap.parentElement.clientWidth || 300;
+  let canvasW;
+  if (chartYearFilter !== 'all') {
+    // 12 vaste maanden — passen altijd in beeld, geen horizontale scroll
+    canvasW = containerW;
+  } else {
+    // Alles — bij veel maanden wél horizontaal scrollen
+    canvasW = Math.max(containerW, labels.length * 40);
+  }
   wrap.style.width = canvasW + 'px';
 
   if (chartMonthly) chartMonthly.destroy();
@@ -1879,15 +1883,41 @@ function saveFbConfig() { /* config is pre-ingesteld */ }
   document.getElementById('fb-status').textContent = '☁️ Verbinding met cloud…';
 })();
 
-// Geeft lokale readings terug voor initiële Firestore upload
+// Geeft lokale readings terug (niet meer nodig voor snapshot, maar bruikbaar elders)
 window.getLocalReadings = () => readings;
 
 // Wordt aangeroepen door de Firestore real-time listener
 window.onFirestoreUpdate = function(fsReadings) {
-  readings = fsReadings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
-  save(); // ook lokaal bijhouden
+  // Merge: bewaar lokale metingen die nog niet in Firestore staan
+  const fsIds = new Set(fsReadings.map(r => r.id));
+  const localOnly = readings.filter(r => !fsIds.has(r.id));
+  if (localOnly.length && window.fsBatchUpload) {
+    window.fsBatchUpload(localOnly).catch(err => {
+      const msg = err.code === 'permission-denied'
+        ? '❌ Firebase: geen toegang — controleer Firestore-beveiligingsregels.'
+        : `❌ Opslaan mislukt (${err.code || err.message})`;
+      const el = document.getElementById('fb-status');
+      if (el) el.textContent = msg;
+    });
+  }
+  const merged = [...fsReadings, ...localOnly];
+  merged.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  readings = merged;
+  save();
   renderAll();
-  document.getElementById('fb-status').textContent = '✅ Cloud sync actief — ' + readings.length + ' metingen gesynchroniseerd.';
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = fsReadings.length > 0
+    ? `✅ Cloud sync actief — ${merged.length} meting${merged.length !== 1 ? 'en' : ''}`
+    : '⚠️ Firestore leeg — data lokaal opgeslagen';
+};
+
+// Foutafhandeling Firestore (bijv. verlopen beveiligingsregels)
+window.onFirestoreError = function(error) {
+  const msg = error.code === 'permission-denied'
+    ? '❌ Firebase: geen toegang. Controleer de Firestore-beveiligingsregels.'
+    : `❌ Firebase fout: ${error.code || error.message}`;
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = msg;
 };
 
 // ─── HELP MODAL ───────────────────────────────
