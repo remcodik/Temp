@@ -779,7 +779,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.8 &nbsp;·&nbsp; 3 mrt 2026
+    Versie 2.9 &nbsp;·&nbsp; 3 mrt 2026 16:51
   </div>
 </div>
 
@@ -1002,14 +1002,18 @@ const _T = (fy, fh) =>
   `<circle cx="12" cy="19" r="3"/>` +
   `<circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>`;
 
-// Wind-wolk helper: wolk links + n streepjes rechts
+// Wind-wolk helper: pafferige wolk (duidelijke bobbels) + golvende streepjes (stripstijl)
 const _W = (lines) => {
-  const cloud = `<path d="M2 15A3.5 3.5 0 0 1 5.5 11.5 A4.5 4.5 0 0 1 14 13.5 A2 2 0 0 1 12 17.5 H4.5 A2.5 2.5 0 0 1 2 15Z"/>`;
-  const lineY = [10, 14, 18];
-  const linesSVG = lineY.slice(0, lines).map(y =>
-    `<line x1="15" y1="${y}" x2="22" y2="${y}"/>`
-  ).join('');
-  return cloud + linesSVG;
+  // Wolk met 2 zichtbare bobbels bovenaan, vlakke onderkant, rechts op x≈14 zodat wind rechts past
+  const cloud =
+    `<path d="M1 16 Q1 13 4 13 Q4 9 8 9 Q12 9 13 12 Q15 12 14 15 Q14 17 11 17 H3 Q1 17 1 16Z"/>`;
+  // Golvende windlijnen (S-bocht met 2 quadratic beziers — stripstijl)
+  const ws = [
+    `<path d="M15 13 Q17 11 19 13 Q21 15 23 13"/>`,   // 1 golf — midden
+    `<path d="M15 10 Q17 8  19 10 Q21 12 23 10"/>`,   // 2e golf — boven
+    `<path d="M15 16 Q17 14 19 16 Q21 18 23 16"/>`,   // 3e golf — onder
+  ];
+  return cloud + ws.slice(0, lines).join('');
 };
 
 const SVG_ICONS = {
