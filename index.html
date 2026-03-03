@@ -779,7 +779,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.10 &nbsp;·&nbsp; 3 mrt 2026 16:57
+    Versie 2.11 &nbsp;·&nbsp; 3 mrt 2026 17:02
   </div>
 </div>
 
@@ -1013,11 +1013,12 @@ const _W = (lines) => {
     `<circle cx="8" cy="10" r="1.5"/>` +         // naaf
     `<line x1="8" y1="11" x2="8"  y2="22"/>` +  // mast
     `<line x1="5" y1="22" x2="11" y2="22"/>`;   // sokkel
-  // Golvende windlijnen rechts — S-golven (stripstijl)
+  // Golvende windlijnen rechts — S-golven (stripstijl), 0–4 golven
   const ws = [
     `<path d="M15 10 Q17 8  19 10 Q21 12 23 10"/>`,  // midden
     `<path d="M15 7  Q17 5  19 7  Q21 9  23 7"/>`,   // boven
     `<path d="M15 14 Q17 12 19 14 Q21 16 23 14"/>`,  // onder
+    `<path d="M15 4  Q17 2  19 4  Q21 6  23 4"/>`,   // extra boven (storm)
   ];
   return mill + ws.slice(0, lines).join('');
 };
@@ -1035,13 +1036,8 @@ const SVG_ICONS = {
   calm:     _W(0),   // windstil: enkel wolkje, geen streepjes
   gentle:   _W(1),   // zacht: 1 streepje
   moderate: _W(2),   // matig: 2 streepjes
-  strong:   _W(3),   // hard: 3 streepjes
-  // Tornado: trechter, breder boven, punt onderaan
-  storm: `<path d="M4 3L20 3L15 11L13 17L12 21L11 17L9 11Z" fill="currentColor" fill-opacity="0.15" stroke="none"/>` +
-         `<line x1="4"  y1="3"  x2="20" y2="3"/>` +
-         `<line x1="6"  y1="8"  x2="18" y2="8"/>` +
-         `<line x1="9"  y1="13" x2="15" y2="13"/>` +
-         `<line x1="11" y1="18" x2="13" y2="18"/>`,
+  strong:   _W(3),   // hard: 3 golven
+  storm:    _W(4),   // storm: windmolen + 4 golven
 };
 
 function mkIcon(key, color, size) {
@@ -2076,8 +2072,11 @@ const SEED = [
 ];
 
 function seedIfEmpty() {
-  if (readings.length > 0) return;
-  readings = [...SEED].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  // Voeg altijd historische seed-metingen toe die nog niet aanwezig zijn
+  const existingIds = new Set(readings.map(r => r.id));
+  const missing = SEED.filter(s => !existingIds.has(s.id));
+  if (!missing.length) return;
+  readings = [...readings, ...missing].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
 }
 
