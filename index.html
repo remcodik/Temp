@@ -779,7 +779,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.9 &nbsp;·&nbsp; 3 mrt 2026 16:51
+    Versie 2.10 &nbsp;·&nbsp; 3 mrt 2026 16:57
   </div>
 </div>
 
@@ -1002,18 +1002,24 @@ const _T = (fy, fh) =>
   `<circle cx="12" cy="19" r="3"/>` +
   `<circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>`;
 
-// Wind-wolk helper: pafferige wolk (duidelijke bobbels) + golvende streepjes (stripstijl)
+// Wind-windmolen helper: windmolen links + golvende windlijnen rechts
 const _W = (lines) => {
-  // Wolk met 2 zichtbare bobbels bovenaan, vlakke onderkant, rechts op x≈14 zodat wind rechts past
-  const cloud =
-    `<path d="M1 16 Q1 13 4 13 Q4 9 8 9 Q12 9 13 12 Q15 12 14 15 Q14 17 11 17 H3 Q1 17 1 16Z"/>`;
-  // Golvende windlijnen (S-bocht met 2 quadratic beziers — stripstijl)
+  // 4 wieken in X-patroon, naaf (hub), mast, sokkel
+  const mill =
+    `<line x1="8" y1="10" x2="3"  y2="5"/>` +   // wiek NW
+    `<line x1="8" y1="10" x2="13" y2="5"/>` +   // wiek NO
+    `<line x1="8" y1="10" x2="13" y2="15"/>` +  // wiek ZO
+    `<line x1="8" y1="10" x2="3"  y2="15"/>` +  // wiek ZW
+    `<circle cx="8" cy="10" r="1.5"/>` +         // naaf
+    `<line x1="8" y1="11" x2="8"  y2="22"/>` +  // mast
+    `<line x1="5" y1="22" x2="11" y2="22"/>`;   // sokkel
+  // Golvende windlijnen rechts — S-golven (stripstijl)
   const ws = [
-    `<path d="M15 13 Q17 11 19 13 Q21 15 23 13"/>`,   // 1 golf — midden
-    `<path d="M15 10 Q17 8  19 10 Q21 12 23 10"/>`,   // 2e golf — boven
-    `<path d="M15 16 Q17 14 19 16 Q21 18 23 16"/>`,   // 3e golf — onder
+    `<path d="M15 10 Q17 8  19 10 Q21 12 23 10"/>`,  // midden
+    `<path d="M15 7  Q17 5  19 7  Q21 9  23 7"/>`,   // boven
+    `<path d="M15 14 Q17 12 19 14 Q21 16 23 14"/>`,  // onder
   ];
-  return cloud + ws.slice(0, lines).join('');
+  return mill + ws.slice(0, lines).join('');
 };
 
 const SVG_ICONS = {
