@@ -759,9 +759,10 @@
       <span style="margin-left:auto;font-size:16px;color:#2e7d32">▾</span>
     </summary>
     <div style="margin-top:10px">
-      <div id="fb-status" class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:12px;">
+      <div id="fb-status" class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:6px;">
         ☁️ Verbinding met cloud…
       </div>
+      <button onclick="fsSyncNow()" style="width:100%;margin-bottom:12px;padding:8px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;">🔄 Sync nu</button>
       <div style="font-size:13px;color:var(--muted);line-height:2;">
         <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
         <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
@@ -1917,12 +1918,13 @@ window.onFirestoreUpdate = function(fsReadings) {
   // Merge: bewaar lokale metingen die nog niet in Firestore staan
   const fsIds = new Set(fsReadings.map(r => r.id));
   const localOnly = readings.filter(r => !fsIds.has(r.id));
+  const el = document.getElementById('fb-status');
   if (localOnly.length && window.fsBatchUpload) {
+    if (el) el.textContent = `⬆️ ${localOnly.length} meting${localOnly.length !== 1 ? 'en' : ''} uploaden…`;
     window.fsBatchUpload(localOnly).catch(err => {
       const msg = err.code === 'permission-denied'
         ? '❌ Firebase: geen toegang — controleer Firestore-beveiligingsregels.'
-        : `❌ Opslaan mislukt (${err.code || err.message})`;
-      const el = document.getElementById('fb-status');
+        : `❌ Upload mislukt (${err.code || err.message}) — druk op Sync nu`;
       if (el) el.textContent = msg;
     });
   }
@@ -1931,11 +1933,39 @@ window.onFirestoreUpdate = function(fsReadings) {
   readings = merged;
   save();
   renderAll();
-  const el = document.getElementById('fb-status');
-  if (el) el.textContent = fsReadings.length > 0
-    ? `✅ Cloud sync actief — ${merged.length} meting${merged.length !== 1 ? 'en' : ''}`
-    : '⚠️ Firestore leeg — data lokaal opgeslagen';
+  if (!localOnly.length) {
+    if (el) el.textContent = fsReadings.length > 0
+      ? `✅ Cloud sync actief — ${merged.length} meting${merged.length !== 1 ? 'en' : ''}`
+      : '⚠️ Firestore leeg — data lokaal opgeslagen';
+  }
 };
+
+// Handmatige sync: upload alle lokale metingen opnieuw naar Firestore
+window.fsSyncNow = function() {
+  if (!window.fsBatchUpload) {
+    showToast('⚠️ Geen verbinding met Firebase');
+    return;
+  }
+  const el = document.getElementById('fb-status');
+  if (el) el.textContent = `⬆️ ${readings.length} meting${readings.length !== 1 ? 'en' : ''} uploaden…`;
+  window.fsBatchUpload(readings)
+    .then(() => {
+      if (el) el.textContent = `✅ Sync klaar — ${readings.length} meting${readings.length !== 1 ? 'en' : ''} gesynchroniseerd`;
+      showToast('✅ Alle metingen gesynchroniseerd');
+    })
+    .catch(err => {
+      const msg = err.code === 'permission-denied'
+        ? '❌ Firebase: geen toegang — controleer Firestore-beveiligingsregels.'
+        : `❌ Upload mislukt (${err.code || err.message})`;
+      if (el) el.textContent = msg;
+      showToast('❌ Sync mislukt');
+    });
+};
+
+// Automatisch re-syncen bij herstel internetverbinding
+window.addEventListener('online', () => {
+  if (window.fsBatchUpload && readings.length) window.fsSyncNow();
+});
 
 // Foutafhandeling Firestore (bijv. verlopen beveiligingsregels)
 window.onFirestoreError = function(error) {
