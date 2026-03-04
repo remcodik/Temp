@@ -1245,12 +1245,10 @@ async function fetchWaterTemp() {
 
 async function fetchAndFill() {
   document.getElementById('f-at').placeholder = 'Ophalen…';
-  document.getElementById('f-wt').placeholder = 'Ophalen…';
-  const [at, wt] = await Promise.all([fetchAirTemp(), fetchWaterTemp()]);
-  if (at !== null) document.getElementById('f-at').value = at;
-  if (wt !== null) document.getElementById('f-wt').value = wt;
-  if (at !== null || wt !== null) {
-    showToast('🌡️ Temperaturen opgehaald');
+  const at = await fetchAirTemp();
+  if (at !== null) {
+    document.getElementById('f-at').value = at;
+    showToast('🌡️ Luchttemperatuur opgehaald');
   } else {
     showToast('❌ Kon temperatuur niet ophalen');
   }
