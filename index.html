@@ -897,6 +897,18 @@
       <p><strong style="color:var(--text)">3.</strong> Klik <em>Firestore Database</em> → Maak database → <em>testmodus</em></p>
       <p><strong style="color:var(--text)">4.</strong> Projectinstellingen ⚙️ → <em>Jouw apps</em> → Webapplicatie &lt;/&gt;</p>
       <p><strong style="color:var(--text)">5.</strong> Kopieer <code>projectId</code> en <code>apiKey</code> en plak ze in de app</p>
+      <hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">
+      <p style="color:#b45309;font-weight:600;">⚠️ Testmodus verloopt na 30 dagen!</p>
+      <p>Zet permanente regels in Firestore → <em>Rules</em> tab:</p>
+      <pre style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px;overflow-x:auto;white-space:pre-wrap;color:var(--text);">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+      <p>Plak bovenstaande → klik <strong>Publiceren</strong>. Sync werkt dan permanent.</p>
     </div>
   </div>
 </div>
@@ -1993,10 +2005,10 @@ window.fsSyncNow = function() {
     })
     .catch(err => {
       const msg = err.code === 'permission-denied'
-        ? '❌ Firebase: geen toegang — controleer Firestore-beveiligingsregels.'
+        ? '❌ Regels verlopen — zie ℹ️ voor instructies. Lokale data veilig.'
         : `❌ Upload mislukt (${err.code || err.message})`;
       if (el) el.textContent = msg;
-      showToast('❌ Sync mislukt');
+      showToast('❌ Sync mislukt — zie Cloud sync sectie');
     });
 };
 
@@ -2007,11 +2019,16 @@ window.addEventListener('online', () => {
 
 // Foutafhandeling Firestore (bijv. verlopen beveiligingsregels)
 window.onFirestoreError = function(error) {
-  const msg = error.code === 'permission-denied'
-    ? '❌ Firebase: geen toegang. Controleer de Firestore-beveiligingsregels.'
-    : `❌ Firebase fout: ${error.code || error.message}`;
   const el = document.getElementById('fb-status');
-  if (el) el.textContent = msg;
+  if (!el) return;
+  if (error.code === 'permission-denied') {
+    el.innerHTML = '❌ Firestore-regels verlopen — '
+      + '<a href="https://console.firebase.google.com/project/lentse-plas/firestore/rules" '
+      + 'target="_blank" style="color:#1d4ed8;text-decoration:underline">regels bijwerken</a> '
+      + '(klik ℹ️ voor instructies). Lokale data is veilig.';
+  } else {
+    el.textContent = `❌ Firebase fout: ${error.code || error.message}`;
+  }
 };
 
 // ─── HELP MODAL ───────────────────────────────
