@@ -762,7 +762,10 @@
       <div id="fb-status" class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:6px;">
         ☁️ Verbinding met cloud…
       </div>
-      <button onclick="fsSyncNow()" style="width:100%;margin-bottom:12px;padding:8px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;">🔄 Sync nu</button>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button onclick="fsSyncNow()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;">🔄 Sync nu</button>
+        <button onclick="openHelp()" style="padding:8px 14px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;" title="Firebase instellen / Firestore-regels">ℹ️ Hulp</button>
+      </div>
       <div style="font-size:13px;color:var(--muted);line-height:2;">
         <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
         <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
