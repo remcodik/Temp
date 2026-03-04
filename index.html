@@ -972,7 +972,7 @@ const WEATHER_API =
 // RWS watertemperatuur — dichtstbijzijnde meetstation Waal
 // Aanpassen naar 'NIJM' voor Nijmegen Haven
 const RWS_WATER_STATION = 'LOBH';
-const RWS_API = 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen';
+const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
 
 const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       bg:'#fef9c3' },
@@ -1947,6 +1947,13 @@ window.getLocalReadings = () => readings;
 // Wordt aangeroepen door de Firestore real-time listener
 window.onFirestoreUpdate = function(fsReadings) {
   // Merge: bewaar lokale metingen die nog niet in Firestore staan
+  // Veiligheid: als Firestore leeg is maar lokaal data bestaat, NOOIT overschrijven
+  if (fsReadings.length === 0 && readings.length > 0) {
+    const el = document.getElementById('fb-status');
+    if (el) el.textContent = `⚠️ Firestore leeg — lokale data (${readings.length}) bewaard`;
+    if (window.fsBatchUpload) window.fsBatchUpload(readings).catch(() => {});
+    return;
+  }
   const fsIds = new Set(fsReadings.map(r => r.id));
   const localOnly = readings.filter(r => !fsIds.has(r.id));
   const el = document.getElementById('fb-status');
