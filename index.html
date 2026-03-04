@@ -762,7 +762,10 @@
       <div id="fb-status" class="info-box" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;margin-bottom:6px;">
         ☁️ Verbinding met cloud…
       </div>
-      <button onclick="fsSyncNow()" style="width:100%;margin-bottom:12px;padding:8px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;">🔄 Sync nu</button>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button onclick="fsSyncNow()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;">🔄 Sync nu</button>
+        <button onclick="openHelp()" style="padding:8px 14px;border-radius:8px;border:1px solid #a5d6a7;background:#f1f8e9;color:#2e7d32;font-size:13px;cursor:pointer;" title="Firebase instellen / Firestore-regels">ℹ️ Hulp</button>
+      </div>
       <div style="font-size:13px;color:var(--muted);line-height:2;">
         <div><strong style="color:var(--text);">Project:</strong> lentse-plas</div>
         <div><strong style="color:var(--text);">Database:</strong> Firestore</div>
@@ -897,6 +900,18 @@
       <p><strong style="color:var(--text)">3.</strong> Klik <em>Firestore Database</em> → Maak database → <em>testmodus</em></p>
       <p><strong style="color:var(--text)">4.</strong> Projectinstellingen ⚙️ → <em>Jouw apps</em> → Webapplicatie &lt;/&gt;</p>
       <p><strong style="color:var(--text)">5.</strong> Kopieer <code>projectId</code> en <code>apiKey</code> en plak ze in de app</p>
+      <hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">
+      <p style="color:#b45309;font-weight:600;">⚠️ Testmodus verloopt na 30 dagen!</p>
+      <p>Zet permanente regels in Firestore → <em>Rules</em> tab:</p>
+      <pre style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:11px;overflow-x:auto;white-space:pre-wrap;color:var(--text);">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+      <p>Plak bovenstaande → klik <strong>Publiceren</strong>. Sync werkt dan permanent.</p>
     </div>
   </div>
 </div>
@@ -972,7 +987,7 @@ const WEATHER_API =
 // RWS watertemperatuur — dichtstbijzijnde meetstation Waal
 // Aanpassen naar 'NIJM' voor Nijmegen Haven
 const RWS_WATER_STATION = 'LOBH';
-const RWS_API = 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen';
+const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
 
 const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       bg:'#fef9c3' },
@@ -1947,6 +1962,13 @@ window.getLocalReadings = () => readings;
 // Wordt aangeroepen door de Firestore real-time listener
 window.onFirestoreUpdate = function(fsReadings) {
   // Merge: bewaar lokale metingen die nog niet in Firestore staan
+  // Veiligheid: als Firestore leeg is maar lokaal data bestaat, NOOIT overschrijven
+  if (fsReadings.length === 0 && readings.length > 0) {
+    const el = document.getElementById('fb-status');
+    if (el) el.textContent = `⚠️ Firestore leeg — lokale data (${readings.length}) bewaard`;
+    if (window.fsBatchUpload) window.fsBatchUpload(readings).catch(() => {});
+    return;
+  }
   const fsIds = new Set(fsReadings.map(r => r.id));
   const localOnly = readings.filter(r => !fsIds.has(r.id));
   const el = document.getElementById('fb-status');
@@ -1986,10 +2008,10 @@ window.fsSyncNow = function() {
     })
     .catch(err => {
       const msg = err.code === 'permission-denied'
-        ? '❌ Firebase: geen toegang — controleer Firestore-beveiligingsregels.'
+        ? '❌ Regels verlopen — zie ℹ️ voor instructies. Lokale data veilig.'
         : `❌ Upload mislukt (${err.code || err.message})`;
       if (el) el.textContent = msg;
-      showToast('❌ Sync mislukt');
+      showToast('❌ Sync mislukt — zie Cloud sync sectie');
     });
 };
 
@@ -2000,11 +2022,16 @@ window.addEventListener('online', () => {
 
 // Foutafhandeling Firestore (bijv. verlopen beveiligingsregels)
 window.onFirestoreError = function(error) {
-  const msg = error.code === 'permission-denied'
-    ? '❌ Firebase: geen toegang. Controleer de Firestore-beveiligingsregels.'
-    : `❌ Firebase fout: ${error.code || error.message}`;
   const el = document.getElementById('fb-status');
-  if (el) el.textContent = msg;
+  if (!el) return;
+  if (error.code === 'permission-denied') {
+    el.innerHTML = '❌ Firestore-regels verlopen — '
+      + '<a href="https://console.firebase.google.com/project/lentse-plas/firestore/rules" '
+      + 'target="_blank" style="color:#1d4ed8;text-decoration:underline">regels bijwerken</a> '
+      + '(klik ℹ️ voor instructies). Lokale data is veilig.';
+  } else {
+    el.textContent = `❌ Firebase fout: ${error.code || error.message}`;
+  }
 };
 
 // ─── HELP MODAL ───────────────────────────────
