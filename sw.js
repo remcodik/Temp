@@ -35,20 +35,21 @@ self.addEventListener('message', ev => {
 self.addEventListener('fetch', ev => {
   const url = ev.request.url;
 
-  // Altijd netwerk voor Open-Meteo API
-  if (url.includes('api.open-meteo.com')) {
-    ev.respondWith(
-      fetch(ev.request).catch(() =>
-        new Response(JSON.stringify({ error: 'offline' }), {
-          headers: { 'Content-Type': 'application/json' }
-        })
-      )
-    );
+  // Altijd netwerk voor API-aanroepen — nooit cachen
+  if (
+    url.includes('api.open-meteo.com') ||
+    url.includes('googleapis.com') ||
+    url.includes('firebaseio.com') ||
+    url.includes('gstatic.com/firebasejs') ||
+    url.includes('waterwebservices.rijkswaterstaat.nl')
+  ) {
+    ev.respondWith(fetch(ev.request));
     return;
   }
 
-  // Network-first voor eigen bestanden
+  // Network-first voor eigen bestanden (alleen GET)
   if (url.includes(self.location.origin) || url.startsWith('./')) {
+    if (ev.request.method !== 'GET') return;
     ev.respondWith(
       fetch(ev.request)
         .then(response => {
@@ -63,7 +64,8 @@ self.addEventListener('fetch', ev => {
     return;
   }
 
-  // Cache-first voor externe resources (Chart.js CDN)
+  // Cache-first voor externe resources (Chart.js CDN) — alleen GET
+  if (ev.request.method !== 'GET') return;
   ev.respondWith(
     caches.match(ev.request).then(cached => {
       if (cached) return cached;
@@ -73,7 +75,7 @@ self.addEventListener('fetch', ev => {
           caches.open(CACHE).then(c => c.put(ev.request, clone));
         }
         return response;
-      }).catch(() => caches.match('./index.html'));
+      });
     })
   );
 });
