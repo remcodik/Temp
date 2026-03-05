@@ -932,7 +932,7 @@ service cloud.firestore {
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
-  import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+  import { getFirestore, collection, doc, setDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCM6mw_SlcjyHArKFIMA0G8EvP7aJrhCxQ",
@@ -953,7 +953,7 @@ service cloud.firestore {
 
   // Firestore helpers
   window.fsSetDoc = (id, data) => setDoc(doc(db, 'readings', id), data);
-  window.fsDeleteDoc = (id) => deleteDoc(doc(db, 'readings', id));
+  window.fsDeleteDoc = (id) => setDoc(doc(db, 'readings', id), {id, _deleted: true, deletedAt: Date.now()});
   window.fsBatchUpload = async (items) => {
     const batch = writeBatch(db);
     items.forEach(item => batch.set(doc(db, 'readings', item.id), item));
@@ -1100,6 +1100,14 @@ function load() {
 }
 function save() { localStorage.setItem('lp-readings', JSON.stringify(readings)); }
 function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// Tombstone: verwijderde IDs zodat ze na sync niet terugkomen
+let deletedIds = new Set();
+function loadDeletedIds() {
+  try { deletedIds = new Set(JSON.parse(localStorage.getItem('lp-deleted') || '[]')); }
+  catch { deletedIds = new Set(); }
+}
+function saveDeletedIds() { localStorage.setItem('lp-deleted', JSON.stringify([...deletedIds])); }
 
 // ─── PHOTO STORAGE ────────────────────────────
 function savePhoto(id, dataUrl) { localStorage.setItem('lp-photo-' + id, dataUrl); }
@@ -1419,6 +1427,8 @@ function saveReading(ev) {
 // Directe delete (geen undo) — voor "wis alles" en bevestigde deletes
 function deleteReadingDirect(id) {
   readings = readings.filter(r => r.id !== id);
+  deletedIds.add(id);
+  saveDeletedIds();
   deletePhoto(id);
   save();
   if (window.fsDeleteDoc) window.fsDeleteDoc(id).catch(console.error);
@@ -1433,6 +1443,8 @@ function deleteWithUndo(id) {
   if (undoTimer) clearTimeout(undoTimer);
   undoBuffer = readings[idx];
   readings.splice(idx, 1);
+  deletedIds.add(id);
+  saveDeletedIds();
   save();
   if (window.fsDeleteDoc) window.fsDeleteDoc(id).catch(console.error);
   renderAll();
@@ -1447,6 +1459,8 @@ function undoDelete() {
   clearTimeout(undoTimer);
   readings.push(undoBuffer);
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
+  deletedIds.delete(undoBuffer.id);
+  saveDeletedIds();
   save();
   if (window.fsSetDoc) window.fsSetDoc(undoBuffer.id, undoBuffer).catch(console.error);
   undoBuffer = null;
@@ -1959,16 +1973,30 @@ window.getLocalReadings = () => readings;
 
 // Wordt aangeroepen door de Firestore real-time listener
 window.onFirestoreUpdate = function(fsReadings) {
-  // Merge: bewaar lokale metingen die nog niet in Firestore staan
+  // Splits Firestore-data in actief en verwijderd (tombstones)
+  const activeFs = fsReadings.filter(r => !r._deleted);
+  const tombstonedIds = fsReadings.filter(r => r._deleted).map(r => r.id);
+
+  // Sync tombstones van Firestore naar lokale deletedIds
+  let tombstoneChanged = false;
+  tombstonedIds.forEach(id => { if (!deletedIds.has(id)) { deletedIds.add(id); tombstoneChanged = true; } });
+  if (tombstoneChanged) saveDeletedIds();
+
+  // Verwijder lokale metingen die door een ander apparaat zijn verwijderd
+  const beforeLen = readings.length;
+  readings = readings.filter(r => !deletedIds.has(r.id));
+  if (readings.length !== beforeLen) save();
+
   // Veiligheid: als Firestore leeg is maar lokaal data bestaat, NOOIT overschrijven
   if (fsReadings.length === 0 && readings.length > 0) {
     const el = document.getElementById('fb-status');
     if (el) el.textContent = `⚠️ Firestore leeg — lokale data (${readings.length}) bewaard`;
-    if (window.fsBatchUpload) window.fsBatchUpload(readings).catch(() => {});
+    if (window.fsBatchUpload) window.fsBatchUpload(readings.filter(r => !deletedIds.has(r.id))).catch(() => {});
     return;
   }
-  const fsIds = new Set(fsReadings.map(r => r.id));
-  const localOnly = readings.filter(r => !fsIds.has(r.id));
+  const fsIds = new Set(activeFs.map(r => r.id));
+  // localOnly: lokaal aanwezig, niet in actieve Firestore-data, en niet verwijderd
+  const localOnly = readings.filter(r => !fsIds.has(r.id) && !deletedIds.has(r.id));
   const el = document.getElementById('fb-status');
   if (localOnly.length && window.fsBatchUpload) {
     if (el) el.textContent = `⬆️ ${localOnly.length} meting${localOnly.length !== 1 ? 'en' : ''} uploaden…`;
@@ -1979,13 +2007,13 @@ window.onFirestoreUpdate = function(fsReadings) {
       if (el) el.textContent = msg;
     });
   }
-  const merged = [...fsReadings, ...localOnly];
+  const merged = [...activeFs, ...localOnly];
   merged.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   readings = merged;
   save();
   renderAll();
   if (!localOnly.length) {
-    if (el) el.textContent = fsReadings.length > 0
+    if (el) el.textContent = activeFs.length > 0
       ? `✅ Cloud sync actief — ${merged.length} meting${merged.length !== 1 ? 'en' : ''}`
       : '⚠️ Firestore leeg — data lokaal opgeslagen';
   }
@@ -2168,6 +2196,7 @@ function seedIfEmpty() {
 
 // ─── INIT ─────────────────────────────────────
 load();
+loadDeletedIds();
 seedIfEmpty();
 renderAll();
 updateAirTemp();
