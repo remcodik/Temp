@@ -301,17 +301,19 @@
     .rc-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
     .rc-date   { font-size:11px; color:var(--muted); font-weight:500; }
     .rc-edit   { background:#e3f2fd; color:var(--primary); border:none; border-radius:6px; width:28px; height:28px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .rc-body   { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .rc-water  { font-size:26px; font-weight:900; line-height:1; }
+    .rc-body   { display:flex; align-items:center; gap:8px; min-height:48px; }
+    .rc-temps  { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .rc-water  { font-size:28px; font-weight:900; line-height:1; }
     .rc-air    { font-size:20px; font-weight:700; line-height:1; }
     .rc-sep    { font-size:12px; color:rgba(0,0,0,.2); }
     .rc-notes  { margin-top:5px; font-size:11px; color:var(--muted); font-style:italic; line-height:1.4; }
     .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:2px; }
-    .rc-cond-icons { display:flex; gap:5px; align-items:center; margin:0 6px; }
+    .rc-cond-icons { display:flex; gap:5px; align-items:center; margin-left:auto; }
     .rc-cond-icon  {
       display:inline-flex; align-items:center; justify-content:center;
-      width:32px; height:32px; border-radius:50%; flex-shrink:0;
+      width:42px; height:42px; border-radius:50%; flex-shrink:0;
     }
+    .rc-topday { font-size:14px; margin-left:4px; flex-shrink:0; }
     /* ── Year filter (maandgrafiek) ── */
     .year-filter { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
     .yf-btn {
@@ -345,10 +347,10 @@
       background: var(--card);
       border-radius: 20px 20px 0 0;
       width: 100%; max-width: 600px;
-      max-height: 92vh; overflow-y:auto;
-      padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+      height: 96vh; overflow-y:auto;
+      padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
     }
-    .modal-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    .modal-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .modal-hdr h2 { font-size:17px; font-weight:700; }
     .close-btn {
       background:#f0f0f0; border:none; width:30px; height:30px;
@@ -357,16 +359,19 @@
     }
 
     /* ── Form ── */
-    .fg { margin-bottom:12px; }
-    .fg-row { display:flex; gap:10px; margin-bottom:12px; }
+    .fg { margin-bottom:8px; }
+    .fg-row { display:flex; gap:8px; margin-bottom:8px; }
     .fg-row .fg { flex:1; margin-bottom:0; }
+    .fg-row-3 { display:flex; gap:8px; margin-bottom:8px; }
+    .fg-row-3 .fg { flex:1; margin-bottom:0; }
+    .fg-row-3 .fg:first-child { flex:1.4; }
     .fg label {
       display:block; font-size:10px; font-weight:700;
-      color:var(--muted); margin-bottom:5px;
+      color:var(--muted); margin-bottom:3px;
       text-transform:uppercase; letter-spacing:.6px;
     }
     .fg input, .fg textarea {
-      width:100%; padding:10px 12px;
+      width:100%; padding:8px 10px;
       border:2px solid #e0e0e0; border-radius:10px;
       font-size:15px; font-family:var(--font);
       outline:none; background:#fafafa;
@@ -385,16 +390,18 @@
     }
 
     /* ── Icon picker ── */
-    .icon-picker { display:flex; flex-wrap:wrap; gap:5px; }
+    .icon-picker { display:flex; flex-wrap:wrap; gap:6px; }
     .ico {
-      display:flex; flex-direction:column; align-items:center; gap:2px;
-      padding:7px 8px; border:2px solid #e0e0e0; border-radius:10px;
-      cursor:pointer; background:white; min-width:50px;
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:8px 4px; border:2px solid #e0e0e0; border-radius:10px;
+      cursor:pointer; background:white; flex:1; min-width:70px;
       transition:all .15s;
     }
+    /* Gevoel (6) en Wind (5): 3 per rij zodat ze groter worden */
+    #feeling-picker .ico, #windstr-picker .ico { min-width:90px; }
     .ico:hover, .ico.sel { border-color:var(--primary); background:var(--primary-light); }
-    .ico .ie { font-size:20px; display:flex; align-items:center; justify-content:center; }
-    .ico .il { font-size:8px; color:var(--muted); text-align:center; line-height:1.2; }
+    .ico .ie { font-size:26px; display:flex; align-items:center; justify-content:center; }
+    .ico .il { font-size:10px; color:var(--muted); text-align:center; line-height:1.2; }
 
     /* ── Photo input ── */
     .topday-btn {
@@ -831,22 +838,18 @@
     <form onsubmit="saveReading(event)">
       <input type="hidden" id="f-id">
 
-      <div class="fg">
-        <label>Datum</label>
-        <input type="date" id="f-dt" required>
-      </div>
-
-      <!-- Water + Lucht naast elkaar -->
-      <div class="fg-row">
+      <!-- Datum + Water + Lucht op 1 rij -->
+      <div class="fg-row-3">
         <div class="fg">
-          <label>🌊 Water °C</label>
-          <div class="input-row">
-            <input type="number" id="f-wt" placeholder="22.5" step="0.1" min="-5" max="45" required>
-            <span class="unit-lbl">°</span>
-          </div>
+          <label>Datum</label>
+          <input type="date" id="f-dt" required>
         </div>
         <div class="fg">
-          <label>Lucht °C</label>
+          <label>🌊 Water °C</label>
+          <input type="number" id="f-wt" placeholder="22.5" step="0.1" min="-5" max="45" required>
+        </div>
+        <div class="fg">
+          <label>🌡️ Lucht °C</label>
           <div class="input-row">
             <input type="number" id="f-at" placeholder="25.0" step="0.1" min="-30" max="50">
             <button type="button" class="fetch-btn" onclick="fetchAndFill()" title="Haal luchttemperatuur op">🔄</button>
@@ -1546,13 +1549,14 @@ function readingHTML(r, showSwipeHint) {
     ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
 
   // Gevoel-icon (opgeslagen als 'wind')
-  const feelIcon  = r.wind    ? condIconCircle(FEELING,  r.wind,    20) : '';
+  const feelIcon  = r.wind    ? condIconCircle(FEELING,  r.wind,    36) : '';
   // Sky-icon
-  const skyIcon   = r.sky     ? condIconCircle(SKY,      r.sky,     20) : '';
+  const skyIcon   = r.sky     ? condIconCircle(SKY,      r.sky,     36) : '';
   // Windkracht-icon
-  const windIcon  = r.windStr ? condIconCircle(WIND_STR, r.windStr, 20) : '';
+  const windIcon  = r.windStr ? condIconCircle(WIND_STR, r.windStr, 36) : '';
   const iconsHTML = (skyIcon || feelIcon || windIcon)
     ? `<div class="rc-cond-icons">${skyIcon}${feelIcon}${windIcon}</div>` : '';
+  const topdayHTML = r.isTopDay ? `<span class="rc-topday" title="Top dag">🏅</span>` : '';
 
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
@@ -1561,15 +1565,18 @@ function readingHTML(r, showSwipeHint) {
         ${hintHTML}
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
-          ${iconsHTML}
+          ${topdayHTML}
           <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
         </div>
         <div class="rc-body">
-          <span class="rc-water" style="color:${tc}">${r.waterTemp.toFixed(1)}°</span>
-          ${airHTML}
-          ${photoHTML}
+          <div class="rc-temps">
+            <span class="rc-water" style="color:${tc}">${r.waterTemp.toFixed(1)}°</span>
+            ${airHTML}
+            ${photoHTML}
+          </div>
+          ${iconsHTML}
         </div>
       </div>
     </div>`;
