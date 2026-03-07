@@ -437,6 +437,12 @@
     }
     .btn-primary { background:var(--primary); color:white; width:100%; }
     .btn-primary:active { transform:scale(.98); }
+    .submit-sticky {
+      position: sticky; bottom: 0;
+      background: var(--card);
+      padding: 10px 0 0;
+      margin-top: 6px;
+    }
     .btn-danger  { background:#ffebee; color:var(--danger); width:100%; }
     .btn-plain   { background:#f4f4f4; color:var(--text); width:100%; }
 
@@ -880,7 +886,9 @@
                onchange="handlePhotoSelect(event)">
       </div>
 
-      <button type="submit" class="btn btn-primary">Opslaan</button>
+      <div class="submit-sticky">
+        <button type="submit" class="btn btn-primary">Opslaan</button>
+      </div>
     </form>
   </div>
 </div>
@@ -993,6 +1001,7 @@ const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       bg:'#fef9c3' },
   { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  bg:'#e0f2fe' },
   { v:'cloudy',        e:'☁️',  l:'Bewolkt',       bg:'#f1f5f9' },
+  { v:'hazy',          e:'🌁',  l:'Heiig',         bg:'#f0f0e6' },
   { v:'misty',         e:'🌫️', l:'Mistig',        bg:'#f8fafc' },
   { v:'rainy',         e:'🌧️', l:'Regen',         bg:'#eff6ff' },
   { v:'stormy',        e:'⛈️', l:'Onweer',        bg:'#fdf4ff' },
@@ -1374,13 +1383,15 @@ function renderPicker(containerId, opts, type) {
 }
 
 function pickIcon(type, val) {
-  if (type === 'sky')     selSky     = val;
-  if (type === 'feeling') selWind    = val;  // opgeslagen als 'wind'
-  if (type === 'windstr') selWindStr = val;
+  const cur = type === 'sky' ? selSky : type === 'feeling' ? selWind : selWindStr;
+  const newVal = cur === val ? null : val;
+  if (type === 'sky')     selSky     = newVal;
+  if (type === 'feeling') selWind    = newVal;  // opgeslagen als 'wind'
+  if (type === 'windstr') selWindStr = newVal;
   const opts = type === 'sky' ? SKY : type === 'feeling' ? FEELING : WIND_STR;
   opts.forEach(o => {
     const el = document.getElementById(`ico-${type}-${o.v}`);
-    if (el) el.classList.toggle('sel', o.v === val);
+    if (el) el.classList.toggle('sel', o.v === newVal);
   });
 }
 
