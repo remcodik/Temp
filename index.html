@@ -437,7 +437,7 @@
     /* Gevoel (6) en Wind (5): 3 per rij zodat ze groter worden */
     #feeling-picker .ico, #windstr-picker .ico { min-width:90px; }
     .ico:hover { border-color:var(--primary); background:var(--primary-light); }
-    .ico.sel   { border-color:var(--ico-accent, var(--primary)); background:color-mix(in srgb, var(--ico-accent, var(--primary)) 12%, white); }
+    .ico.sel   { border-color:var(--primary); background:var(--primary-light); }
     .ico .ie { font-size:26px; display:flex; align-items:center; justify-content:center; }
     .ico .il { font-size:11px; font-weight:600; color:var(--muted); text-align:center; line-height:1.2; }
 
@@ -1518,7 +1518,19 @@ function pickIcon(type, val) {
   const opts = type === 'sky' ? SKY : type === 'feeling' ? FEELING : WIND_STR;
   opts.forEach(o => {
     const el = document.getElementById(`ico-${type}-${o.v}`);
-    if (el) el.classList.toggle('sel', o.v === newVal);
+    if (!el) return;
+    const isSelected = o.v === newVal;
+    el.classList.toggle('sel', isSelected);
+    if (isSelected) {
+      const accent = o.cc || o.c || '';
+      if (accent) {
+        el.style.borderColor = accent;
+        el.style.background  = accent + '22'; // ~13% transparantie
+      }
+    } else {
+      el.style.borderColor = '';
+      el.style.background  = '';
+    }
   });
 }
 
