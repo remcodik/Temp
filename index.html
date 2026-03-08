@@ -574,17 +574,17 @@
 
     /* ── Data filter (metingen) ── */
     .data-filters {
-      display:grid;
-      grid-template-columns: auto auto 1fr 1fr 1fr 1fr;
+      display:flex; flex-wrap:wrap;
       gap:6px; margin-bottom:10px;
     }
     .df-btn {
-      padding:6px 10px; border-radius:20px; border:none;
+      flex:1; padding:6px 10px; border-radius:20px; border:none;
       font-size:12px; font-weight:700; cursor:pointer;
       background:#eef2f5; color:var(--muted);
       font-family:var(--font); transition:all .15s; white-space:nowrap;
-      text-align:center;
+      text-align:center; min-width:0;
     }
+    .df-btn.df-full { flex-basis:100%; flex-grow:1; }
     .df-btn .df-count { font-size:10px; opacity:.75; margin-left:3px; }
     .df-btn.active { background:var(--primary); color:white; }
     .df-btn.active-top { background:#f9a825; color:#5d3a00; }
@@ -1119,13 +1119,13 @@ const RWS_WATER_STATION = 'LOBH';
 const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
 
 const SKY = [
-  { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },
-  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  cc:'#60a5fa', bg:'#dbeafe' },
-  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       cc:'#94a3b8', bg:'#e2e8f0' },
-  { v:'hazy',          e:'🌁',  l:'Heiig',         cc:'#c4965a', bg:'#fdf0d5' },
-  { v:'misty',         e:'🌫️', l:'Mistig',        cc:'#a78bfa', bg:'#ede9fe' },
-  { v:'rainy',         e:'🌧️', l:'Regen',         cc:'#3b82f6', bg:'#dbeafe' },
-  { v:'stormy',        e:'⛈️', l:'Onweer',        cc:'#6d28d9', bg:'#f3e8ff' },
+  { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },  // amber
+  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  cc:'#38bdf8', bg:'#e0f7ff' },  // helder lichtblauw
+  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       cc:'#94a3b8', bg:'#e2e8f0' },  // slate grijs
+  { v:'hazy',          e:'🌁',  l:'Heiig',         cc:'#c4965a', bg:'#fdf0d5' },  // warm oker
+  { v:'misty',         e:'🌫️', l:'Mistig',        cc:'#7fb3c8', bg:'#e4f2f7' },  // blauwgrijs (geen paars)
+  { v:'rainy',         e:'🌧️', l:'Regen',         cc:'#1565c0', bg:'#dce9ff' },  // diepblauw (≠ lichtblauw)
+  { v:'stormy',        e:'⛈️', l:'Onweer',        cc:'#b91c1c', bg:'#fee2e2' },  // donkerrood (≠ blauwgrijs)
 ];
 // Gevoel (opgeslagen als 'wind' voor backward compat)
 const FEELING = [
@@ -1855,21 +1855,23 @@ function renderAll() {
 let activeDataFilter = 'all';
 
 const DATA_FILTERS = [
-  { key:'top',   label:'🏅',          activeColor:'#f9a825', activeText:'#5d3a00', isTop:true  },
-  { key:'all',   label:'Alle',        activeColor:null,      activeText:null,      isTop:false },
-  { key:'<5',    label:'&lt;5°',      activeColor:'#1a237e', activeText:'white',   isTop:false },
-  { key:'5-10',  label:'5–10°',       activeColor:'#0277bd', activeText:'white',   isTop:false },
-  { key:'10-15', label:'10–15°',      activeColor:'#00838f', activeText:'white',   isTop:false },
-  { key:'>15',   label:'&gt;15°',     activeColor:'#2e7d32', activeText:'white',   isTop:false },
+  { key:'all',   label:'Alle metingen', full:true,  activeColor:null,      activeText:null,      isTop:false },
+  { key:'top',   label:'🏅',            full:false, activeColor:'#f9a825', activeText:'#5d3a00', isTop:true  },
+  { key:'<5',    label:'&lt;5°',        full:false, activeColor:'#1a237e', activeText:'white',   isTop:false },
+  { key:'5-10',  label:'5–10°',         full:false, activeColor:'#0277bd', activeText:'white',   isTop:false },
+  { key:'10-15', label:'10–15°',        full:false, activeColor:'#00838f', activeText:'white',   isTop:false },
+  { key:'15-20', label:'15–20°',        full:false, activeColor:'#2e7d32', activeText:'white',   isTop:false },
+  { key:'>20',   label:'&gt;20°',       full:false, activeColor:'#e65100', activeText:'white',   isTop:false },
 ];
 
 function filterReadings(key) {
   switch(key) {
     case 'top':   return readings.filter(r => r.isTopDay);
     case '<5':    return readings.filter(r => r.waterTemp < 5);
-    case '5-10':  return readings.filter(r => r.waterTemp >= 5 && r.waterTemp < 10);
+    case '5-10':  return readings.filter(r => r.waterTemp >= 5  && r.waterTemp < 10);
     case '10-15': return readings.filter(r => r.waterTemp >= 10 && r.waterTemp < 15);
-    case '>15':   return readings.filter(r => r.waterTemp >= 15);
+    case '15-20': return readings.filter(r => r.waterTemp >= 15 && r.waterTemp < 20);
+    case '>20':   return readings.filter(r => r.waterTemp >= 20);
     default:      return readings;
   }
 }
@@ -1881,10 +1883,11 @@ function renderDataFilters() {
     const count = filterReadings(f.key).length;
     const isActive = f.key === activeDataFilter;
     const activeClass = isActive ? (f.isTop ? 'active-top' : 'active') : '';
+    const fullClass  = f.full ? 'df-full' : '';
     const style = isActive && f.activeColor
       ? `background:${f.activeColor};color:${f.activeText};`
       : '';
-    return `<button class="df-btn ${activeClass}" style="${style}" onclick="setDataFilter('${f.key}')">
+    return `<button class="df-btn ${activeClass} ${fullClass}" style="${style}" onclick="setDataFilter('${f.key}')">
       ${f.label}<span class="df-count">${count}</span>
     </button>`;
   }).join('');
