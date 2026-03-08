@@ -307,6 +307,16 @@
       width:42px; height:42px; border-radius:50%; flex-shrink:0;
     }
     .rc-topday { font-size:14px; margin-left:4px; flex-shrink:0; }
+    /* ── Conditie-grafiek toggle ── */
+    .cond-toggle { display:flex; gap:6px; margin-bottom:10px; }
+    .ct-btn {
+      flex:1; padding:6px 0; border-radius:20px; border:none;
+      font-size:12px; font-weight:700; cursor:pointer;
+      background:#eef2f5; color:var(--muted);
+      font-family:var(--font); transition:all .15s;
+    }
+    .ct-btn.active { background:var(--primary); color:white; }
+
     /* ── Welkomstmodal profiel ── */
     .profile-overlay {
       position:fixed; inset:0;
@@ -563,21 +573,20 @@
 
     /* ── Data filter (metingen) ── */
     .data-filters {
-      display:flex; gap:6px; margin-bottom:10px;
-      overflow-x:auto; -webkit-overflow-scrolling:touch;
-      scrollbar-width:none; padding-bottom:2px;
+      display:grid;
+      grid-template-columns: auto auto 1fr 1fr 1fr 1fr;
+      gap:6px; margin-bottom:10px;
     }
-    .data-filters::-webkit-scrollbar { display:none; }
     .df-btn {
-      padding:6px 13px; border-radius:20px; border:none;
+      padding:6px 10px; border-radius:20px; border:none;
       font-size:12px; font-weight:700; cursor:pointer;
       background:#eef2f5; color:var(--muted);
       font-family:var(--font); transition:all .15s; white-space:nowrap;
-      flex-shrink:0;
+      text-align:center;
     }
     .df-btn .df-count { font-size:10px; opacity:.75; margin-left:3px; }
     .df-btn.active { background:var(--primary); color:white; }
-    .df-btn.active-top { background:#e65100; color:white; }
+    .df-btn.active-top { background:#f9a825; color:#5d3a00; }
 
     /* ── Swipe hint ── */
     .rc-swipe-hint {
@@ -666,6 +675,8 @@
       .df-btn.active-top { background:#e65100; color:white; }
       .yf-btn { background:#1a3a5c; color:#90caf9; }
       .yf-btn.active { background:#0288d1; color:white; }
+      .ct-btn { background:#1a3a5c; color:#90caf9; }
+      .ct-btn.active { background:var(--primary); color:white; }
       .rc-cond-icon { filter: brightness(0.8) saturate(1.3); }
       .air-refresh-btn:active { background:rgba(255,255,255,.07); }
       .profile-modal { background:#112136; }
@@ -786,6 +797,17 @@
       <div class="chart-scroll-inner" id="chart-monthly-wrap">
         <canvas id="chart-monthly"></canvas>
       </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:10px">
+    <div class="card-title">Condities over tijd</div>
+    <div class="cond-toggle" id="cond-toggle">
+      <button class="ct-btn active" onclick="setCondChart('sky',this)">☁️ Hemel</button>
+      <button class="ct-btn"        onclick="setCondChart('feel',this)">🌡️ Gevoel</button>
+      <button class="ct-btn"        onclick="setCondChart('wind',this)">💨 Wind</button>
+    </div>
+    <div class="chart-wrap" style="height:220px">
+      <canvas id="chart-cond"></canvas>
     </div>
   </div>
 </div>
@@ -1193,8 +1215,10 @@ let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
 let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
+let chartCond    = null;
 let chartPeriod  = 'all';
 let chartYearFilter = 'all'; // 'all' of een jaarnummer
+let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
 let undoBuffer  = null;
 let undoTimer   = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
@@ -1389,7 +1413,7 @@ function goPage(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); }, 50);
+  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); }, 50);
 }
 
 // ─── FORM ─────────────────────────────────────
@@ -1815,7 +1839,7 @@ function renderAll() {
   renderBestDay();
   const chartPage = document.getElementById('page-chart');
   if (chartPage && chartPage.classList.contains('active')) {
-    renderCharts(); renderMonthChart();
+    renderCharts(); renderMonthChart(); renderCondChart();
   }
 
   renderList('preview-list', readings.slice(0,5));
@@ -1826,12 +1850,12 @@ function renderAll() {
 let activeDataFilter = 'all';
 
 const DATA_FILTERS = [
-  { key:'all',   label:'Alle',        color:null,      isTop:false },
-  { key:'top',   label:'🏅 Topdagen', color:'#e65100', isTop:true  },
-  { key:'<5',    label:'&lt;5°',      color:'#1a237e', isTop:false },
-  { key:'5-10',  label:'5–10°',       color:'#0277bd', isTop:false },
-  { key:'10-15', label:'10–15°',      color:'#00838f', isTop:false },
-  { key:'>15',   label:'&gt;15°',     color:'#2e7d32', isTop:false },
+  { key:'top',   label:'🏅',          activeColor:'#f9a825', activeText:'#5d3a00', isTop:true  },
+  { key:'all',   label:'Alle',        activeColor:null,      activeText:null,      isTop:false },
+  { key:'<5',    label:'&lt;5°',      activeColor:'#1a237e', activeText:'white',   isTop:false },
+  { key:'5-10',  label:'5–10°',       activeColor:'#0277bd', activeText:'white',   isTop:false },
+  { key:'10-15', label:'10–15°',      activeColor:'#00838f', activeText:'white',   isTop:false },
+  { key:'>15',   label:'&gt;15°',     activeColor:'#2e7d32', activeText:'white',   isTop:false },
 ];
 
 function filterReadings(key) {
@@ -1852,14 +1876,16 @@ function renderDataFilters() {
     const count = filterReadings(f.key).length;
     const isActive = f.key === activeDataFilter;
     const activeClass = isActive ? (f.isTop ? 'active-top' : 'active') : '';
-    const colorStyle = isActive && f.color ? `background:${f.color};color:white;` : '';
-    return `<button class="df-btn ${activeClass}" style="${colorStyle}" onclick="setDataFilter('${f.key}',this)">
+    const style = isActive && f.activeColor
+      ? `background:${f.activeColor};color:${f.activeText};`
+      : '';
+    return `<button class="df-btn ${activeClass}" style="${style}" onclick="setDataFilter('${f.key}')">
       ${f.label}<span class="df-count">${count}</span>
     </button>`;
   }).join('');
 }
 
-function setDataFilter(f, btn) {
+function setDataFilter(f) {
   activeDataFilter = f;
   applyDataFilter();
 }
@@ -2058,11 +2084,92 @@ function renderMonthChart() {
   });
 }
 
+// ─── CONDITIE GRAFIEK ─────────────────────────
+function setCondChart(mode, btn) {
+  condChartMode = mode;
+  document.querySelectorAll('.ct-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCondChart();
+}
+
+function renderCondChart() {
+  const canvas = document.getElementById('chart-cond');
+  if (!canvas) return;
+  if (chartCond) { chartCond.destroy(); chartCond = null; }
+  if (!readings.length) return;
+
+  // Bepaal welke opties en veldnaam we gebruiken
+  let opts, field, title;
+  if (condChartMode === 'sky') {
+    opts  = SKY;
+    field = 'sky';
+    title = 'Hemelconditie per maand';
+  } else if (condChartMode === 'feel') {
+    opts  = FEELING;
+    field = 'wind'; // backward-compat veldnaam
+    title = 'Gevoel per maand';
+  } else {
+    opts  = WIND_STR;
+    field = 'windStr';
+    title = 'Windkracht per maand';
+  }
+
+  // Maanden (label) ophalen
+  const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+  const monthKeys = [...new Set(sorted.map(r => r.datetime.slice(0,7)))];
+  const labels = monthKeys.map(k => {
+    const [y, m] = k.split('-');
+    const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+    return MAAND[+m - 1] + ' \'' + y.slice(2);
+  });
+
+  // Datasets: één per optie
+  const datasets = opts.map(o => {
+    const data = monthKeys.map(k =>
+      readings.filter(r => r.datetime.slice(0,7) === k && r[field] === o.v).length
+    );
+    // Kleur: gebruik o.c (SVG-icon kleur) of genereer vanuit o.bg
+    const bg = o.c || o.bg || '#90a4ae';
+    return {
+      label: o.l,
+      data,
+      backgroundColor: bg + 'cc',
+      borderColor: bg,
+      borderWidth: 1,
+      borderRadius: 3,
+    };
+  });
+
+  chartCond = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        title:  { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => items[0].label,
+            label: item => ` ${item.dataset.label}: ${item.raw}×`,
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 } }, grid: { display: false } },
+        y: { stacked: true, ticks: { precision: 0, font: { size: 10 } },
+             grid: { color: 'rgba(0,0,0,.06)' } },
+      }
+    }
+  });
+}
+
 // Herlaad grafieken bij scherm draaien
 const _reloadCharts = () => {
   const page = document.getElementById('page-chart');
   if (page && page.classList.contains('active')) {
-    setTimeout(() => { renderCharts(); renderMonthChart(); }, 200);
+    setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); }, 200);
   }
 };
 window.addEventListener('resize', _reloadCharts);
