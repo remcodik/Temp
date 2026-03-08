@@ -436,7 +436,8 @@
     }
     /* Gevoel (6) en Wind (5): 3 per rij zodat ze groter worden */
     #feeling-picker .ico, #windstr-picker .ico { min-width:90px; }
-    .ico:hover, .ico.sel { border-color:var(--primary); background:var(--primary-light); }
+    .ico:hover { border-color:var(--primary); background:var(--primary-light); }
+    .ico.sel   { border-color:var(--ico-accent, var(--primary)); background:color-mix(in srgb, var(--ico-accent, var(--primary)) 12%, white); }
     .ico .ie { font-size:26px; display:flex; align-items:center; justify-content:center; }
     .ico .il { font-size:11px; font-weight:600; color:var(--muted); text-align:center; line-height:1.2; }
 
@@ -1118,13 +1119,13 @@ const RWS_WATER_STATION = 'LOBH';
 const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
 
 const SKY = [
-  { v:'sunny',         e:'☀️',  l:'Zonnig',       bg:'#fef9c3' },
-  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  bg:'#e0f2fe' },
-  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       bg:'#f1f5f9' },
-  { v:'hazy',          e:'🌁',  l:'Heiig',         bg:'#f0f0e6' },
-  { v:'misty',         e:'🌫️', l:'Mistig',        bg:'#f8fafc' },
-  { v:'rainy',         e:'🌧️', l:'Regen',         bg:'#eff6ff' },
-  { v:'stormy',        e:'⛈️', l:'Onweer',        bg:'#fdf4ff' },
+  { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },
+  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  cc:'#60a5fa', bg:'#dbeafe' },
+  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       cc:'#94a3b8', bg:'#e2e8f0' },
+  { v:'hazy',          e:'🌁',  l:'Heiig',         cc:'#c4965a', bg:'#fdf0d5' },
+  { v:'misty',         e:'🌫️', l:'Mistig',        cc:'#a78bfa', bg:'#ede9fe' },
+  { v:'rainy',         e:'🌧️', l:'Regen',         cc:'#3b82f6', bg:'#dbeafe' },
+  { v:'stormy',        e:'⛈️', l:'Onweer',        cc:'#6d28d9', bg:'#f3e8ff' },
 ];
 // Gevoel (opgeslagen als 'wind' voor backward compat)
 const FEELING = [
@@ -1203,8 +1204,9 @@ function condIconCircle(opts, val, size=20) {
     // SVG icon (FEELING, WIND_STR)
     return `<span class="rc-cond-icon" style="background:${bg}" title="${o.l}">${mkIcon(val, o.c, size)}</span>`;
   }
-  // Emoji fallback (SKY)
-  return `<span class="rc-cond-icon" style="background:${bg};font-size:${Math.round(size*0.85)}px" title="${o.l}">${o.e || ''}</span>`;
+  // Emoji fallback (SKY) — cc geeft subtiele gekleurde rand
+  const border = o.cc ? `border:2px solid ${o.cc};` : '';
+  return `<span class="rc-cond-icon" style="background:${bg};${border}font-size:${Math.round(size*0.85)}px" title="${o.l}">${o.e || ''}</span>`;
 }
 
 // ─── STATE ────────────────────────────────────
@@ -1497,7 +1499,10 @@ function renderPicker(containerId, opts, type) {
     const icon = o.c  // heeft kleur → SVG icon
       ? mkIcon(o.v, o.c, 22)
       : `<span style="font-size:20px">${o.e || ''}</span>`;
-    return `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')">
+    // bg-tint voor de chip zelf (o.bg), accent-kleur voor geselecteerde rand via CSS var
+    const accent = o.cc || o.c || '';
+    const accentStyle = accent ? `--ico-accent:${accent}` : '';
+    return `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')" style="${accentStyle}">
        <span class="ie">${icon}</span>
        <span class="il">${o.l}</span>
      </div>`;
@@ -2128,8 +2133,8 @@ function renderCondChart() {
     const data = monthKeys.map(k =>
       readings.filter(r => r.datetime.slice(0,7) === k && r[field] === o.v).length
     );
-    // Kleur: gebruik o.c (SVG-icon kleur) of genereer vanuit o.bg
-    const bg = o.c || o.bg || '#90a4ae';
+    // Kleur: cc (SKY grafiekkleur) → c (FEELING/WIND_STR SVG-kleur) → bg fallback
+    const bg = o.cc || o.c || '#90a4ae';
     return {
       label: o.l,
       data,
