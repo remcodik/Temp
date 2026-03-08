@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Lentse Plas">
+  <meta name="apple-mobile-web-app-title" content="Oosterhoutse Plas">
   <meta name="theme-color" content="#0277bd">
-  <title>Lentse Plas Temp</title>
+  <title>Oosterhoutse Plas Temp</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
@@ -164,13 +164,15 @@
       position: relative;
       overflow: hidden;
     }
-    .wh-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; opacity:.78; margin-bottom:2px; }
-    .wh-temp  { font-size:60px; font-weight:900; line-height:1; letter-spacing:-3px; }
+    .wh-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; opacity:.78; margin-bottom:6px; }
+    .wh-main  { display:flex; align-items:center; gap:14px; }
+    .wh-temp  { font-size:60px; font-weight:900; line-height:1; letter-spacing:-3px; flex-shrink:0; }
+    .wh-right { display:flex; flex-direction:column; gap:6px; }
     .wh-status {
       display: inline-flex; align-items:center; gap:5px;
       background: rgba(255,255,255,.18); backdrop-filter:blur(4px);
       border-radius: 20px; padding: 4px 12px;
-      font-size: 13px; font-weight: 600; margin-top: 7px;
+      font-size: 13px; font-weight: 600;
     }
     .wh-bottom { display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px; }
     .wh-date  { font-size:11px; opacity:.7; }
@@ -305,7 +307,36 @@
       width:42px; height:42px; border-radius:50%; flex-shrink:0;
     }
     .rc-topday { font-size:14px; margin-left:4px; flex-shrink:0; }
-    /* ── Year filter (maandgrafiek) ── */
+    /* ── Welkomstmodal profiel ── */
+    .profile-overlay {
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.65);
+      z-index:300;
+      display:none; align-items:center; justify-content:center;
+      padding:20px;
+    }
+    .profile-overlay.open { display:flex; }
+    .profile-modal {
+      background:var(--card);
+      border-radius:20px;
+      width:100%; max-width:400px;
+      padding:28px 20px 24px;
+      text-align:center;
+    }
+    .profile-modal h2 { font-size:22px; font-weight:800; margin-bottom:4px; }
+    .profile-modal p  { font-size:13px; color:var(--muted); margin-bottom:20px; }
+    .profile-chips { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+    .profile-chip {
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      padding:12px 16px; border:2px solid #e0e0e0; border-radius:14px;
+      cursor:pointer; background:white; min-width:80px;
+      font-family:var(--font); transition:all .15s;
+    }
+    .profile-chip:hover { border-color:var(--primary); background:var(--primary-light); }
+    .profile-chip .pc-medal { font-size:22px; line-height:1; }
+    .profile-chip .pc-name  { font-size:13px; font-weight:700; color:var(--text); }
+
+    /* ── Data filters — scrollbare rij ── */
     .year-filter { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
     .yf-btn {
       padding:4px 12px; border-radius:16px; border:none;
@@ -531,13 +562,20 @@
     .pf-btn.active { background:var(--primary); color:white; }
 
     /* ── Data filter (metingen) ── */
-    .data-filters { display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap; }
+    .data-filters {
+      display:flex; gap:6px; margin-bottom:10px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none; padding-bottom:2px;
+    }
+    .data-filters::-webkit-scrollbar { display:none; }
     .df-btn {
-      padding:6px 12px; border-radius:20px; border:none;
+      padding:6px 13px; border-radius:20px; border:none;
       font-size:12px; font-weight:700; cursor:pointer;
       background:#eef2f5; color:var(--muted);
       font-family:var(--font); transition:all .15s; white-space:nowrap;
+      flex-shrink:0;
     }
+    .df-btn .df-count { font-size:10px; opacity:.75; margin-left:3px; }
     .df-btn.active { background:var(--primary); color:white; }
     .df-btn.active-top { background:#e65100; color:white; }
 
@@ -630,6 +668,10 @@
       .yf-btn.active { background:#0288d1; color:white; }
       .rc-cond-icon { filter: brightness(0.8) saturate(1.3); }
       .air-refresh-btn:active { background:rgba(255,255,255,.07); }
+      .profile-modal { background:#112136; }
+      .profile-chip { background:#1a3a5c; border-color:#2a5a8c; }
+      .profile-chip:hover { background:#0d47a1; border-color:var(--primary); }
+      .profile-chip .pc-name { color:#e3f2fd; }
     }
   </style>
 </head>
@@ -647,14 +689,17 @@
     <div class="hdr-title">
       <span style="font-size:24px">🏊</span>
       <div>
-        <h1>Lentse Plas</h1>
-        <p>Temperatuur Tracker</p>
+        <h1>Oosterhoutse Plas</h1>
+        <p id="hdr-profile">Temperatuur Tracker</p>
       </div>
     </div>
-    <a href="https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas"
-       target="_blank" rel="noopener" class="waterkaart-btn">
-      📍 Waterkaart
-    </a>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="openProfileModal()" id="hdr-profile-btn" style="display:none;background:rgba(255,255,255,.18);border:none;border-radius:20px;padding:5px 10px;color:white;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)"></button>
+      <a href="https://waterkaart.net/gids/zwemplek.php?naam=Oosterhoutse%20Plas"
+         target="_blank" rel="noopener" class="waterkaart-btn">
+        📍 Waterkaart
+      </a>
+    </div>
   </div>
   <svg class="wave-svg" viewBox="0 0 1200 20" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M0,13 C200,20 400,5 600,13 C800,20 1000,5 1200,13 L1200,20 L0,20 Z" fill="var(--bg)"/>
@@ -719,14 +764,7 @@
     <h2>Alle metingen</h2>
     <span class="badge" id="badge-data">0</span>
   </div>
-  <div class="data-filters">
-    <button class="df-btn active"   onclick="setDataFilter('all',this)">Alle</button>
-    <button class="df-btn"          onclick="setDataFilter('top',this)">🏅 Topdagen</button>
-    <button class="df-btn"          onclick="setDataFilter('<5',this)">&lt;5°</button>
-    <button class="df-btn"          onclick="setDataFilter('5-10',this)">5–10°</button>
-    <button class="df-btn"          onclick="setDataFilter('10-15',this)">10–15°</button>
-    <button class="df-btn"          onclick="setDataFilter('>15',this)">&gt;15°</button>
-  </div>
+  <div class="data-filters" id="data-filters"></div>
   <div id="all-list"></div>
 </div>
 
@@ -754,34 +792,10 @@
 
 <!-- EXPORT / SETTINGS -->
 <div id="page-export" class="page">
-  <div class="section-hdr"><h2>Data &amp; instellingen</h2></div>
+  <div class="section-hdr"><h2>Instellingen</h2></div>
 
-  <!-- Update knop bovenaan -->
-  <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px">🔄 Nieuwe versie ophalen</button>
-
-  <div class="action-grid" style="margin-bottom:13px">
-    <button class="action-card" onclick="exportCSV()">
-      <span class="ai">📊</span>
-      <div class="al">Export CSV</div>
-      <div class="ad">Excel / Numbers</div>
-    </button>
-    <button class="action-card" onclick="exportJSON()">
-      <span class="ai">💾</span>
-      <div class="al">Export JSON</div>
-      <div class="ad">Backup bestand</div>
-    </button>
-    <button class="action-card" onclick="triggerImport()">
-      <span class="ai">📂</span>
-      <div class="al">Import JSON</div>
-      <div class="ad">Herstel / samenvoegen</div>
-    </button>
-    <button class="action-card" onclick="shareData()">
-      <span class="ai">🔗</span>
-      <div class="al">Deel data</div>
-      <div class="ad">Via iPhone deel-menu</div>
-    </button>
-  </div>
-  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+  <!-- Wissel profiel -->
+  <button class="btn btn-primary" onclick="openProfileModal()" style="width:100%;margin-bottom:13px;font-size:15px;">👤 Wissel profiel</button>
 
   <!-- Firebase — inklapmenu -->
   <details class="card" style="border:2px solid #a5d6a7;margin-bottom:8px">
@@ -807,14 +821,8 @@
     </div>
   </details>
 
-  <div class="card" style="border:2px solid #ffcdd2;">
-    <div class="card-title" style="color:var(--danger);">Data wissen</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Wist alle lokale metingen permanent.</p>
-    <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
-  </div>
-
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.12 &nbsp;·&nbsp; __BUILD_TIME__
+    Versie 2.13 &nbsp;·&nbsp; __BUILD_TIME__
   </div>
 </div>
 
@@ -951,6 +959,15 @@ service cloud.firestore {
   <img id="photo-img" src="" alt="foto meting">
 </div>
 
+<!-- PROFIEL MODAL -->
+<div class="profile-overlay" id="profile-overlay">
+  <div class="profile-modal">
+    <h2>👋 Wie ben jij?</h2>
+    <p>Kies jouw naam om verder te gaan</p>
+    <div class="profile-chips" id="profile-chips"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <span id="toast-msg"></span>
@@ -1007,6 +1024,66 @@ service cloud.firestore {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
+// ─── PERSONEN ─────────────────────────────────
+const PERSONS = [
+  { name:'Saskia',   medal:'🥇' },
+  { name:'Karla',    medal:'🥇' },
+  { name:'Mieke W',  medal:'🥇' },
+  { name:'Mieke H',  medal:'🥇' },
+  { name:'Marianne', medal:'🥇' },
+  { name:'Remco',    medal:''   },
+  { name:'Gast',     medal:''   },
+];
+
+let currentProfile = null; // { name, medal }
+
+function loadProfile() {
+  try { currentProfile = JSON.parse(localStorage.getItem('lp-profile') || 'null'); }
+  catch { currentProfile = null; }
+}
+function saveProfile(p) {
+  currentProfile = p;
+  localStorage.setItem('lp-profile', JSON.stringify(p));
+}
+function isGuest() { return currentProfile && currentProfile.name === 'Gast'; }
+
+function openProfileModal() {
+  const chips = document.getElementById('profile-chips');
+  chips.innerHTML = PERSONS.map(p => `
+    <button class="profile-chip" onclick="selectProfile('${p.name}')">
+      <span class="pc-medal">${p.medal || '👤'}</span>
+      <span class="pc-name">${p.name}</span>
+    </button>`).join('');
+  document.getElementById('profile-overlay').classList.add('open');
+}
+
+function selectProfile(name) {
+  const p = PERSONS.find(x => x.name === name);
+  if (!p) return;
+  saveProfile(p);
+  document.getElementById('profile-overlay').classList.remove('open');
+  applyProfile();
+}
+
+function applyProfile() {
+  if (!currentProfile) return;
+  const { name, medal } = currentProfile;
+  // Header subtitle
+  document.getElementById('hdr-profile').textContent =
+    (medal ? medal + ' ' : '') + name;
+  // Header wissel-knop
+  const btn = document.getElementById('hdr-profile-btn');
+  btn.textContent = '↩ Wissel';
+  btn.style.display = 'block';
+  // FAB zichtbaarheid
+  const fab = document.querySelector('.fab');
+  if (fab) fab.style.display = isGuest() ? 'none' : '';
+  // Edit knoppen in lijsten
+  document.querySelectorAll('.rc-edit').forEach(el => {
+    el.style.display = isGuest() ? 'none' : '';
+  });
+}
+
 // ─── CONSTANTS ────────────────────────────────
 const LAT = 51.873, LON = 5.863;
 const WEATHER_API =
@@ -1331,6 +1408,7 @@ function setTopDayUI(val) {
 function toggleTopDay() { setTopDayUI(!selTopDay); }
 
 function openForm(id) {
+  if (isGuest()) { showToast('🚫 Gasten kunnen geen metingen toevoegen'); return; }
   editingId = id || null;
   selSky = selWind = selWindStr = null;
   pendingPhotoData = null;
@@ -1629,11 +1707,15 @@ function renderWaterHero() {
   el.innerHTML = `
     <div class="water-hero" style="background:${hg.grad};box-shadow:0 6px 24px ${hg.shadow}">
       <div class="wh-label">Watertemperatuur</div>
-      <div class="wh-temp">${latest.waterTemp.toFixed(1)}°</div>
-      <div class="wh-status">${status.e} ${status.l}</div>
+      <div class="wh-main">
+        <div class="wh-temp">${latest.waterTemp.toFixed(1)}°</div>
+        <div class="wh-right">
+          <div class="wh-status">${status.e} ${status.l}</div>
+          ${deltaHTML}
+        </div>
+      </div>
       <div class="wh-bottom">
         <div class="wh-date">${fmtDate(latest.datetime)}</div>
-        ${deltaHTML}
       </div>
     </div>`;
 }
@@ -1743,24 +1825,48 @@ function renderAll() {
 // ─── DATA FILTER ──────────────────────────────
 let activeDataFilter = 'all';
 
+const DATA_FILTERS = [
+  { key:'all',   label:'Alle',        color:null,      isTop:false },
+  { key:'top',   label:'🏅 Topdagen', color:'#e65100', isTop:true  },
+  { key:'<5',    label:'&lt;5°',      color:'#1a237e', isTop:false },
+  { key:'5-10',  label:'5–10°',       color:'#0277bd', isTop:false },
+  { key:'10-15', label:'10–15°',      color:'#00838f', isTop:false },
+  { key:'>15',   label:'&gt;15°',     color:'#2e7d32', isTop:false },
+];
+
+function filterReadings(key) {
+  switch(key) {
+    case 'top':   return readings.filter(r => r.isTopDay);
+    case '<5':    return readings.filter(r => r.waterTemp < 5);
+    case '5-10':  return readings.filter(r => r.waterTemp >= 5 && r.waterTemp < 10);
+    case '10-15': return readings.filter(r => r.waterTemp >= 10 && r.waterTemp < 15);
+    case '>15':   return readings.filter(r => r.waterTemp >= 15);
+    default:      return readings;
+  }
+}
+
+function renderDataFilters() {
+  const el = document.getElementById('data-filters');
+  if (!el) return;
+  el.innerHTML = DATA_FILTERS.map(f => {
+    const count = filterReadings(f.key).length;
+    const isActive = f.key === activeDataFilter;
+    const activeClass = isActive ? (f.isTop ? 'active-top' : 'active') : '';
+    const colorStyle = isActive && f.color ? `background:${f.color};color:white;` : '';
+    return `<button class="df-btn ${activeClass}" style="${colorStyle}" onclick="setDataFilter('${f.key}',this)">
+      ${f.label}<span class="df-count">${count}</span>
+    </button>`;
+  }).join('');
+}
+
 function setDataFilter(f, btn) {
   activeDataFilter = f;
-  document.querySelectorAll('.df-btn').forEach(b => b.classList.remove('active','active-top'));
-  btn.classList.add(f === 'top' ? 'active-top' : 'active');
   applyDataFilter();
 }
 
 function applyDataFilter() {
-  let filtered;
-  switch(activeDataFilter) {
-    case 'top':   filtered = readings.filter(r => r.isTopDay); break;
-    case '<5':    filtered = readings.filter(r => r.waterTemp < 5); break;
-    case '5-10':  filtered = readings.filter(r => r.waterTemp >= 5 && r.waterTemp < 10); break;
-    case '10-15': filtered = readings.filter(r => r.waterTemp >= 10 && r.waterTemp < 15); break;
-    case '>15':   filtered = readings.filter(r => r.waterTemp >= 15); break;
-    default:      filtered = readings;
-  }
-  renderList('all-list', filtered);
+  renderDataFilters();
+  renderList('all-list', filterReadings(activeDataFilter));
 }
 
 function renderList(containerId, items) {
@@ -1773,6 +1879,11 @@ function renderList(containerId, items) {
     const wrap = document.getElementById('wrap-' + r.id);
     if (wrap) setupSwipe(wrap, r.id);
   });
+  // Gast: verberg edit knoppen en swipe-bg
+  if (isGuest()) {
+    el.querySelectorAll('.rc-edit').forEach(b => b.style.display = 'none');
+    el.querySelectorAll('.swipe-bg').forEach(b => b.style.display = 'none');
+  }
 }
 
 // ─── CHARTS ───────────────────────────────────
@@ -2255,10 +2366,18 @@ function seedIfEmpty() {
 // ─── INIT ─────────────────────────────────────
 load();
 loadDeletedIds();
+loadProfile();
 seedIfEmpty();
 renderAll();
 updateAirTemp();
 setInterval(updateAirTemp, 10 * 60 * 1000);
+
+// Profiel tonen of welkomstmodal
+if (currentProfile) {
+  applyProfile();
+} else {
+  openProfileModal();
+}
 </script>
 </body>
 </html>
