@@ -706,8 +706,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <button onclick="openProfileModal()" id="hdr-profile-btn" style="display:none;background:rgba(255,255,255,.18);border:none;border-radius:20px;padding:5px 10px;color:white;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)"></button>
-      <a href="https://waterkaart.net/gids/zwemplek.php?naam=Oosterhoutse%20Plas"
+<a href="https://waterkaart.net/gids/zwemplek.php?naam=Oosterhoutse%20Plas"
          target="_blank" rel="noopener" class="waterkaart-btn">
         📍 Waterkaart
       </a>
@@ -1123,10 +1122,6 @@ function applyProfile() {
   // Header subtitle
   document.getElementById('hdr-profile').textContent =
     (medal ? medal + ' ' : '') + name;
-  // Header wissel-knop
-  const btn = document.getElementById('hdr-profile-btn');
-  btn.textContent = '↩ Wissel';
-  btn.style.display = 'block';
   // FAB zichtbaarheid
   const fab = document.querySelector('.fab');
   if (fab) fab.style.display = isGuest() ? 'none' : '';
