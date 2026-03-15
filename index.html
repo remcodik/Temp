@@ -802,7 +802,7 @@
   <div class="card" style="margin-top:10px">
     <div class="card-title">Condities over tijd</div>
     <div class="cond-toggle" id="cond-toggle">
-      <button class="ct-btn active" onclick="setCondChart('sky',this)">☁️ Hemel</button>
+      <button class="ct-btn active" onclick="setCondChart('sky',this)">☁️ Bewolking</button>
       <button class="ct-btn"        onclick="setCondChart('feel',this)">🌡️ Gevoel</button>
       <button class="ct-btn"        onclick="setCondChart('wind',this)">💨 Wind</button>
     </div>
@@ -935,7 +935,7 @@
       </div>
 
       <div class="fg">
-        <label>Hemelconditie</label>
+        <label>Bewolking</label>
         <div class="icon-picker" id="sky-picker"></div>
       </div>
 
@@ -1243,7 +1243,7 @@ let chartComb    = null;
 let chartMonthly = null;
 let chartCond    = null;
 let chartPeriod  = 'all';
-let chartYearFilter = 'all'; // 'all' of een jaarnummer
+let chartYearFilter = new Date().getFullYear(); // huidig jaar als standaard
 let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
 let undoBuffer  = null;
 let undoTimer   = null;
@@ -1579,7 +1579,12 @@ function saveReading(ev) {
     isTopDay  : selTopDay,
   };
   const idx = readings.findIndex(x => x.id === id);
-  if (idx >= 0) readings[idx] = r;
+  if (idx >= 0) {
+    r.createdBy = readings[idx].createdBy || null; // bewaar originele maker
+    readings[idx] = r;
+  } else {
+    r.createdBy = currentProfile ? currentProfile.name : null;
+  }
   else          readings.push(r);
 
   // Sla foto op
@@ -1726,9 +1731,12 @@ function readingHTML(r, showSwipeHint) {
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
           ${topdayHTML}
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+            ${r.createdBy ? `<div class="rc-date">${r.createdBy}</div>` : ''}
           <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
+          </div>
         </div>
         <div class="rc-body">
           <div class="rc-temps">
@@ -1970,6 +1978,7 @@ function setYearFilter(year, btn) {
   document.querySelectorAll('.yf-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderMonthChart();
+  renderCondChart();
 }
 
 function renderYearFilterButtons() {
@@ -2147,7 +2156,7 @@ function renderCondChart() {
   if (condChartMode === 'sky') {
     opts  = SKY;
     field = 'sky';
-    title = 'Hemelconditie per maand';
+    title = 'Bewolking per maand';
   } else if (condChartMode === 'feel') {
     opts  = FEELING;
     field = 'wind'; // backward-compat veldnaam
@@ -2158,14 +2167,21 @@ function renderCondChart() {
     title = 'Windkracht per maand';
   }
 
-  // Maanden (label) ophalen
-  const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
-  const monthKeys = [...new Set(sorted.map(r => r.datetime.slice(0,7)))];
-  const labels = monthKeys.map(k => {
-    const [y, m] = k.split('-');
-    const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-    return MAAND[+m - 1] + ' \'' + y.slice(2);
-  });
+  // Maanden (label) ophalen — zelfde logica als renderMonthChart
+  const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  let monthKeys, labels;
+  if (chartYearFilter !== 'all') {
+    const year = chartYearFilter;
+    monthKeys = MAAND.map((_, i) => `${year}-${String(i + 1).padStart(2,'0')}`);
+    labels    = MAAND;
+  } else {
+    const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+    monthKeys = [...new Set(sorted.map(r => r.datetime.slice(0,7)))];
+    labels = monthKeys.map(k => {
+      const [y, m] = k.split('-');
+      return MAAND[+m - 1] + ' \'' + y.slice(2);
+    });
+  }
 
   // Datasets: één per optie
   const datasets = opts.map(o => {
@@ -2223,7 +2239,7 @@ window.addEventListener('orientationchange', () => setTimeout(_reloadCharts, 300
 // ─── EXPORT / IMPORT ──────────────────────────
 function exportCSV() {
   if (!readings.length) { showToast('Geen data om te exporteren'); return; }
-  const hdr  = ['Datum','Water °C','Lucht °C','Hemel','Gevoel','Windkracht','Notities'];
+  const hdr  = ['Datum','Water °C','Lucht °C','Bewolking','Gevoel','Windkracht','Notities'];
   const rows = readings.map(r => [
     shortDate(r.datetime), r.waterTemp, r.airTemp ?? '',
     label(SKY,r.sky), label(FEELING,r.wind), label(WIND_STR,r.windStr), r.notes ?? '',
