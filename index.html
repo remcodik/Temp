@@ -1584,8 +1584,8 @@ function saveReading(ev) {
     readings[idx] = r;
   } else {
     r.createdBy = currentProfile ? currentProfile.name : null;
+    readings.push(r);
   }
-  else          readings.push(r);
 
   // Sla foto op
   if (pendingPhotoData) savePhoto(id, pendingPhotoData);
