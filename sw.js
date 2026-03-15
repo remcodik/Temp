@@ -1,5 +1,5 @@
 // Service Worker — Lentse Plas Temperatuur Tracker
-const CACHE = 'lentse-plas-__CACHE_VER__';  // Ingevuld door CI/CD bij elke deploy
+const CACHE = 'lentse-plas-v20260315';  // Update dit bij elke deploy
 const ASSETS = [
   './',
   './index.html',
