@@ -307,6 +307,16 @@
       width:42px; height:42px; border-radius:50%; flex-shrink:0;
     }
     .rc-topday { font-size:14px; margin-left:4px; flex-shrink:0; }
+    /* ── Conditie-grafiek toggle ── */
+    .cond-toggle { display:flex; gap:6px; margin-bottom:10px; }
+    .ct-btn {
+      flex:1; padding:6px 0; border-radius:20px; border:none;
+      font-size:12px; font-weight:700; cursor:pointer;
+      background:#eef2f5; color:var(--muted);
+      font-family:var(--font); transition:all .15s;
+    }
+    .ct-btn.active { background:var(--primary); color:white; }
+
     /* ── Welkomstmodal profiel ── */
     .profile-overlay {
       position:fixed; inset:0;
@@ -426,7 +436,8 @@
     }
     /* Gevoel (6) en Wind (5): 3 per rij zodat ze groter worden */
     #feeling-picker .ico, #windstr-picker .ico { min-width:90px; }
-    .ico:hover, .ico.sel { border-color:var(--primary); background:var(--primary-light); }
+    .ico:hover { border-color:var(--primary); background:var(--primary-light); }
+    .ico.sel   { border-color:var(--primary); background:var(--primary-light); }
     .ico .ie { font-size:26px; display:flex; align-items:center; justify-content:center; }
     .ico .il { font-size:11px; font-weight:600; color:var(--muted); text-align:center; line-height:1.2; }
 
@@ -563,21 +574,20 @@
 
     /* ── Data filter (metingen) ── */
     .data-filters {
-      display:flex; gap:6px; margin-bottom:10px;
-      overflow-x:auto; -webkit-overflow-scrolling:touch;
-      scrollbar-width:none; padding-bottom:2px;
+      display:flex; flex-wrap:wrap;
+      gap:6px; margin-bottom:10px;
     }
-    .data-filters::-webkit-scrollbar { display:none; }
     .df-btn {
-      padding:6px 13px; border-radius:20px; border:none;
+      flex:1; padding:6px 10px; border-radius:20px; border:none;
       font-size:12px; font-weight:700; cursor:pointer;
       background:#eef2f5; color:var(--muted);
       font-family:var(--font); transition:all .15s; white-space:nowrap;
-      flex-shrink:0;
+      text-align:center; min-width:0;
     }
+    .df-btn.df-full { flex-basis:100%; flex-grow:1; }
     .df-btn .df-count { font-size:10px; opacity:.75; margin-left:3px; }
     .df-btn.active { background:var(--primary); color:white; }
-    .df-btn.active-top { background:#e65100; color:white; }
+    .df-btn.active-top { background:#f9a825; color:#5d3a00; }
 
     /* ── Swipe hint ── */
     .rc-swipe-hint {
@@ -666,6 +676,8 @@
       .df-btn.active-top { background:#e65100; color:white; }
       .yf-btn { background:#1a3a5c; color:#90caf9; }
       .yf-btn.active { background:#0288d1; color:white; }
+      .ct-btn { background:#1a3a5c; color:#90caf9; }
+      .ct-btn.active { background:var(--primary); color:white; }
       .rc-cond-icon { filter: brightness(0.8) saturate(1.3); }
       .air-refresh-btn:active { background:rgba(255,255,255,.07); }
       .profile-modal { background:#112136; }
@@ -694,8 +706,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <button onclick="openProfileModal()" id="hdr-profile-btn" style="display:none;background:rgba(255,255,255,.18);border:none;border-radius:20px;padding:5px 10px;color:white;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)"></button>
-      <a href="https://waterkaart.net/gids/zwemplek.php?naam=Oosterhoutse%20Plas"
+<a href="https://waterkaart.net/gids/zwemplek.php?naam=Oosterhoutse%20Plas"
          target="_blank" rel="noopener" class="waterkaart-btn">
         📍 Waterkaart
       </a>
@@ -788,6 +799,17 @@
       </div>
     </div>
   </div>
+  <div class="card" style="margin-top:10px">
+    <div class="card-title">Condities over tijd</div>
+    <div class="cond-toggle" id="cond-toggle">
+      <button class="ct-btn active" onclick="setCondChart('sky',this)">☁️ Bewolking</button>
+      <button class="ct-btn"        onclick="setCondChart('feel',this)">🌡️ Gevoel</button>
+      <button class="ct-btn"        onclick="setCondChart('wind',this)">💨 Wind</button>
+    </div>
+    <div class="chart-wrap" style="height:220px">
+      <canvas id="chart-cond"></canvas>
+    </div>
+  </div>
 </div>
 
 <!-- EXPORT / SETTINGS -->
@@ -795,7 +817,29 @@
   <div class="section-hdr"><h2>Instellingen</h2></div>
 
   <!-- Wissel profiel -->
-  <button class="btn btn-primary" onclick="openProfileModal()" style="width:100%;margin-bottom:13px;font-size:15px;">👤 Wissel profiel</button>
+  <button class="btn btn-primary" onclick="openProfileModal()" style="width:100%;margin-bottom:10px;font-size:15px;">👤 Wissel profiel</button>
+  <!-- Update -->
+  <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px;background:#1b5e20;">🔄 Nieuwe versie ophalen</button>
+
+  <!-- Export / Import -->
+  <div class="action-grid" style="margin-bottom:13px">
+    <button class="action-card" onclick="exportCSV()">
+      <span class="ai">📊</span>
+      <div class="al">Export Excel</div>
+      <div class="ad">CSV voor Excel / Numbers</div>
+    </button>
+    <button class="action-card" onclick="exportJSON()">
+      <span class="ai">💾</span>
+      <div class="al">Export JSON</div>
+      <div class="ad">Backup bestand</div>
+    </button>
+    <button class="action-card" onclick="triggerImport()" style="grid-column:1/-1">
+      <span class="ai">📂</span>
+      <div class="al">Import JSON</div>
+      <div class="ad">Herstel / samenvoegen vanuit backup</div>
+    </button>
+  </div>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
   <!-- Firebase — inklapmenu -->
   <details class="card" style="border:2px solid #a5d6a7;margin-bottom:8px">
@@ -821,8 +865,15 @@
     </div>
   </details>
 
+  <!-- Data wissen -->
+  <div class="card" style="border:2px solid #ffcdd2;margin-bottom:8px">
+    <div class="card-title" style="color:var(--danger);">Data wissen</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Wist alle lokale metingen permanent.</p>
+    <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
+  </div>
+
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.13 &nbsp;·&nbsp; __BUILD_TIME__
+    Versie 2.14 &nbsp;·&nbsp; <span id="build-time"></span>
   </div>
 </div>
 
@@ -884,7 +935,7 @@
       </div>
 
       <div class="fg">
-        <label>Hemelconditie</label>
+        <label>Bewolking</label>
         <div class="icon-picker" id="sky-picker"></div>
       </div>
 
@@ -1071,10 +1122,6 @@ function applyProfile() {
   // Header subtitle
   document.getElementById('hdr-profile').textContent =
     (medal ? medal + ' ' : '') + name;
-  // Header wissel-knop
-  const btn = document.getElementById('hdr-profile-btn');
-  btn.textContent = '↩ Wissel';
-  btn.style.display = 'block';
   // FAB zichtbaarheid
   const fab = document.querySelector('.fab');
   if (fab) fab.style.display = isGuest() ? 'none' : '';
@@ -1096,13 +1143,13 @@ const RWS_WATER_STATION = 'LOBH';
 const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
 
 const SKY = [
-  { v:'sunny',         e:'☀️',  l:'Zonnig',       bg:'#fef9c3' },
-  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  bg:'#e0f2fe' },
-  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       bg:'#f1f5f9' },
-  { v:'hazy',          e:'🌁',  l:'Heiig',         bg:'#f0f0e6' },
-  { v:'misty',         e:'🌫️', l:'Mistig',        bg:'#f8fafc' },
-  { v:'rainy',         e:'🌧️', l:'Regen',         bg:'#eff6ff' },
-  { v:'stormy',        e:'⛈️', l:'Onweer',        bg:'#fdf4ff' },
+  { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },  // amber
+  { v:'partly-cloudy', e:'⛅',  l:'Half bewolkt',  cc:'#38bdf8', bg:'#e0f7ff' },  // helder lichtblauw
+  { v:'cloudy',        e:'☁️',  l:'Bewolkt',       cc:'#94a3b8', bg:'#e2e8f0' },  // slate grijs
+  { v:'hazy',          e:'🌁',  l:'Heiig',         cc:'#c4965a', bg:'#fdf0d5' },  // warm oker
+  { v:'misty',         e:'🌫️', l:'Mistig',        cc:'#7fb3c8', bg:'#e4f2f7' },  // blauwgrijs (geen paars)
+  { v:'rainy',         e:'🌧️', l:'Regen',         cc:'#1565c0', bg:'#dce9ff' },  // diepblauw (≠ lichtblauw)
+  { v:'stormy',        e:'⛈️', l:'Onweer',        cc:'#b91c1c', bg:'#fee2e2' },  // donkerrood (≠ blauwgrijs)
 ];
 // Gevoel (opgeslagen als 'wind' voor backward compat)
 const FEELING = [
@@ -1181,8 +1228,9 @@ function condIconCircle(opts, val, size=20) {
     // SVG icon (FEELING, WIND_STR)
     return `<span class="rc-cond-icon" style="background:${bg}" title="${o.l}">${mkIcon(val, o.c, size)}</span>`;
   }
-  // Emoji fallback (SKY)
-  return `<span class="rc-cond-icon" style="background:${bg};font-size:${Math.round(size*0.85)}px" title="${o.l}">${o.e || ''}</span>`;
+  // Emoji fallback (SKY) — cc geeft subtiele gekleurde rand
+  const border = o.cc ? `border:2px solid ${o.cc};` : '';
+  return `<span class="rc-cond-icon" style="background:${bg};${border}font-size:${Math.round(size*0.85)}px" title="${o.l}">${o.e || ''}</span>`;
 }
 
 // ─── STATE ────────────────────────────────────
@@ -1193,8 +1241,10 @@ let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
 let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
+let chartCond    = null;
 let chartPeriod  = 'all';
-let chartYearFilter = 'all'; // 'all' of een jaarnummer
+let chartYearFilter = new Date().getFullYear(); // huidig jaar als standaard
+let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
 let undoBuffer  = null;
 let undoTimer   = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
@@ -1389,7 +1439,7 @@ function goPage(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); }, 50);
+  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); }, 50);
 }
 
 // ─── FORM ─────────────────────────────────────
@@ -1473,7 +1523,10 @@ function renderPicker(containerId, opts, type) {
     const icon = o.c  // heeft kleur → SVG icon
       ? mkIcon(o.v, o.c, 22)
       : `<span style="font-size:20px">${o.e || ''}</span>`;
-    return `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')">
+    // bg-tint voor de chip zelf (o.bg), accent-kleur voor geselecteerde rand via CSS var
+    const accent = o.cc || o.c || '';
+    const accentStyle = accent ? `--ico-accent:${accent}` : '';
+    return `<div class="ico" id="ico-${type}-${o.v}" onclick="pickIcon('${type}','${o.v}')" style="${accentStyle}">
        <span class="ie">${icon}</span>
        <span class="il">${o.l}</span>
      </div>`;
@@ -1489,7 +1542,19 @@ function pickIcon(type, val) {
   const opts = type === 'sky' ? SKY : type === 'feeling' ? FEELING : WIND_STR;
   opts.forEach(o => {
     const el = document.getElementById(`ico-${type}-${o.v}`);
-    if (el) el.classList.toggle('sel', o.v === newVal);
+    if (!el) return;
+    const isSelected = o.v === newVal;
+    el.classList.toggle('sel', isSelected);
+    if (isSelected) {
+      const accent = o.cc || o.c || '';
+      if (accent) {
+        el.style.borderColor = accent;
+        el.style.background  = accent + '22'; // ~13% transparantie
+      }
+    } else {
+      el.style.borderColor = '';
+      el.style.background  = '';
+    }
   });
 }
 
@@ -1514,7 +1579,12 @@ function saveReading(ev) {
     isTopDay  : selTopDay,
   };
   const idx = readings.findIndex(x => x.id === id);
-  if (idx >= 0) readings[idx] = r;
+  if (idx >= 0) {
+    r.createdBy = readings[idx].createdBy || null; // bewaar originele maker
+    readings[idx] = r;
+  } else {
+    r.createdBy = currentProfile ? currentProfile.name : null;
+  }
   else          readings.push(r);
 
   // Sla foto op
@@ -1661,9 +1731,12 @@ function readingHTML(r, showSwipeHint) {
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
           ${topdayHTML}
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+            ${r.createdBy ? `<div class="rc-date">${r.createdBy}</div>` : ''}
           <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
+          </div>
         </div>
         <div class="rc-body">
           <div class="rc-temps">
@@ -1815,7 +1888,7 @@ function renderAll() {
   renderBestDay();
   const chartPage = document.getElementById('page-chart');
   if (chartPage && chartPage.classList.contains('active')) {
-    renderCharts(); renderMonthChart();
+    renderCharts(); renderMonthChart(); renderCondChart();
   }
 
   renderList('preview-list', readings.slice(0,5));
@@ -1826,21 +1899,23 @@ function renderAll() {
 let activeDataFilter = 'all';
 
 const DATA_FILTERS = [
-  { key:'all',   label:'Alle',        color:null,      isTop:false },
-  { key:'top',   label:'🏅 Topdagen', color:'#e65100', isTop:true  },
-  { key:'<5',    label:'&lt;5°',      color:'#1a237e', isTop:false },
-  { key:'5-10',  label:'5–10°',       color:'#0277bd', isTop:false },
-  { key:'10-15', label:'10–15°',      color:'#00838f', isTop:false },
-  { key:'>15',   label:'&gt;15°',     color:'#2e7d32', isTop:false },
+  { key:'all',   label:'Alle metingen', full:true,  activeColor:null,      activeText:null,      isTop:false },
+  { key:'top',   label:'🏅',            full:false, activeColor:'#f9a825', activeText:'#5d3a00', isTop:true  },
+  { key:'<5',    label:'&lt;5°',        full:false, activeColor:'#1a237e', activeText:'white',   isTop:false },
+  { key:'5-10',  label:'5–10°',         full:false, activeColor:'#0277bd', activeText:'white',   isTop:false },
+  { key:'10-15', label:'10–15°',        full:false, activeColor:'#00838f', activeText:'white',   isTop:false },
+  { key:'15-20', label:'15–20°',        full:false, activeColor:'#2e7d32', activeText:'white',   isTop:false },
+  { key:'>20',   label:'&gt;20°',       full:false, activeColor:'#e65100', activeText:'white',   isTop:false },
 ];
 
 function filterReadings(key) {
   switch(key) {
     case 'top':   return readings.filter(r => r.isTopDay);
     case '<5':    return readings.filter(r => r.waterTemp < 5);
-    case '5-10':  return readings.filter(r => r.waterTemp >= 5 && r.waterTemp < 10);
+    case '5-10':  return readings.filter(r => r.waterTemp >= 5  && r.waterTemp < 10);
     case '10-15': return readings.filter(r => r.waterTemp >= 10 && r.waterTemp < 15);
-    case '>15':   return readings.filter(r => r.waterTemp >= 15);
+    case '15-20': return readings.filter(r => r.waterTemp >= 15 && r.waterTemp < 20);
+    case '>20':   return readings.filter(r => r.waterTemp >= 20);
     default:      return readings;
   }
 }
@@ -1852,14 +1927,17 @@ function renderDataFilters() {
     const count = filterReadings(f.key).length;
     const isActive = f.key === activeDataFilter;
     const activeClass = isActive ? (f.isTop ? 'active-top' : 'active') : '';
-    const colorStyle = isActive && f.color ? `background:${f.color};color:white;` : '';
-    return `<button class="df-btn ${activeClass}" style="${colorStyle}" onclick="setDataFilter('${f.key}',this)">
+    const fullClass  = f.full ? 'df-full' : '';
+    const style = isActive && f.activeColor
+      ? `background:${f.activeColor};color:${f.activeText};`
+      : '';
+    return `<button class="df-btn ${activeClass} ${fullClass}" style="${style}" onclick="setDataFilter('${f.key}')">
       ${f.label}<span class="df-count">${count}</span>
     </button>`;
   }).join('');
 }
 
-function setDataFilter(f, btn) {
+function setDataFilter(f) {
   activeDataFilter = f;
   applyDataFilter();
 }
@@ -1900,6 +1978,7 @@ function setYearFilter(year, btn) {
   document.querySelectorAll('.yf-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderMonthChart();
+  renderCondChart();
 }
 
 function renderYearFilterButtons() {
@@ -2058,11 +2137,99 @@ function renderMonthChart() {
   });
 }
 
+// ─── CONDITIE GRAFIEK ─────────────────────────
+function setCondChart(mode, btn) {
+  condChartMode = mode;
+  document.querySelectorAll('.ct-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCondChart();
+}
+
+function renderCondChart() {
+  const canvas = document.getElementById('chart-cond');
+  if (!canvas) return;
+  if (chartCond) { chartCond.destroy(); chartCond = null; }
+  if (!readings.length) return;
+
+  // Bepaal welke opties en veldnaam we gebruiken
+  let opts, field, title;
+  if (condChartMode === 'sky') {
+    opts  = SKY;
+    field = 'sky';
+    title = 'Bewolking per maand';
+  } else if (condChartMode === 'feel') {
+    opts  = FEELING;
+    field = 'wind'; // backward-compat veldnaam
+    title = 'Gevoel per maand';
+  } else {
+    opts  = WIND_STR;
+    field = 'windStr';
+    title = 'Windkracht per maand';
+  }
+
+  // Maanden (label) ophalen — zelfde logica als renderMonthChart
+  const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  let monthKeys, labels;
+  if (chartYearFilter !== 'all') {
+    const year = chartYearFilter;
+    monthKeys = MAAND.map((_, i) => `${year}-${String(i + 1).padStart(2,'0')}`);
+    labels    = MAAND;
+  } else {
+    const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+    monthKeys = [...new Set(sorted.map(r => r.datetime.slice(0,7)))];
+    labels = monthKeys.map(k => {
+      const [y, m] = k.split('-');
+      return MAAND[+m - 1] + ' \'' + y.slice(2);
+    });
+  }
+
+  // Datasets: één per optie
+  const datasets = opts.map(o => {
+    const data = monthKeys.map(k =>
+      readings.filter(r => r.datetime.slice(0,7) === k && r[field] === o.v).length
+    );
+    // Kleur: cc (SKY grafiekkleur) → c (FEELING/WIND_STR SVG-kleur) → bg fallback
+    const bg = o.cc || o.c || '#90a4ae';
+    return {
+      label: o.l,
+      data,
+      backgroundColor: bg + 'cc',
+      borderColor: bg,
+      borderWidth: 1,
+      borderRadius: 3,
+    };
+  });
+
+  chartCond = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        title:  { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => items[0].label,
+            label: item => ` ${item.dataset.label}: ${item.raw}×`,
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 } }, grid: { display: false } },
+        y: { stacked: true, ticks: { precision: 0, font: { size: 10 } },
+             grid: { color: 'rgba(0,0,0,.06)' } },
+      }
+    }
+  });
+}
+
 // Herlaad grafieken bij scherm draaien
 const _reloadCharts = () => {
   const page = document.getElementById('page-chart');
   if (page && page.classList.contains('active')) {
-    setTimeout(() => { renderCharts(); renderMonthChart(); }, 200);
+    setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); }, 200);
   }
 };
 window.addEventListener('resize', _reloadCharts);
@@ -2072,7 +2239,7 @@ window.addEventListener('orientationchange', () => setTimeout(_reloadCharts, 300
 // ─── EXPORT / IMPORT ──────────────────────────
 function exportCSV() {
   if (!readings.length) { showToast('Geen data om te exporteren'); return; }
-  const hdr  = ['Datum','Water °C','Lucht °C','Hemel','Gevoel','Windkracht','Notities'];
+  const hdr  = ['Datum','Water °C','Lucht °C','Bewolking','Gevoel','Windkracht','Notities'];
   const rows = readings.map(r => [
     shortDate(r.datetime), r.waterTemp, r.airTemp ?? '',
     label(SKY,r.sky), label(FEELING,r.wind), label(WIND_STR,r.windStr), r.notes ?? '',
@@ -2362,6 +2529,18 @@ function seedIfEmpty() {
   readings = [...readings, ...missing].sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
 }
+
+// ─── BUILD TIME ───────────────────────────────
+const BUILD_TIME = '2026-03-08T14:30:00Z'; // UTC — weergave altijd in CET
+(function () {
+  const el = document.getElementById('build-time');
+  if (!el) return;
+  el.textContent = new Date(BUILD_TIME).toLocaleString('nl-NL', {
+    timeZone: 'Europe/Amsterdam',
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }) + ' CET';
+})();
 
 // ─── INIT ─────────────────────────────────────
 load();
