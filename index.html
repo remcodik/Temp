@@ -1847,7 +1847,8 @@ function readingHTML(r, showSwipeHint) {
   const hintHTML = showSwipeHint ? `<div class="rc-swipe-hint">← veeg</div>` : '';
   const myId   = currentProfile ? currentProfile.id   : null;
   const myName = currentProfile ? currentProfile.name : null;
-  const isOwn  = !r.createdBy || r.createdBy === myId || r.createdBy === myName;
+  const isAdmin = myId === 'remco';
+  const isOwn  = isAdmin || !r.createdBy || r.createdBy === myId || r.createdBy === myName;
   const swipeBg = (!isGuest() && isOwn) ? `<div class="swipe-bg">🗑️</div>` : '';
 
   const airHTML = r.airTemp != null
@@ -2018,7 +2019,8 @@ function _clearStatAll() {
 }
 
 function renderAll() {
-  const scoped  = scopeReadings();   // respecteert activeProfileScope
+  const scoped  = scopeReadings();   // respecteert activeProfileScope (stats/trend)
+  const primary = primaryReadings(); // eigen + gevolgd (preview-list)
   const all     = readings;
   const n       = scoped.length;
   const nAll    = all.length;
