@@ -576,11 +576,11 @@
     /* ── Data filter (metingen) ── */
     .data-filters {
       display:flex; flex-wrap:wrap;
-      gap:6px; margin-bottom:10px;
+      gap:4px; margin-bottom:8px;
     }
     .df-btn {
-      flex:1; padding:6px 10px; border-radius:20px; border:none;
-      font-size:12px; font-weight:700; cursor:pointer;
+      flex:1; padding:5px 7px; border-radius:20px; border:none;
+      font-size:11px; font-weight:700; cursor:pointer;
       background:#eef2f5; color:var(--muted);
       font-family:var(--font); transition:all .15s; white-space:nowrap;
       text-align:center; min-width:0;
@@ -1797,7 +1797,7 @@ function deleteReading(id) {
 // ─── SWIPE TO DELETE ──────────────────────────
 function setupSwipe(wrap, id) {
   const card = wrap.querySelector('.reading-card');
-  if (!card) return;
+  if (!card || !wrap.querySelector('.swipe-bg')) return;
   let startX = 0, startY = 0, curX = 0, dragging = false, moved = false;
 
   card.addEventListener('touchstart', e => {
@@ -1845,6 +1845,10 @@ function readingHTML(r, showSwipeHint) {
   const hasPhoto = !!loadPhoto(r.id);
   const tc = tempColor(r.waterTemp);
   const hintHTML = showSwipeHint ? `<div class="rc-swipe-hint">← veeg</div>` : '';
+  const myId   = currentProfile ? currentProfile.id   : null;
+  const myName = currentProfile ? currentProfile.name : null;
+  const isOwn  = !r.createdBy || r.createdBy === myId || r.createdBy === myName;
+  const swipeBg = (!isGuest() && isOwn) ? `<div class="swipe-bg">🗑️</div>` : '';
 
   const airHTML = r.airTemp != null
     ? `<span class="rc-sep">|</span><span class="rc-air" style="color:${tempColor(r.airTemp)}">${r.airTemp}°</span>`
@@ -1864,7 +1868,7 @@ function readingHTML(r, showSwipeHint) {
 
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
-      <div class="swipe-bg">🗑️</div>
+      ${swipeBg}
       <div class="reading-card" id="card-${r.id}" style="border-left-color:${tc}">
         ${hintHTML}
         <div class="rc-header">
@@ -1935,7 +1939,8 @@ function renderWaterHero() {
 // ─── TREND ────────────────────────────────────
 function renderTrendSection() {
   const el = document.getElementById('trend-section');
-  const src = primaryReadings().length ? primaryReadings() : readings;
+  const primary = primaryReadings();
+  const src = primary.length ? primary : readings;
   if (!src.length) { el.innerHTML = ''; return; }
   const thisWeek = weekAvg(0, src);
   const lastWeek = weekAvg(1, src);
@@ -1945,6 +1950,19 @@ function renderTrendSection() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
   const thisYear = src.filter(r => new Date(r.datetime).getFullYear() === now.getFullYear()).length;
+
+  // "alle" totalen — alleen tonen als primary afwijkt van all
+  const showAll = primary.length > 0 && readings.length > primary.length;
+  const thisMonthAll = showAll ? readings.filter(r => {
+    const d = new Date(r.datetime);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length : null;
+  const thisYearAll = showAll ? readings.filter(r => new Date(r.datetime).getFullYear() === now.getFullYear()).length : null;
+
+  const allSuffix = (val, allVal) =>
+    allVal !== null && allVal !== val
+      ? ` <span style="font-size:10px;opacity:.45">v/d ${allVal}</span>`
+      : '';
 
   let rows = '';
   if (thisWeek !== null) {
@@ -1958,8 +1976,8 @@ function renderTrendSection() {
     rows += `<div class="trend-row"><span class="trend-lbl">Gem. deze week</span><div><div class="trend-val">${thisWeek.toFixed(1)}°C</div>${deltaHTML}</div></div>`;
   }
   rows += `
-    <div class="trend-row"><span class="trend-lbl">Deze maand</span><span class="trend-val">${thisMonth} meting${thisMonth !== 1 ? 'en' : ''}</span></div>
-    <div class="trend-row"><span class="trend-lbl">Dit jaar</span><span class="trend-val">${thisYear} meting${thisYear !== 1 ? 'en' : ''}</span></div>`;
+    <div class="trend-row"><span class="trend-lbl">Deze maand</span><span class="trend-val">${thisMonth} meting${thisMonth !== 1 ? 'en' : ''}${allSuffix(thisMonth, thisMonthAll)}</span></div>
+    <div class="trend-row"><span class="trend-lbl">Dit jaar</span><span class="trend-val">${thisYear} meting${thisYear !== 1 ? 'en' : ''}${allSuffix(thisYear, thisYearAll)}</span></div>`;
 
   el.innerHTML = `<div class="card"><div class="card-title">Trend &amp; statistieken</div>${rows}</div>`;
 }
@@ -2120,16 +2138,17 @@ function setProfileScope(scope) {
 function renderDataFilters() {
   const el = document.getElementById('data-filters');
   if (!el) return;
+  const activeCount = filterReadings(activeDataFilter).length;
   el.innerHTML = DATA_FILTERS.map(f => {
-    const count = filterReadings(f.key).length;
     const isActive = f.key === activeDataFilter;
     const activeClass = isActive ? (f.isTop ? 'active-top' : 'active') : '';
     const fullClass  = f.full ? 'df-full' : '';
     const style = isActive && f.activeColor
       ? `background:${f.activeColor};color:${f.activeText};`
       : '';
+    const countHTML = isActive ? `<span class="df-count">${activeCount}</span>` : '';
     return `<button class="df-btn ${activeClass} ${fullClass}" style="${style}" onclick="setDataFilter('${f.key}')">
-      ${f.label}<span class="df-count">${count}</span>
+      ${f.label}${countHTML}
     </button>`;
   }).join('');
 }
@@ -2157,10 +2176,9 @@ function renderList(containerId, items) {
     const wrap = document.getElementById('wrap-' + r.id);
     if (wrap) setupSwipe(wrap, r.id);
   });
-  // Gast: verberg edit knoppen en swipe-bg
+  // Gast: verberg edit knoppen
   if (isGuest()) {
     el.querySelectorAll('.rc-edit').forEach(b => b.style.display = 'none');
-    el.querySelectorAll('.swipe-bg').forEach(b => b.style.display = 'none');
   }
 }
 
