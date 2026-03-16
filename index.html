@@ -211,6 +211,7 @@
     .stat-value { font-size:22px; font-weight:800; color:var(--primary); line-height:1.1; }
     .stat-label { font-size:10px; color:var(--muted); margin-top:2px; }
     .stat-record{ font-size:9px; color:var(--muted); margin-top:2px; opacity:.7; }
+    .stat-all   { font-size:9px; color:var(--muted); opacity:.55; margin-top:2px; }
 
     /* ── Trend ── */
     .trend-row {
@@ -744,20 +745,24 @@
     <div class="stat-card">
       <div class="stat-value" id="s-count" style="color:var(--primary)">0</div>
       <div class="stat-label">Metingen</div>
+      <div class="stat-all" id="s-count-all"></div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-topdays" style="color:#e65100">--</div>
       <div class="stat-label">Top dagen 🏅</div>
+      <div class="stat-all" id="s-topdays-all"></div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-max">--</div>
       <div class="stat-label">Record hoog</div>
       <div class="stat-record" id="s-max-date"></div>
+      <div class="stat-all" id="s-max-all"></div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-min">--</div>
       <div class="stat-label">Record laag</div>
       <div class="stat-record" id="s-min-date"></div>
+      <div class="stat-all" id="s-min-all"></div>
     </div>
   </div>
   <div id="trend-section"></div>
@@ -771,10 +776,8 @@
 
 <!-- ALL DATA -->
 <div id="page-data" class="page">
-  <div class="section-hdr">
-    <h2>Alle metingen</h2>
-    <span class="badge" id="badge-data">0</span>
-  </div>
+  <span id="badge-data" style="display:none">0</span>
+  <div class="data-filters" id="scope-filters"></div>
   <div class="data-filters" id="data-filters"></div>
   <div id="all-list"></div>
 </div>
@@ -818,6 +821,12 @@
 
   <!-- Wissel profiel -->
   <button class="btn btn-primary" onclick="openProfileModal()" style="width:100%;margin-bottom:10px;font-size:15px;">👤 Wissel profiel</button>
+
+  <!-- Volgen -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="card-title">Volgen</div>
+    <div id="follow-list"><p style="font-size:12px;color:var(--muted)">Kies eerst een profiel.</p></div>
+  </div>
   <!-- Update -->
   <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px;background:#1b5e20;">🔄 Nieuwe versie ophalen</button>
 
@@ -873,7 +882,7 @@
   </div>
 
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.14 &nbsp;·&nbsp; <span id="build-time"></span>
+    Versie 2.15 &nbsp;·&nbsp; <span id="build-time"></span>
   </div>
 </div>
 
@@ -1077,58 +1086,149 @@ service cloud.firestore {
 <script>
 // ─── PERSONEN ─────────────────────────────────
 const PERSONS = [
-  { name:'Saskia',   medal:'🥇' },
-  { name:'Karla',    medal:'🥇' },
-  { name:'Mieke W',  medal:'🥇' },
-  { name:'Mieke H',  medal:'🥇' },
-  { name:'Marianne', medal:'🥇' },
-  { name:'Remco',    medal:''   },
-  { name:'Gast',     medal:''   },
+  { id:'saskia',   name:'Saskia',   medal:'🥇' },
+  { id:'karla',    name:'Karla',    medal:'🥇' },
+  { id:'miekew',   name:'Mieke W',  medal:'🥇' },
+  { id:'miekeh',   name:'Mieke H',  medal:'🥇' },
+  { id:'marianne', name:'Marianne', medal:'🥇' },
+  { id:'remco',    name:'Remco',    medal:''   },
+  { id:'gast',     name:'Gast',     medal:''   },
 ];
 
-let currentProfile = null; // { name, medal }
+let currentProfile = null; // { id, name, medal, displayName? }
+
+// Zoek persoon op id of naam (backward compat)
+function findPerson(idOrName) {
+  if (!idOrName) return null;
+  return PERSONS.find(x => x.id === idOrName || x.name === idOrName) || null;
+}
+function getProfileName(idOrName) {
+  if (!idOrName) return null;
+  const p = findPerson(idOrName);
+  return p ? p.name : idOrName;
+}
+function getProfileId(idOrName) {
+  if (!idOrName) return null;
+  const p = findPerson(idOrName);
+  return p ? p.id : idOrName;
+}
 
 function loadProfile() {
-  try { currentProfile = JSON.parse(localStorage.getItem('lp-profile') || 'null'); }
-  catch { currentProfile = null; }
+  try {
+    currentProfile = JSON.parse(localStorage.getItem('lp-profile') || 'null');
+    // Backward compat: voeg id toe als het er niet is
+    if (currentProfile && !currentProfile.id) {
+      const match = PERSONS.find(p => p.name === currentProfile.name);
+      if (match) currentProfile = { ...match, displayName: currentProfile.displayName || '' };
+      else currentProfile.id = currentProfile.name.toLowerCase().replace(/\s+/g,'');
+    }
+  } catch { currentProfile = null; }
 }
 function saveProfile(p) {
   currentProfile = p;
   localStorage.setItem('lp-profile', JSON.stringify(p));
 }
-function isGuest() { return currentProfile && currentProfile.name === 'Gast'; }
+function isGuest() { return currentProfile && currentProfile.id === 'gast'; }
 
 function openProfileModal() {
   const chips = document.getElementById('profile-chips');
   chips.innerHTML = PERSONS.map(p => `
-    <button class="profile-chip" onclick="selectProfile('${p.name}')">
+    <button class="profile-chip" onclick="selectProfile('${p.id}')">
       <span class="pc-medal">${p.medal || '👤'}</span>
       <span class="pc-name">${p.name}</span>
     </button>`).join('');
   document.getElementById('profile-overlay').classList.add('open');
 }
 
-function selectProfile(name) {
-  const p = PERSONS.find(x => x.name === name);
+function selectProfile(id) {
+  const p = PERSONS.find(x => x.id === id);
   if (!p) return;
-  saveProfile(p);
+  if (id === 'gast') { showGuestNameInput(); return; }
+  saveProfile({ ...p, displayName: '' });
+  document.getElementById('profile-overlay').classList.remove('open');
+  applyProfile();
+  renderFollowList();
+}
+
+function showGuestNameInput() {
+  const chips = document.getElementById('profile-chips');
+  chips.innerHTML = `
+    <div style="width:100%;text-align:left">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Hoe noemen we jou? (optioneel)</p>
+      <input type="text" id="guest-name-input" placeholder="Jouw naam" maxlength="30"
+        style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;font-family:var(--font);outline:none;background:#fafafa;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')confirmGuestName()">
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="button" onclick="confirmGuestName()" style="flex:1;padding:11px;background:var(--primary);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Doorgaan als Gast</button>
+        <button type="button" onclick="openProfileModal()" style="padding:11px 14px;background:#f0f0f0;color:var(--text);border:none;border-radius:10px;font-size:14px;cursor:pointer;font-family:var(--font)">Terug</button>
+      </div>
+    </div>`;
+  setTimeout(() => { const i = document.getElementById('guest-name-input'); if(i) i.focus(); }, 50);
+}
+
+function confirmGuestName() {
+  const input = document.getElementById('guest-name-input');
+  const displayName = input ? input.value.trim() : '';
+  const p = PERSONS.find(x => x.id === 'gast');
+  saveProfile({ ...p, displayName });
   document.getElementById('profile-overlay').classList.remove('open');
   applyProfile();
 }
 
 function applyProfile() {
   if (!currentProfile) return;
-  const { name, medal } = currentProfile;
-  // Header subtitle
+  const { id, name, medal, displayName } = currentProfile;
+  const shown = (id === 'gast' && displayName) ? displayName : name;
   document.getElementById('hdr-profile').textContent =
-    (medal ? medal + ' ' : '') + name;
-  // FAB zichtbaarheid
+    (medal ? medal + ' ' : '') + shown;
   const fab = document.querySelector('.fab');
   if (fab) fab.style.display = isGuest() ? 'none' : '';
-  // Edit knoppen in lijsten
   document.querySelectorAll('.rc-edit').forEach(el => {
     el.style.display = isGuest() ? 'none' : '';
   });
+}
+
+// ─── VOLGEN ────────────────────────────────────
+let followedIds = new Set();
+
+function loadFollowing() {
+  try { followedIds = new Set(JSON.parse(localStorage.getItem('lp-following') || '[]')); }
+  catch { followedIds = new Set(); }
+}
+function saveFollowing() {
+  localStorage.setItem('lp-following', JSON.stringify([...followedIds]));
+}
+function toggleFollow(id) {
+  if (followedIds.has(id)) followedIds.delete(id);
+  else followedIds.add(id);
+  saveFollowing();
+  renderFollowList();
+  renderAll();
+  applyDataFilter();
+}
+
+function renderFollowList() {
+  const el = document.getElementById('follow-list');
+  if (!el) return;
+  if (!currentProfile) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--muted)">Kies eerst een profiel.</p>';
+    return;
+  }
+  const others = PERSONS.filter(p => p.id !== currentProfile.id && p.id !== 'gast');
+  if (!others.length) { el.innerHTML = '<p style="font-size:12px;color:var(--muted)">Geen profielen beschikbaar.</p>'; return; }
+  el.innerHTML = others.map(p => {
+    const followed = followedIds.has(p.id);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid rgba(0,0,0,.05)">
+      <span style="font-size:14px">${p.medal ? p.medal + ' ' : ''}${p.name}</span>
+      <button onclick="toggleFollow('${p.id}')"
+        style="padding:5px 14px;border-radius:20px;border:2px solid ${followed ? 'var(--primary)' : '#ddd'};
+               background:${followed ? 'var(--primary-light)' : 'transparent'};
+               color:${followed ? 'var(--primary)' : 'var(--muted)'};
+               font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">
+        ${followed ? '✓ Gevolgd' : '+ Volgen'}
+      </button>
+    </div>`;
+  }).join('');
 }
 
 // ─── CONSTANTS ────────────────────────────────
@@ -1356,18 +1456,57 @@ function waterStatus(t) {
 }
 
 // ─── STATISTICS ───────────────────────────────
-function weekAvg(weeksBack) {
+function weekAvg(weeksBack, list) {
+  const src = list || readings;
   const MS = 86400000;
   const now = new Date();
   const end   = new Date(now.getTime() - weeksBack * 7 * MS);
   const start = new Date(end.getTime() - 7 * MS);
-  const sub   = readings.filter(r => { const d = new Date(r.datetime); return d >= start && d < end; });
+  const sub   = src.filter(r => { const d = new Date(r.datetime); return d >= start && d < end; });
   if (!sub.length) return null;
   return sub.reduce((a,b) => a + b.waterTemp, 0) / sub.length;
 }
 
 function lastTopDay() {
-  return readings.find(r => r.isTopDay) || null;
+  return primaryReadings().find(r => r.isTopDay) || null;
+}
+
+// Primaire readings: eigen + gevolgden + legacy (geen eigenaar)
+function primaryReadings() {
+  if (!currentProfile) return readings;
+  const myId   = currentProfile.id;
+  const myName = currentProfile.name; // backward compat (oud: name opgeslagen)
+  return readings.filter(r => {
+    if (!r.createdBy) return true;                                   // legacy
+    const rId = getProfileId(r.createdBy);
+    if (rId === myId || r.createdBy === myName) return true;         // eigen
+    if (followedIds.has(rId) || followedIds.has(r.createdBy)) return true; // gevolgd
+    return false;
+  });
+}
+
+// Scope voor metingen-pagina
+let activeProfileScope = 'iedereen'; // 'eigen' | 'gevolgd' | 'iedereen'
+
+function scopeReadings() {
+  if (activeProfileScope === 'iedereen') return readings;
+  const myId   = currentProfile ? currentProfile.id   : null;
+  const myName = currentProfile ? currentProfile.name : null;
+  if (activeProfileScope === 'eigen') {
+    return readings.filter(r =>
+      !r.createdBy ||
+      r.createdBy === myId ||
+      r.createdBy === myName
+    );
+  }
+  if (activeProfileScope === 'gevolgd') {
+    return readings.filter(r => {
+      if (!r.createdBy) return true;
+      const rId = getProfileId(r.createdBy);
+      return followedIds.has(rId) || followedIds.has(r.createdBy);
+    });
+  }
+  return readings;
 }
 
 function shortDate(dt) {
@@ -1583,7 +1722,7 @@ function saveReading(ev) {
     r.createdBy = readings[idx].createdBy || null; // bewaar originele maker
     readings[idx] = r;
   } else {
-    r.createdBy = currentProfile ? currentProfile.name : null;
+    r.createdBy = currentProfile ? currentProfile.id : null;
     readings.push(r);
   }
 
@@ -1732,7 +1871,7 @@ function readingHTML(r, showSwipeHint) {
           <div class="rc-date">${fmtDate(r.datetime)}</div>
           ${topdayHTML}
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-            ${r.createdBy ? `<div class="rc-date">${r.createdBy}</div>` : ''}
+            ${r.createdBy ? `<div class="rc-date">${getProfileName(r.createdBy)}</div>` : ''}
           <button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -1796,15 +1935,16 @@ function renderWaterHero() {
 // ─── TREND ────────────────────────────────────
 function renderTrendSection() {
   const el = document.getElementById('trend-section');
-  if (!readings.length) { el.innerHTML = ''; return; }
-  const thisWeek = weekAvg(0);
-  const lastWeek = weekAvg(1);
+  const src = primaryReadings().length ? primaryReadings() : readings;
+  if (!src.length) { el.innerHTML = ''; return; }
+  const thisWeek = weekAvg(0, src);
+  const lastWeek = weekAvg(1, src);
   const now = new Date();
-  const thisMonth = readings.filter(r => {
+  const thisMonth = src.filter(r => {
     const d = new Date(r.datetime);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
-  const thisYear = readings.filter(r => new Date(r.datetime).getFullYear() === now.getFullYear()).length;
+  const thisYear = src.filter(r => new Date(r.datetime).getFullYear() === now.getFullYear()).length;
 
   let rows = '';
   if (thisWeek !== null) {
@@ -1851,22 +1991,36 @@ function renderBestDay() {
 }
 
 // ─── RENDER ALL ───────────────────────────────
-function renderAll() {
-  const n = readings.length;
-  document.getElementById('s-count').textContent    = n;
-  document.getElementById('badge-home').textContent = n;
-  document.getElementById('badge-data').textContent = n;
-  document.getElementById('stats-grid').style.display = n > 0 ? 'grid' : 'none';
+function _setStatAll(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function _clearStatAll() {
+  ['s-count-all','s-topdays-all','s-max-all','s-min-all'].forEach(id => _setStatAll(id, ''));
+}
 
-  if (n > 0) {
-    const wt       = readings.map(r => r.waterTemp);
+function renderAll() {
+  const primary = primaryReadings();
+  const all     = readings;
+  const n       = primary.length;
+  const nAll    = all.length;
+
+  // Gebruik primary als bron; val terug op all als er geen eigen/gevolgde data is
+  const src = n > 0 ? primary : all;
+
+  document.getElementById('badge-home').textContent = nAll;
+  document.getElementById('stats-grid').style.display = nAll > 0 ? 'grid' : 'none';
+
+  if (src.length > 0) {
+    const wt       = src.map(r => r.waterTemp);
     const maxVal   = Math.max(...wt), minVal = Math.min(...wt);
-    const maxR     = readings.find(r => r.waterTemp === maxVal);
-    const minR     = readings.find(r => r.waterTemp === minVal);
-    const topCount = readings.filter(r => r.isTopDay).length;
+    const maxR     = src.find(r => r.waterTemp === maxVal);
+    const minR     = src.find(r => r.waterTemp === minVal);
+    const topCount = src.filter(r => r.isTopDay).length;
     const topEl    = document.getElementById('s-topdays');
     const maxEl    = document.getElementById('s-max');
     const minEl    = document.getElementById('s-min');
+    document.getElementById('s-count').textContent = n > 0 ? n : nAll;
     topEl.textContent = topCount;
     topEl.style.color = topCount > 0 ? '#e65100' : 'var(--muted)';
     maxEl.textContent = maxVal.toFixed(1) + '°';
@@ -1875,12 +2029,27 @@ function renderAll() {
     minEl.style.color = tempColor(minVal);
     if (maxR) document.getElementById('s-max-date').textContent = shortDate(maxR.datetime);
     if (minR) document.getElementById('s-min-date').textContent = shortDate(minR.datetime);
+
+    // Globale stats in klein (alleen tonen als er meer is dan primary)
+    if (n > 0 && nAll > n) {
+      const wtAll    = all.map(r => r.waterTemp);
+      const maxAll   = Math.max(...wtAll), minAll = Math.min(...wtAll);
+      const topAll   = all.filter(r => r.isTopDay).length;
+      _setStatAll('s-count-all',   `alle: ${nAll}`);
+      _setStatAll('s-topdays-all', `alle: ${topAll}`);
+      _setStatAll('s-max-all',     `alle: ${maxAll.toFixed(1)}°`);
+      _setStatAll('s-min-all',     `alle: ${minAll.toFixed(1)}°`);
+    } else {
+      _clearStatAll();
+    }
   } else {
+    document.getElementById('s-count').textContent = 0;
     ['s-topdays','s-max','s-min'].forEach(id => {
       const el = document.getElementById(id);
       el.textContent = '--'; el.style.color = 'var(--muted)';
     });
     ['s-max-date','s-min-date'].forEach(id => document.getElementById(id).textContent = '');
+    _clearStatAll();
   }
 
   renderWaterHero();
@@ -1891,15 +2060,16 @@ function renderAll() {
     renderCharts(); renderMonthChart(); renderCondChart();
   }
 
-  renderList('preview-list', readings.slice(0,5));
+  renderList('preview-list', primary.slice(0,5));
   applyDataFilter();
+  renderFollowList();
 }
 
 // ─── DATA FILTER ──────────────────────────────
 let activeDataFilter = 'all';
 
 const DATA_FILTERS = [
-  { key:'all',   label:'Alle metingen', full:true,  activeColor:null,      activeText:null,      isTop:false },
+  { key:'all',   label:'Alle',          full:false, activeColor:null,      activeText:null,      isTop:false },
   { key:'top',   label:'🏅',            full:false, activeColor:'#f9a825', activeText:'#5d3a00', isTop:true  },
   { key:'<5',    label:'&lt;5°',        full:false, activeColor:'#1a237e', activeText:'white',   isTop:false },
   { key:'5-10',  label:'5–10°',         full:false, activeColor:'#0277bd', activeText:'white',   isTop:false },
@@ -1909,15 +2079,42 @@ const DATA_FILTERS = [
 ];
 
 function filterReadings(key) {
+  const base = scopeReadings();
   switch(key) {
-    case 'top':   return readings.filter(r => r.isTopDay);
-    case '<5':    return readings.filter(r => r.waterTemp < 5);
-    case '5-10':  return readings.filter(r => r.waterTemp >= 5  && r.waterTemp < 10);
-    case '10-15': return readings.filter(r => r.waterTemp >= 10 && r.waterTemp < 15);
-    case '15-20': return readings.filter(r => r.waterTemp >= 15 && r.waterTemp < 20);
-    case '>20':   return readings.filter(r => r.waterTemp >= 20);
-    default:      return readings;
+    case 'top':   return base.filter(r => r.isTopDay);
+    case '<5':    return base.filter(r => r.waterTemp < 5);
+    case '5-10':  return base.filter(r => r.waterTemp >= 5  && r.waterTemp < 10);
+    case '10-15': return base.filter(r => r.waterTemp >= 10 && r.waterTemp < 15);
+    case '15-20': return base.filter(r => r.waterTemp >= 15 && r.waterTemp < 20);
+    case '>20':   return base.filter(r => r.waterTemp >= 20);
+    default:      return base;
   }
+}
+
+function renderScopeFilter() {
+  const el = document.getElementById('scope-filters');
+  if (!el) return;
+  const scopes = [
+    { key:'eigen',    label:'Eigen'    },
+    { key:'gevolgd',  label:'Gevolgd'  },
+    { key:'iedereen', label:'Iedereen' },
+  ];
+  el.innerHTML = scopes.map(s => {
+    // tel zonder de activeProfileScope te muteren
+    const saved = activeProfileScope;
+    activeProfileScope = s.key;
+    const count = scopeReadings().length;
+    activeProfileScope = saved;
+    const isActive = s.key === activeProfileScope;
+    return `<button class="df-btn ${isActive ? 'active' : ''}" onclick="setProfileScope('${s.key}')">
+      ${s.label}<span class="df-count">${count}</span>
+    </button>`;
+  }).join('');
+}
+
+function setProfileScope(scope) {
+  activeProfileScope = scope;
+  applyDataFilter();
 }
 
 function renderDataFilters() {
@@ -1943,8 +2140,11 @@ function setDataFilter(f) {
 }
 
 function applyDataFilter() {
+  renderScopeFilter();
   renderDataFilters();
-  renderList('all-list', filterReadings(activeDataFilter));
+  const filtered = filterReadings(activeDataFilter);
+  document.getElementById('badge-data').textContent = filtered.length;
+  renderList('all-list', filtered);
 }
 
 function renderList(containerId, items) {
@@ -2531,7 +2731,7 @@ function seedIfEmpty() {
 }
 
 // ─── BUILD TIME ───────────────────────────────
-const BUILD_TIME = '2026-03-08T14:30:00Z'; // UTC — weergave altijd in CET
+const BUILD_TIME = '2026-03-16T12:00:00Z'; // UTC — weergave altijd in CET
 (function () {
   const el = document.getElementById('build-time');
   if (!el) return;
@@ -2546,6 +2746,7 @@ const BUILD_TIME = '2026-03-08T14:30:00Z'; // UTC — weergave altijd in CET
 load();
 loadDeletedIds();
 loadProfile();
+loadFollowing();
 seedIfEmpty();
 renderAll();
 updateAirTemp();
