@@ -212,7 +212,7 @@
     .stat-sub   { font-size:11px; color:var(--muted); margin-top:1px; opacity:.8; }
     .stat-label { font-size:10px; color:var(--muted); margin-top:2px; }
     .stat-record{ font-size:9px; color:var(--muted); margin-top:2px; opacity:.7; }
-    .stat-all   { font-size:9px; color:var(--muted); opacity:.55; margin-top:2px; }
+    .stat-all   { font-size:12px; color:var(--muted); opacity:.65; margin-top:2px; }
 
     /* ── Trend ── */
     .trend-row {
@@ -832,24 +832,30 @@
   <!-- Update -->
   <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px;background:#1b5e20;">🔄 Nieuwe versie ophalen</button>
 
-  <!-- Export / Import -->
-  <div class="action-grid" style="margin-bottom:13px">
-    <button class="action-card" onclick="exportCSV()">
-      <span class="ai">📊</span>
-      <div class="al">Export Excel</div>
-      <div class="ad">CSV voor Excel / Numbers</div>
-    </button>
-    <button class="action-card" onclick="exportJSON()">
-      <span class="ai">💾</span>
-      <div class="al">Export JSON</div>
-      <div class="ad">Backup bestand</div>
-    </button>
-    <button class="action-card" onclick="triggerImport()" style="grid-column:1/-1">
-      <span class="ai">📂</span>
-      <div class="al">Import JSON</div>
-      <div class="ad">Herstel / samenvoegen vanuit backup</div>
-    </button>
-  </div>
+  <!-- Export / Import (ingeklapt) -->
+  <details class="card" style="margin-bottom:10px">
+    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--primary)">
+      📦 Data exporteren &amp; importeren
+      <span style="margin-left:auto;font-size:16px;color:var(--primary)">▾</span>
+    </summary>
+    <div class="action-grid" style="margin-top:10px">
+      <button class="action-card" onclick="exportCSV()">
+        <span class="ai">📊</span>
+        <div class="al">Export Excel</div>
+        <div class="ad">CSV voor Excel / Numbers</div>
+      </button>
+      <button class="action-card" onclick="exportJSON()">
+        <span class="ai">💾</span>
+        <div class="al">Export JSON</div>
+        <div class="ad">Backup bestand</div>
+      </button>
+      <button class="action-card" onclick="triggerImport()" style="grid-column:1/-1">
+        <span class="ai">📂</span>
+        <div class="al">Import JSON</div>
+        <div class="ad">Herstel / samenvoegen vanuit backup</div>
+      </button>
+    </div>
+  </details>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
   <!-- Firebase — inklapmenu -->
@@ -876,15 +882,8 @@
     </div>
   </details>
 
-  <!-- Data wissen -->
-  <div class="card" style="border:2px solid #ffcdd2;margin-bottom:8px">
-    <div class="card-title" style="color:var(--danger);">Data wissen</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Wist alle lokale metingen permanent.</p>
-    <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
-  </div>
-
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.16 &nbsp;·&nbsp; <span id="build-time"></span>
+    Versie 2.17 &nbsp;·&nbsp; <span id="build-time"></span>
   </div>
 </div>
 
@@ -1487,16 +1486,13 @@ function primaryReadings() {
   });
 }
 
-// Eigen metingen + metingen zonder eigenaar (altijd voor stats-grid)
+// Eigen + gevolgde + zonder naam — tellen als "eigen" bij statistieken
 function ownReadings() {
-  if (!currentProfile) return readings;
-  const myId   = currentProfile.id;
-  const myName = currentProfile.name;
-  return readings.filter(r => !r.createdBy || r.createdBy === myId || r.createdBy === myName);
+  return primaryReadings();
 }
 
 // Scope voor metingen-pagina
-let activeProfileScope = 'iedereen'; // 'eigen' | 'gevolgd' | 'iedereen'
+let activeProfileScope = 'gevolgd'; // 'eigen' | 'gevolgd' | 'iedereen'
 
 function scopeReadings() {
   if (activeProfileScope === 'iedereen') return readings;
@@ -2011,64 +2007,56 @@ function renderTrendSection() {
 }
 
 // ─── LAST TOP DAY ─────────────────────────────
+function _bestDayCard(top, label) {
+  const bs     = waterStatus(top.waterTemp);
+  const skyIc  = top.sky     ? condIconCircle(SKY,      top.sky,     28) : '';
+  const feelIc = top.wind    ? condIconCircle(FEELING,  top.wind,    28) : '';
+  const windIc = top.windStr ? condIconCircle(WIND_STR, top.windStr, 28) : '';
+  const condHTML = (skyIc || feelIc || windIc)
+    ? `<div class="rc-cond-icons" style="justify-content:flex-start;gap:6px;margin-top:6px">${skyIc}${feelIc}${windIc}</div>` : '';
+  const airStr = top.airTemp != null ? `<span style="opacity:.7"> · Lucht ${top.airTemp.toFixed(1)}°</span>` : '';
+  const byStr  = top.createdBy ? `<span style="font-size:10px;opacity:.6"> · ${getProfileName(top.createdBy)}</span>` : '';
+  return `
+    <div class="best-day-card">
+      <div class="bd-label">${label}</div>
+      <div class="bd-body">
+        <div>
+          <div class="bd-temp" style="color:${tempColor(top.waterTemp)}">${top.waterTemp.toFixed(1)}°</div>
+          <div class="bd-date">${new Date(top.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${airStr}${byStr}</div>
+          ${condHTML}
+        </div>
+        <div style="font-size:44px;line-height:1">${bs.e}</div>
+      </div>
+    </div>`;
+}
+
 function renderBestDay() {
   const el = document.getElementById('best-day-section');
 
-  // Eigen topdag (eigen + zonder naam), gesorteerd nieuwste eerst
-  const ownTop = ownReadings()
+  // Eigen/gevolgd topdag — nieuwste eerst
+  const ownTop = primaryReadings()
     .filter(r => r.isTopDay)
     .sort((a,b) => new Date(b.datetime) - new Date(a.datetime))[0] || null;
 
-  // Laatste topdag van alle metingen
+  // Algemene topdag — nieuwste eerst
   const allTop = readings
     .filter(r => r.isTopDay)
     .sort((a,b) => new Date(b.datetime) - new Date(a.datetime))[0] || null;
 
   if (!ownTop && !allTop) { el.innerHTML = ''; return; }
 
+  let html = '';
+
   if (ownTop) {
-    // Eigen topdag groot tonen
-    const bs     = waterStatus(ownTop.waterTemp);
-    const skyIc  = ownTop.sky     ? condIconCircle(SKY,      ownTop.sky,     28) : '';
-    const feelIc = ownTop.wind    ? condIconCircle(FEELING,  ownTop.wind,    28) : '';
-    const windIc = ownTop.windStr ? condIconCircle(WIND_STR, ownTop.windStr, 28) : '';
-    const condHTML = (skyIc || feelIc || windIc)
-      ? `<div class="rc-cond-icons" style="justify-content:flex-start;gap:6px;margin-top:6px">${skyIc}${feelIc}${windIc}</div>` : '';
-    const airStr = ownTop.airTemp != null ? `<span style="opacity:.7"> · Lucht ${ownTop.airTemp.toFixed(1)}°</span>` : '';
-
-    // Alle-topdag klein ernaast (alleen als anders)
-    let alleHTML = '';
-    if (allTop && allTop.id !== ownTop.id) {
-      const allName = allTop.createdBy ? ` · ${getProfileName(allTop.createdBy)}` : '';
-      alleHTML = `<div style="font-size:9px;color:var(--muted);opacity:.6;margin-top:5px">
-        alle: ${allTop.waterTemp.toFixed(1)}° · ${new Date(allTop.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}${allName}
-      </div>`;
-    }
-
-    el.innerHTML = `
-      <div class="best-day-card">
-        <div class="bd-label">🏅 Laatste top dag</div>
-        <div class="bd-body">
-          <div>
-            <div class="bd-temp" style="color:${tempColor(ownTop.waterTemp)}">${ownTop.waterTemp.toFixed(1)}°</div>
-            <div class="bd-date">${new Date(ownTop.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${airStr}</div>
-            ${condHTML}
-            ${alleHTML}
-          </div>
-          <div style="font-size:44px;line-height:1">${bs.e}</div>
-        </div>
-      </div>`;
-  } else {
-    // Geen eigen topdag — toon alleen alle-topdag klein
-    const allName = allTop.createdBy ? ` · ${getProfileName(allTop.createdBy)}` : '';
-    el.innerHTML = `
-      <div class="best-day-card">
-        <div class="bd-label">🏅 Laatste top dag</div>
-        <div style="font-size:11px;color:var(--muted);padding:4px 0">
-          alle: ${allTop.waterTemp.toFixed(1)}° · ${new Date(allTop.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${allName}
-        </div>
-      </div>`;
+    html += _bestDayCard(ownTop, '🏅 Laatste top dag (eigen / gevolgd)');
   }
+
+  // Algemene kaart alleen tonen als die afwijkt van de eigen topdag
+  if (allTop && (!ownTop || allTop.id !== ownTop.id)) {
+    html += _bestDayCard(allTop, '🏅 Laatste top dag (algemeen)');
+  }
+
+  el.innerHTML = html;
 }
 
 // ─── RENDER ALL ───────────────────────────────
@@ -2486,6 +2474,7 @@ function renderCondChart() {
       borderColor: bg,
       borderWidth: 1,
       borderRadius: 3,
+      stack: 'cond',
     };
   });
 
