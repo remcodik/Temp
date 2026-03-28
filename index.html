@@ -745,6 +745,7 @@
       </div>
     </div>
   </div>
+  <div id="rws-debug" style="background:#fff3cd;border-radius:8px;padding:8px 12px;margin-bottom:9px;font-size:11px;font-family:monospace;white-space:pre-wrap;display:none"></div>
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
       <div class="stat-value" id="s-count" style="color:var(--primary)">0</div>
@@ -1537,7 +1538,15 @@ async function fetchAirTemp() {
 }
 
 // ─── RWS WATERTEMPERATUUR ─────────────────────
+function _rwsDebug(lines) {
+  const el = document.getElementById('rws-debug');
+  if (!el) return;
+  el.textContent = lines.join('\n');
+  el.style.display = 'block';
+}
+
 async function fetchWaterTemp() {
+  const log = [];
   for (const { url, code, label } of RWS_CANDIDATES) {
     try {
       const body = {
@@ -1547,18 +1556,16 @@ async function fetchWaterTemp() {
           WaarnemingMetadata: { KwaliteitswaardecodeLijst: ['00','10','20','25','30','40'] }
         }]
       };
-      const r = await fetch(url, {
-        method: 'POST', mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
+      const r = await fetch(url, { method:'POST', mode:'cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       const d = await r.json();
-      console.log(`RWS [${code}]:`, JSON.stringify(d).slice(0, 300));
+      const preview = JSON.stringify(d).slice(0, 200);
+      log.push(`[${code}] HTTP ${r.status}\n${preview}`);
       const metingen = (d?.WaarnemingenLijst || []).flatMap(w => w.MetingenLijst || []);
       const val = metingen.find(m => m.Meetwaarde?.Waarde_Numeriek != null)?.Meetwaarde?.Waarde_Numeriek;
-      if (val != null) return { val: Math.round(val * 10) / 10, label };
-    } catch(e) { console.warn(`RWS [${code}] fout:`, e.message); }
+      if (val != null) { _rwsDebug(log); return { val: Math.round(val * 10) / 10, label }; }
+    } catch(e) { log.push(`[${code}] FOUT: ${e.message}`); }
   }
+  _rwsDebug(log);
   return { val: null, label: RWS_CANDIDATES[0].label };
 }
 
