@@ -1338,6 +1338,8 @@ function condIconCircle(opts, val, size=20) {
 // ─── STATE ────────────────────────────────────
 let readings   = [];
 let editingId  = null;
+let liveWaterTemp = null;
+let liveAirTemp   = null;
 let selSky     = null;
 let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
 let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
@@ -1536,9 +1538,13 @@ async function fetchWaterTemp() {
   try {
     const r = await fetch('./water-temp.json?t=' + Date.now());
     const d = await r.json();
-    if (d.temperature != null) return { val: d.temperature, label: d.label || 'Lobith' };
+    if (d.temperature != null) return {
+      val: d.temperature,
+      label: d.label || 'Lobith',
+      source: d.source || null
+    };
   } catch { /* geen data beschikbaar */ }
-  return { val: null, label: 'Lobith' };
+  return { val: null, label: 'Lobith', source: null };
 }
 
 async function fetchAndFill() {
@@ -1555,6 +1561,7 @@ async function fetchAndFill() {
 async function updateLiveTemps() {
   const [at, wtResult] = await Promise.all([fetchAirTemp(), fetchWaterTemp()]);
   if (at !== null) {
+    liveAirTemp = at;
     document.getElementById('cur-air').textContent = at.toFixed(1) + '°C';
     document.getElementById('cur-air').style.color = tempColor(at);
     document.getElementById('cur-icon').textContent =
@@ -1565,13 +1572,19 @@ async function updateLiveTemps() {
   const srcEl  = document.getElementById('cur-water-rws-src');
   if (rwsEl) {
     if (wtResult.val !== null) {
+      liveWaterTemp = wtResult.val;
       rwsEl.textContent = wtResult.val.toFixed(1) + '°C';
       rwsEl.style.color = tempColor(wtResult.val);
     } else {
       rwsEl.textContent = '--°C';
       rwsEl.style.color = 'var(--muted)';
     }
-    if (srcEl) srcEl.textContent = wtResult.label;
+    if (srcEl) {
+      const bronTekst = wtResult.source === 'waterkaart.net'
+        ? `${wtResult.label} · waterkaart.net`
+        : wtResult.label;
+      srcEl.textContent = bronTekst;
+    }
   }
 }
 // Backwards compat alias
@@ -1615,8 +1628,8 @@ function openForm(id) {
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
   document.getElementById('f-dt').value = local;
-  document.getElementById('f-wt').value = '';
-  document.getElementById('f-at').value = '';
+  document.getElementById('f-wt').value = liveWaterTemp !== null ? liveWaterTemp : '';
+  document.getElementById('f-at').value = liveAirTemp   !== null ? liveAirTemp   : '';
   document.getElementById('f-id').value = '';
   clearPhoto();
 
