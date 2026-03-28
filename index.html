@@ -745,7 +745,6 @@
       </div>
     </div>
   </div>
-  <div id="rws-debug" style="background:#fff3cd;border-radius:8px;padding:8px 12px;margin-bottom:9px;font-size:11px;font-family:monospace;white-space:pre-wrap;display:none"></div>
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
       <div class="stat-value" id="s-count" style="color:var(--primary)">0</div>
@@ -1242,20 +1241,7 @@ const WEATHER_API =
   `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
-// RWS watertemperatuur — Lobith (Waal)
-// Nieuwe API (dec 2025) gebruikt lowercase locatiecodes
-// Fallback naar oude API als nieuwe niet werkt (oud stopt april 2026)
-const RWS_CANDIDATES = [
-  // Waterinfo GET-API (geen CORS preflight, betere kans op succes in Safari)
-  { type:'get', url: 'https://waterinfo.rws.nl/api/point/latestbyparameternameandstationid/?parameterid=Watertemperatuur___20&stationid=LOBH', label: 'Lobith' },
-  { type:'get', url: 'https://waterinfo.rws.nl/api/point/latestbyparameternameandstationid/?parameterid=Watertemperatuur___20&stationid=LOBI', label: 'Lobith' },
-  { type:'get', url: 'https://waterinfo.rws.nl/api/point/latestbyparameternameandstationid/?parameterid=Watertemperatuur___20&stationid=NIJK', label: 'Nijmegen' },
-  // WaterWebservices POST-API (fallback)
-  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobith.ponton', label: 'Lobith' },
-  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobh',          label: 'Lobith' },
-  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'LOBH',          label: 'Lobith' },
-  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'NIJK',          label: 'Nijmegen Kanaal' },
-];
+// RWS watertemperatuur — wordt elk uur bijgewerkt via GitHub Action (geen CORS issue)
 
 const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },  // amber
@@ -1543,48 +1529,15 @@ async function fetchAirTemp() {
 }
 
 // ─── RWS WATERTEMPERATUUR ─────────────────────
-function _rwsDebug(lines) {
-  const el = document.getElementById('rws-debug');
-  if (!el) return;
-  el.textContent = lines.join('\n');
-  el.style.display = 'block';
-}
-
+// ─── RWS WATERTEMPERATUUR ─────────────────────
+// Leest water-temp.json — bijgewerkt elk uur door GitHub Action (geen CORS probleem)
 async function fetchWaterTemp() {
-  const log = [];
-  for (const candidate of RWS_CANDIDATES) {
-    const { url, label } = candidate;
-    try {
-      let val = null;
-      if (candidate.type === 'get') {
-        // Waterinfo GET-API
-        const r = await fetch(url, { mode:'cors' });
-        const d = await r.json();
-        log.push(`[GET ${label}] HTTP ${r.status}\n${JSON.stringify(d).slice(0,200)}`);
-        // Waterinfo retourneert array of object met 'waarde' of 'latestValue'
-        const arr = Array.isArray(d) ? d : (d?.measurements || d?.data || []);
-        val = arr[0]?.latestValue ?? arr[0]?.waarde ?? d?.latestValue ?? d?.waarde ?? null;
-      } else {
-        // WaterWebservices POST-API
-        const { code } = candidate;
-        const body = {
-          LocatieLijst: [{ Code: code }],
-          AquoPlusWaarnemingMetadataLijst: [{
-            AquoMetadata: { Compartiment: { Code: 'OW' }, Grootheid: { Code: 'T' } },
-            WaarnemingMetadata: { KwaliteitswaardecodeLijst: ['00','10','20','25','30','40'] }
-          }]
-        };
-        const r = await fetch(url, { method:'POST', mode:'cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-        const d = await r.json();
-        log.push(`[${code}] HTTP ${r.status}\n${JSON.stringify(d).slice(0,200)}`);
-        const metingen = (d?.WaarnemingenLijst || []).flatMap(w => w.MetingenLijst || []);
-        val = metingen.find(m => m.Meetwaarde?.Waarde_Numeriek != null)?.Meetwaarde?.Waarde_Numeriek ?? null;
-      }
-      if (val != null) { _rwsDebug(log); return { val: Math.round(val * 10) / 10, label }; }
-    } catch(e) { log.push(`[${candidate.code || label}] FOUT: ${e.message}`); }
-  }
-  _rwsDebug(log);
-  return { val: null, label: RWS_CANDIDATES[0].label };
+  try {
+    const r = await fetch('./water-temp.json?t=' + Date.now());
+    const d = await r.json();
+    if (d.temperature != null) return { val: d.temperature, label: d.label || 'Lobith' };
+  } catch { /* geen data beschikbaar */ }
+  return { val: null, label: 'Lobith' };
 }
 
 async function fetchAndFill() {

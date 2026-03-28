@@ -1,0 +1,81 @@
+name: Update Water Temperature
+
+on:
+  schedule:
+    - cron: '15 * * * *'   # Elk uur op :15
+  workflow_dispatch:         # Handmatig starten mogelijk
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch water temperature from RWS
+        id: fetch
+        run: |
+          RESULT=""
+
+          # Probeer nieuwe RWS API (lobith.ponton)
+          RESP=$(curl -s --max-time 10 -X POST \
+            "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen" \
+            -H "Content-Type: application/json" \
+            -d '{"LocatieLijst":[{"Code":"lobith.ponton"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
+          echo "Nieuw API (lobith.ponton): $RESP"
+
+          # Probeer oude RWS API als fallback
+          if ! echo "$RESP" | grep -q "Waarde_Numeriek"; then
+            RESP=$(curl -s --max-time 10 -X POST \
+              "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen" \
+              -H "Content-Type: application/json" \
+              -d '{"LocatieLijst":[{"Code":"LOBH"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
+            echo "Oud API (LOBH): $RESP"
+          fi
+
+          echo "rws_response=$RESP" >> $GITHUB_OUTPUT
+
+      - name: Parse en sla op als water-temp.json
+        run: |
+          python3 - <<'PYEOF'
+          import json, datetime, sys
+
+          raw = """${{ steps.fetch.outputs.rws_response }}"""
+
+          val = None
+          label = "Lobith"
+
+          try:
+              data = json.loads(raw)
+              metingen = []
+              for w in data.get("WaarnemingenLijst", []):
+                  metingen.extend(w.get("MetingenLijst", []))
+              for m in metingen:
+                  v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                  if v is not None:
+                      val = round(v * 10) / 10
+                      break
+          except Exception as e:
+              print(f"Parse fout: {e}", file=sys.stderr)
+
+          result = {
+              "temperature": val,
+              "label": label,
+              "updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+          }
+
+          with open("water-temp.json", "w") as f:
+              json.dump(result, f)
+
+          print("Resultaat:", result)
+          PYEOF
+
+      - name: Commit en push
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add water-temp.json
+          git diff --staged --quiet && echo "Geen wijziging" || git commit -m "Update watertemperatuur [skip ci]"
+          git push
