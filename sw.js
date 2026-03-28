@@ -41,7 +41,9 @@ self.addEventListener('fetch', ev => {
     url.includes('googleapis.com') ||
     url.includes('firebaseio.com') ||
     url.includes('gstatic.com/firebasejs') ||
-    url.includes('waterwebservices.rijkswaterstaat.nl')
+    url.includes('waterwebservices.rijkswaterstaat.nl') ||
+    url.includes('ddapi20-waterwebservices.rijkswaterstaat.nl') ||
+    url.includes('waterinfo.rws.nl')
   ) {
     ev.respondWith(fetch(ev.request));
     return;

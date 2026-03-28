@@ -182,22 +182,28 @@
     .wh-empty { text-align:center; padding:6px 0 2px; opacity:.65; }
     .wh-empty-num { font-size:44px; font-weight:900; opacity:.4; letter-spacing:-2px; }
 
-    /* ── Air – secondary ── */
+    /* ── Huidige temperatuur blok ── */
     .air-secondary {
       background: var(--card);
       border-radius: 12px;
-      padding: 12px 16px;
+      padding: 10px 14px;
       margin-bottom: 9px;
       box-shadow: var(--shadow);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      overflow: hidden;
     }
-    .air-left { display:flex; align-items:center; gap:12px; }
-    .air-icon { font-size:28px; line-height:1; }
-    .air-lbl  { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px; }
-    .air-val  { font-size:30px; font-weight:900; line-height:1; letter-spacing:-1px; color:var(--muted); }
-    .air-meta { font-size:10px; color:var(--muted); text-align:right; line-height:1.5; }
+    .cur-title {
+      font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.8px; color:var(--muted);
+      padding-bottom:8px; margin-bottom:8px;
+      border-bottom:1px solid var(--border);
+    }
+    .cur-grid { display:grid; grid-template-columns:1fr 1fr; }
+    .cur-col  { padding:0 12px; }
+    .cur-col:first-child { padding-left:0; border-right:1px solid var(--border); }
+    .cur-col:last-child  { padding-right:0; }
+    .cur-lbl  { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px; }
+    .cur-val  { font-size:30px; font-weight:900; line-height:1; letter-spacing:-1px; white-space:nowrap; color:var(--muted); }
+    .cur-sub  { font-size:11px; color:var(--muted); margin-top:4px; min-height:15px; }
 
     /* ── Stats grid ── */
     .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:9px; }
@@ -209,9 +215,10 @@
       box-shadow: var(--shadow);
     }
     .stat-value { font-size:22px; font-weight:800; color:var(--primary); line-height:1.1; }
+    .stat-sub   { font-size:11px; color:var(--muted); margin-top:1px; opacity:.8; }
     .stat-label { font-size:10px; color:var(--muted); margin-top:2px; }
     .stat-record{ font-size:9px; color:var(--muted); margin-top:2px; opacity:.7; }
-    .stat-all   { font-size:9px; color:var(--muted); opacity:.55; margin-top:2px; }
+    .stat-all   { font-size:12px; color:var(--muted); opacity:.65; margin-top:2px; }
 
     /* ── Trend ── */
     .trend-row {
@@ -707,7 +714,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-<a href="https://waterkaart.net/gids/zwemplek.php?naam=Oosterhoutse%20Plas"
+<a href="https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas"
          target="_blank" rel="noopener" class="waterkaart-btn">
         📍 Waterkaart
       </a>
@@ -724,21 +731,18 @@
 <div id="page-home" class="page active">
   <div id="water-hero-section"></div>
   <div class="air-secondary">
-    <div class="air-left">
-      <div class="air-icon" id="cur-icon">🌡️</div>
-      <div>
-        <div class="air-lbl">Luchttemperatuur nu</div>
-        <div class="air-val" id="cur-air">--°C</div>
+    <div class="cur-title">Huidige temperatuur</div>
+    <div class="cur-grid">
+      <div class="cur-col">
+        <div class="cur-lbl">🌡️ Lucht</div>
+        <div class="cur-val" id="cur-air">--°C</div>
+        <div class="cur-sub" id="cur-icon"></div>
       </div>
-    </div>
-    <div class="air-right">
-      <div class="air-meta" id="cur-updated">Ophalen…</div>
-      <button class="air-refresh-btn" onclick="updateAirTemp()" aria-label="Verversen">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="1 4 1 10 7 10"/>
-          <path d="M3.51 15a9 9 0 1 0 .49-3.31"/>
-        </svg>
-      </button>
+      <div class="cur-col">
+        <div class="cur-lbl">🌊 Water</div>
+        <div class="cur-val" id="cur-water-rws">--°C</div>
+        <div class="cur-sub" id="cur-water-rws-src"></div>
+      </div>
     </div>
   </div>
   <div class="stats-grid" id="stats-grid">
@@ -749,6 +753,7 @@
     </div>
     <div class="stat-card">
       <div class="stat-value" id="s-topdays" style="color:#e65100">--</div>
+      <div class="stat-sub" id="s-topdays-temp"></div>
       <div class="stat-label">Top dagen 🏅</div>
       <div class="stat-all" id="s-topdays-all"></div>
     </div>
@@ -790,11 +795,11 @@
     <button class="pf-btn" onclick="setChartPeriod('3m',this)">3 maanden</button>
   </div>
   <div class="card">
-    <div class="card-title">Water &amp; lucht over tijd</div>
+    <div class="card-title">Water- &amp; luchttemperatuur over tijd</div>
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
   </div>
   <div class="card" style="margin-top:10px">
-    <div class="card-title">Gem. water per maand</div>
+    <div class="card-title">Gem. watertemperatuur per maand</div>
     <div class="year-filter" id="year-filter-btns"></div>
     <div class="chart-scroll-outer">
       <div class="chart-scroll-inner" id="chart-monthly-wrap">
@@ -830,24 +835,30 @@
   <!-- Update -->
   <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px;background:#1b5e20;">🔄 Nieuwe versie ophalen</button>
 
-  <!-- Export / Import -->
-  <div class="action-grid" style="margin-bottom:13px">
-    <button class="action-card" onclick="exportCSV()">
-      <span class="ai">📊</span>
-      <div class="al">Export Excel</div>
-      <div class="ad">CSV voor Excel / Numbers</div>
-    </button>
-    <button class="action-card" onclick="exportJSON()">
-      <span class="ai">💾</span>
-      <div class="al">Export JSON</div>
-      <div class="ad">Backup bestand</div>
-    </button>
-    <button class="action-card" onclick="triggerImport()" style="grid-column:1/-1">
-      <span class="ai">📂</span>
-      <div class="al">Import JSON</div>
-      <div class="ad">Herstel / samenvoegen vanuit backup</div>
-    </button>
-  </div>
+  <!-- Export / Import (ingeklapt) -->
+  <details class="card" style="margin-bottom:10px">
+    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--primary)">
+      📦 Data exporteren &amp; importeren
+      <span style="margin-left:auto;font-size:16px;color:var(--primary)">▾</span>
+    </summary>
+    <div class="action-grid" style="margin-top:10px">
+      <button class="action-card" onclick="exportCSV()">
+        <span class="ai">📊</span>
+        <div class="al">Export Excel</div>
+        <div class="ad">CSV voor Excel / Numbers</div>
+      </button>
+      <button class="action-card" onclick="exportJSON()">
+        <span class="ai">💾</span>
+        <div class="al">Export JSON</div>
+        <div class="ad">Backup bestand</div>
+      </button>
+      <button class="action-card" onclick="triggerImport()" style="grid-column:1/-1">
+        <span class="ai">📂</span>
+        <div class="al">Import JSON</div>
+        <div class="ad">Herstel / samenvoegen vanuit backup</div>
+      </button>
+    </div>
+  </details>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
 
   <!-- Firebase — inklapmenu -->
@@ -874,15 +885,8 @@
     </div>
   </details>
 
-  <!-- Data wissen -->
-  <div class="card" style="border:2px solid #ffcdd2;margin-bottom:8px">
-    <div class="card-title" style="color:var(--danger);">Data wissen</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Wist alle lokale metingen permanent.</p>
-    <button class="btn btn-danger" onclick="clearAll()">🗑️ Alle data wissen</button>
-  </div>
-
   <div style="text-align:center;padding:14px 0 4px;font-size:11px;color:var(--muted);">
-    Versie 2.16 &nbsp;·&nbsp; <span id="build-time"></span>
+    Versie 2.17 &nbsp;·&nbsp; <span id="build-time"></span>
   </div>
 </div>
 
@@ -1237,10 +1241,7 @@ const WEATHER_API =
   `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
-// RWS watertemperatuur — dichtstbijzijnde meetstation Waal
-// Aanpassen naar 'NIJM' voor Nijmegen Haven
-const RWS_WATER_STATION = 'LOBH';
-const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
+// RWS watertemperatuur — wordt elk uur bijgewerkt via GitHub Action (geen CORS issue)
 
 const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },  // amber
@@ -1485,8 +1486,13 @@ function primaryReadings() {
   });
 }
 
+// Eigen + gevolgde + zonder naam — tellen als "eigen" bij statistieken
+function ownReadings() {
+  return primaryReadings();
+}
+
 // Scope voor metingen-pagina
-let activeProfileScope = 'iedereen'; // 'eigen' | 'gevolgd' | 'iedereen'
+let activeProfileScope = 'gevolgd'; // 'eigen' | 'gevolgd' | 'iedereen'
 
 function scopeReadings() {
   if (activeProfileScope === 'iedereen') return readings;
@@ -1523,27 +1529,15 @@ async function fetchAirTemp() {
 }
 
 // ─── RWS WATERTEMPERATUUR ─────────────────────
+// ─── RWS WATERTEMPERATUUR ─────────────────────
+// Leest water-temp.json — bijgewerkt elk uur door GitHub Action (geen CORS probleem)
 async function fetchWaterTemp() {
   try {
-    const body = {
-      LocatieLijst: [{ Code: RWS_WATER_STATION }],
-      AquoPlusWaarnemingMetadataLijst: [{
-        AquoMetadata: {
-          Compartiment: { Code: 'OW' },
-          Grootheid:    { Code: 'T'  }
-        }
-      }]
-    };
-    const r = await fetch(RWS_API, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+    const r = await fetch('./water-temp.json?t=' + Date.now());
     const d = await r.json();
-    const val = d?.WaarnemingenLijst?.[0]?.MetingenLijst?.[0]?.Meetwaarde?.Waarde_Numeriek;
-    return val != null ? Math.round(val * 10) / 10 : null;
-  } catch { return null; }
+    if (d.temperature != null) return { val: d.temperature, label: d.label || 'Lobith' };
+  } catch { /* geen data beschikbaar */ }
+  return { val: null, label: 'Lobith' };
 }
 
 async function fetchAndFill() {
@@ -1557,20 +1551,30 @@ async function fetchAndFill() {
   }
 }
 
-async function updateAirTemp() {
-  const t = await fetchAirTemp();
-  if (t !== null) {
-    document.getElementById('cur-air').textContent = t + '°C';
-    document.getElementById('cur-air').style.color = tempColor(t);
-    document.getElementById('cur-updated').textContent =
-      'Bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+async function updateLiveTemps() {
+  const [at, wtResult] = await Promise.all([fetchAirTemp(), fetchWaterTemp()]);
+  if (at !== null) {
+    document.getElementById('cur-air').textContent = at.toFixed(1) + '°C';
+    document.getElementById('cur-air').style.color = tempColor(at);
     document.getElementById('cur-icon').textContent =
-      t < 5  ? '🥶' : t < 12 ? '🧥' :
-      t < 18 ? '😊' : t < 25 ? '⛅' : '☀️';
-  } else {
-    document.getElementById('cur-updated').textContent = 'Niet beschikbaar';
+      at < 5  ? '🥶' : at < 12 ? '🧥' :
+      at < 18 ? '😊' : at < 25 ? '⛅' : '☀️';
+  }
+  const rwsEl  = document.getElementById('cur-water-rws');
+  const srcEl  = document.getElementById('cur-water-rws-src');
+  if (rwsEl) {
+    if (wtResult.val !== null) {
+      rwsEl.textContent = wtResult.val.toFixed(1) + '°C';
+      rwsEl.style.color = tempColor(wtResult.val);
+    } else {
+      rwsEl.textContent = '--°C';
+      rwsEl.style.color = 'var(--muted)';
+    }
+    if (srcEl) srcEl.textContent = wtResult.label;
   }
 }
+// Backwards compat alias
+function updateAirTemp() { return updateLiveTemps(); }
 
 // ─── NAVIGATION ───────────────────────────────
 function goPage(name, btn) {
@@ -1879,6 +1883,9 @@ function readingHTML(r, showSwipeHint) {
             ${r.createdBy ? `<div class="rc-date">${getProfileName(r.createdBy)}</div>` : ''}
           ${!isGuest() && isOwn ? `<button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="rc-edit" onclick="deleteReading('${r.id}')" aria-label="Verwijderen" style="color:#e53935">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </button>` : ''}
           </div>
         </div>
@@ -1943,22 +1950,35 @@ function renderTrendSection() {
   const primary = scopeReadings();
   const src = primary.length ? primary : readings;
   if (!src.length) { el.innerHTML = ''; return; }
-  const thisWeek = weekAvg(0, src);
-  const lastWeek = weekAvg(1, src);
   const now = new Date();
-  const thisMonth = src.filter(r => {
-    const d = new Date(r.datetime);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
-  const thisYear = src.filter(r => new Date(r.datetime).getFullYear() === now.getFullYear()).length;
 
-  // "alle" totalen — alleen tonen als primary afwijkt van all
+  // Gem. watertemperatuur deze maand + vorige maand voor delta
+  const curM = now.getMonth(), curY = now.getFullYear();
+  const prevM = curM === 0 ? 11 : curM - 1;
+  const prevY = curM === 0 ? curY - 1 : curY;
+  const thisMonthReadings = src.filter(r => {
+    const d = new Date(r.datetime);
+    return d.getMonth() === curM && d.getFullYear() === curY;
+  });
+  const lastMonthReadings = src.filter(r => {
+    const d = new Date(r.datetime);
+    return d.getMonth() === prevM && d.getFullYear() === prevY;
+  });
+  const thisMonthAvg = thisMonthReadings.length
+    ? thisMonthReadings.reduce((s,r) => s + r.waterTemp, 0) / thisMonthReadings.length : null;
+  const lastMonthAvg = lastMonthReadings.length
+    ? lastMonthReadings.reduce((s,r) => s + r.waterTemp, 0) / lastMonthReadings.length : null;
+
+  const thisMonth = thisMonthReadings.length;
+  const thisYear  = src.filter(r => new Date(r.datetime).getFullYear() === curY).length;
+
+  // "alle" tellingen — tonen als scope verschilt van all
   const showAll = primary.length > 0 && readings.length > primary.length;
   const thisMonthAll = showAll ? readings.filter(r => {
     const d = new Date(r.datetime);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    return d.getMonth() === curM && d.getFullYear() === curY;
   }).length : null;
-  const thisYearAll = showAll ? readings.filter(r => new Date(r.datetime).getFullYear() === now.getFullYear()).length : null;
+  const thisYearAll = showAll ? readings.filter(r => new Date(r.datetime).getFullYear() === curY).length : null;
 
   const allSuffix = (val, allVal) =>
     allVal !== null && allVal !== val
@@ -1966,15 +1986,16 @@ function renderTrendSection() {
       : '';
 
   let rows = '';
-  if (thisWeek !== null) {
-    let deltaHTML = '<span style="opacity:.4;font-size:10px">Eerste week</span>';
-    if (lastWeek !== null) {
-      const d = thisWeek - lastWeek;
-      const cls = d >= 0 ? 'trend-up' : 'trend-down';
-      const arrow = d >= 0 ? '▲' : '▼';
-      deltaHTML = `<div class="trend-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}° vs vorige week</div>`;
-    }
-    rows += `<div class="trend-row"><span class="trend-lbl">Gem. deze week</span><div><div class="trend-val">${thisWeek.toFixed(1)}°C</div>${deltaHTML}</div></div>`;
+  if (thisMonthAvg !== null) {
+    let deltaHTML = lastMonthAvg !== null
+      ? (() => {
+          const d = thisMonthAvg - lastMonthAvg;
+          const cls = d >= 0 ? 'trend-up' : 'trend-down';
+          const arrow = d >= 0 ? '▲' : '▼';
+          return `<div class="trend-delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}° vs vorige maand</div>`;
+        })()
+      : '<span style="opacity:.4;font-size:10px">Eerste maand</span>';
+    rows += `<div class="trend-row"><span class="trend-lbl">Gem. watertemperatuur deze maand</span><div><div class="trend-val">${thisMonthAvg.toFixed(1)}°C</div>${deltaHTML}</div></div>`;
   }
   rows += `
     <div class="trend-row"><span class="trend-lbl">Deze maand</span><span class="trend-val">${thisMonth} meting${thisMonth !== 1 ? 'en' : ''}${allSuffix(thisMonth, thisMonthAll)}</span></div>
@@ -1984,29 +2005,57 @@ function renderTrendSection() {
 }
 
 // ─── LAST TOP DAY ─────────────────────────────
-function renderBestDay() {
-  const el  = document.getElementById('best-day-section');
-  const top = lastTopDay();
-  if (!top) { el.innerHTML = ''; return; }
-  const bs = waterStatus(top.waterTemp);
-  const skyIc  = top.sky     ? condIconCircle(SKY,     top.sky,     28) : '';
-  const feelIc = top.wind    ? condIconCircle(FEELING, top.wind,    28) : '';
-  const windIc = top.windStr ? condIconCircle(WIND_STR,top.windStr, 28) : '';
+function _bestDayCard(top, label) {
+  const bs     = waterStatus(top.waterTemp);
+  const skyIc  = top.sky     ? condIconCircle(SKY,      top.sky,     28) : '';
+  const feelIc = top.wind    ? condIconCircle(FEELING,  top.wind,    28) : '';
+  const windIc = top.windStr ? condIconCircle(WIND_STR, top.windStr, 28) : '';
   const condHTML = (skyIc || feelIc || windIc)
     ? `<div class="rc-cond-icons" style="justify-content:flex-start;gap:6px;margin-top:6px">${skyIc}${feelIc}${windIc}</div>` : '';
   const airStr = top.airTemp != null ? `<span style="opacity:.7"> · Lucht ${top.airTemp.toFixed(1)}°</span>` : '';
-  el.innerHTML = `
+  const byStr  = top.createdBy ? `<div style="font-size:11px;font-weight:600;margin-top:3px;opacity:.75">door ${getProfileName(top.createdBy)}</div>` : '';
+  return `
     <div class="best-day-card">
-      <div class="bd-label">🏅 Laatste top dag</div>
+      <div class="bd-label">${label}</div>
       <div class="bd-body">
         <div>
           <div class="bd-temp" style="color:${tempColor(top.waterTemp)}">${top.waterTemp.toFixed(1)}°</div>
           <div class="bd-date">${new Date(top.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${airStr}</div>
+          ${byStr}
           ${condHTML}
         </div>
         <div style="font-size:44px;line-height:1">${bs.e}</div>
       </div>
     </div>`;
+}
+
+function renderBestDay() {
+  const el = document.getElementById('best-day-section');
+
+  // Eigen/gevolgd topdag — nieuwste eerst
+  const ownTop = primaryReadings()
+    .filter(r => r.isTopDay)
+    .sort((a,b) => new Date(b.datetime) - new Date(a.datetime))[0] || null;
+
+  // Algemene topdag — nieuwste eerst
+  const allTop = readings
+    .filter(r => r.isTopDay)
+    .sort((a,b) => new Date(b.datetime) - new Date(a.datetime))[0] || null;
+
+  if (!ownTop && !allTop) { el.innerHTML = ''; return; }
+
+  let html = '';
+
+  if (ownTop) {
+    html += _bestDayCard(ownTop, '🏅 Laatste top dag (eigen / gevolgd)');
+  }
+
+  // Algemene kaart alleen tonen als die afwijkt van de eigen topdag
+  if (allTop && (!ownTop || allTop.id !== ownTop.id)) {
+    html += _bestDayCard(allTop, '🏅 Laatste top dag (algemeen)');
+  }
+
+  el.innerHTML = html;
 }
 
 // ─── RENDER ALL ───────────────────────────────
@@ -2019,14 +2068,14 @@ function _clearStatAll() {
 }
 
 function renderAll() {
-  const scoped  = scopeReadings();   // respecteert activeProfileScope (stats/trend)
+  const own     = ownReadings();     // eigen + zonder naam — altijd voor stats-grid
   const primary = primaryReadings(); // eigen + gevolgd (preview-list)
   const all     = readings;
-  const n       = scoped.length;
+  const n       = own.length;
   const nAll    = all.length;
 
-  // Gebruik scoped als bron; val terug op all als scope leeg is
-  const src = n > 0 ? scoped : all;
+  // Val terug op all als geen eigen metingen
+  const src = n > 0 ? own : all;
 
   document.getElementById('badge-home').textContent = nAll;
   document.getElementById('stats-grid').style.display = nAll > 0 ? 'grid' : 'none';
@@ -2036,13 +2085,17 @@ function renderAll() {
     const maxVal   = Math.max(...wt), minVal = Math.min(...wt);
     const maxR     = src.find(r => r.waterTemp === maxVal);
     const minR     = src.find(r => r.waterTemp === minVal);
-    const topCount = src.filter(r => r.isTopDay).length;
+    const topDays  = src.filter(r => r.isTopDay);
+    const topCount = topDays.length;
+    const topAvg   = topCount ? topDays.reduce((s,r) => s + r.waterTemp, 0) / topCount : null;
     const topEl    = document.getElementById('s-topdays');
     const maxEl    = document.getElementById('s-max');
     const minEl    = document.getElementById('s-min');
     document.getElementById('s-count').textContent = n > 0 ? n : nAll;
     topEl.textContent = topCount;
     topEl.style.color = topCount > 0 ? '#e65100' : 'var(--muted)';
+    const topTempEl = document.getElementById('s-topdays-temp');
+    if (topTempEl) topTempEl.textContent = topAvg !== null ? `gem. ${topAvg.toFixed(1)}°` : '';
     maxEl.textContent = maxVal.toFixed(1) + '°';
     minEl.textContent = minVal.toFixed(1) + '°';
     maxEl.style.color = tempColor(maxVal);
@@ -2050,13 +2103,18 @@ function renderAll() {
     if (maxR) document.getElementById('s-max-date').textContent = shortDate(maxR.datetime);
     if (minR) document.getElementById('s-min-date').textContent = shortDate(minR.datetime);
 
-    // Globale stats in klein (alleen tonen als scoped < totaal)
+    // Globale stats in klein — tonen als eigen afwijkt van alle
     if (n > 0 && nAll > n) {
-      const wtAll    = all.map(r => r.waterTemp);
-      const maxAll   = Math.max(...wtAll), minAll = Math.min(...wtAll);
-      const topAll   = all.filter(r => r.isTopDay).length;
+      const wtAll      = all.map(r => r.waterTemp);
+      const maxAll     = Math.max(...wtAll), minAll = Math.min(...wtAll);
+      const topAllDays = all.filter(r => r.isTopDay);
+      const topAll     = topAllDays.length;
+      const topAllAvg  = topAll ? topAllDays.reduce((s,r) => s + r.waterTemp, 0) / topAll : null;
+      const topAllStr  = topAllAvg !== null
+        ? `alle: ${topAll} (gem. ${topAllAvg.toFixed(1)}°)`
+        : `alle: ${topAll}`;
       _setStatAll('s-count-all',   `alle: ${nAll}`);
-      _setStatAll('s-topdays-all', `alle: ${topAll}`);
+      _setStatAll('s-topdays-all', topAllStr);
       _setStatAll('s-max-all',     `alle: ${maxAll.toFixed(1)}°`);
       _setStatAll('s-min-all',     `alle: ${minAll.toFixed(1)}°`);
     } else {
@@ -2069,6 +2127,8 @@ function renderAll() {
       el.textContent = '--'; el.style.color = 'var(--muted)';
     });
     ['s-max-date','s-min-date'].forEach(id => document.getElementById(id).textContent = '');
+    const topTempEl = document.getElementById('s-topdays-temp');
+    if (topTempEl) topTempEl.textContent = '';
     _clearStatAll();
   }
 
@@ -2244,10 +2304,10 @@ function renderCharts() {
   chartComb = new Chart(document.getElementById('chart-combined'), {
     type:'line',
     data:{ labels, datasets:[
-      { label:'Water °C', data:wt, borderColor:'#0288d1',
+      { label:'Watertemperatuur °C', data:wt, borderColor:'#0288d1',
         backgroundColor:'rgba(2,136,209,.15)', borderWidth:2.5,
         pointRadius:4, pointBackgroundColor:'#0288d1', fill:true, tension:.4, order:1 },
-      { label:'Lucht °C', data:at, borderColor:'#e65100',
+      { label:'Luchttemperatuur °C', data:at, borderColor:'#e65100',
         backgroundColor:'rgba(230,81,0,.04)', borderWidth:1.5,
         pointRadius:3, pointBackgroundColor:'#e65100', fill:false, tension:.4, order:2 },
       { label:'Zwemgrens', data:labels.map(()=>18),
@@ -2327,7 +2387,7 @@ function renderMonthChart() {
     data: {
       labels,
       datasets: [{
-        label: 'Gem. water °C',
+        label: 'Gem. watertemperatuur °C',
         data: avgs,
         backgroundColor: bgColors,
         borderRadius: 5,
@@ -2413,6 +2473,7 @@ function renderCondChart() {
       borderColor: bg,
       borderWidth: 1,
       borderRadius: 3,
+      stack: 'cond',
     };
   });
 
