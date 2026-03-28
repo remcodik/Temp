@@ -1246,6 +1246,11 @@ const WEATHER_API =
 // Nieuwe API (dec 2025) gebruikt lowercase locatiecodes
 // Fallback naar oude API als nieuwe niet werkt (oud stopt april 2026)
 const RWS_CANDIDATES = [
+  // Waterinfo GET-API (geen CORS preflight, betere kans op succes in Safari)
+  { type:'get', url: 'https://waterinfo.rws.nl/api/point/latestbyparameternameandstationid/?parameterid=Watertemperatuur___20&stationid=LOBH', label: 'Lobith' },
+  { type:'get', url: 'https://waterinfo.rws.nl/api/point/latestbyparameternameandstationid/?parameterid=Watertemperatuur___20&stationid=LOBI', label: 'Lobith' },
+  { type:'get', url: 'https://waterinfo.rws.nl/api/point/latestbyparameternameandstationid/?parameterid=Watertemperatuur___20&stationid=NIJK', label: 'Nijmegen' },
+  // WaterWebservices POST-API (fallback)
   { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobith.ponton', label: 'Lobith' },
   { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobh',          label: 'Lobith' },
   { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'LOBH',          label: 'Lobith' },
@@ -1547,23 +1552,36 @@ function _rwsDebug(lines) {
 
 async function fetchWaterTemp() {
   const log = [];
-  for (const { url, code, label } of RWS_CANDIDATES) {
+  for (const candidate of RWS_CANDIDATES) {
+    const { url, label } = candidate;
     try {
-      const body = {
-        LocatieLijst: [{ Code: code }],
-        AquoPlusWaarnemingMetadataLijst: [{
-          AquoMetadata: { Compartiment: { Code: 'OW' }, Grootheid: { Code: 'T' } },
-          WaarnemingMetadata: { KwaliteitswaardecodeLijst: ['00','10','20','25','30','40'] }
-        }]
-      };
-      const r = await fetch(url, { method:'POST', mode:'cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-      const d = await r.json();
-      const preview = JSON.stringify(d).slice(0, 200);
-      log.push(`[${code}] HTTP ${r.status}\n${preview}`);
-      const metingen = (d?.WaarnemingenLijst || []).flatMap(w => w.MetingenLijst || []);
-      const val = metingen.find(m => m.Meetwaarde?.Waarde_Numeriek != null)?.Meetwaarde?.Waarde_Numeriek;
+      let val = null;
+      if (candidate.type === 'get') {
+        // Waterinfo GET-API
+        const r = await fetch(url, { mode:'cors' });
+        const d = await r.json();
+        log.push(`[GET ${label}] HTTP ${r.status}\n${JSON.stringify(d).slice(0,200)}`);
+        // Waterinfo retourneert array of object met 'waarde' of 'latestValue'
+        const arr = Array.isArray(d) ? d : (d?.measurements || d?.data || []);
+        val = arr[0]?.latestValue ?? arr[0]?.waarde ?? d?.latestValue ?? d?.waarde ?? null;
+      } else {
+        // WaterWebservices POST-API
+        const { code } = candidate;
+        const body = {
+          LocatieLijst: [{ Code: code }],
+          AquoPlusWaarnemingMetadataLijst: [{
+            AquoMetadata: { Compartiment: { Code: 'OW' }, Grootheid: { Code: 'T' } },
+            WaarnemingMetadata: { KwaliteitswaardecodeLijst: ['00','10','20','25','30','40'] }
+          }]
+        };
+        const r = await fetch(url, { method:'POST', mode:'cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        const d = await r.json();
+        log.push(`[${code}] HTTP ${r.status}\n${JSON.stringify(d).slice(0,200)}`);
+        const metingen = (d?.WaarnemingenLijst || []).flatMap(w => w.MetingenLijst || []);
+        val = metingen.find(m => m.Meetwaarde?.Waarde_Numeriek != null)?.Meetwaarde?.Waarde_Numeriek ?? null;
+      }
       if (val != null) { _rwsDebug(log); return { val: Math.round(val * 10) / 10, label }; }
-    } catch(e) { log.push(`[${code}] FOUT: ${e.message}`); }
+    } catch(e) { log.push(`[${candidate.code || label}] FOUT: ${e.message}`); }
   }
   _rwsDebug(log);
   return { val: null, label: RWS_CANDIDATES[0].label };
