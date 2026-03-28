@@ -703,12 +703,12 @@
     <div class="hdr-title">
       <span style="font-size:24px">🏊</span>
       <div>
-        <h1>Oosterhoutse Plas</h1>
+        <h1>Lentse Plas</h1>
         <p id="hdr-profile">Temperatuur Tracker</p>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-<a href="https://waterkaart.net/gids/zwemplek.php?naam=Oosterhoutse%20Plas"
+<a href="https://waterkaart.net/gids/zwemplek.php?naam=Lentse%20Plas"
          target="_blank" rel="noopener" class="waterkaart-btn">
         📍 Waterkaart
       </a>
@@ -732,9 +732,17 @@
         <div class="air-val" id="cur-air">--°C</div>
       </div>
     </div>
+    <div style="width:1px;background:var(--border);margin:0 4px;align-self:stretch"></div>
+    <div class="air-left" style="flex:1">
+      <div class="air-icon">🌊</div>
+      <div>
+        <div class="air-lbl">RWS Nijmegen nu</div>
+        <div class="air-val" id="cur-water-rws">--°C</div>
+      </div>
+    </div>
     <div class="air-right">
       <div class="air-meta" id="cur-updated">Ophalen…</div>
-      <button class="air-refresh-btn" onclick="updateAirTemp()" aria-label="Verversen">
+      <button class="air-refresh-btn" onclick="updateLiveTemps()" aria-label="Verversen">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="1 4 1 10 7 10"/>
           <path d="M3.51 15a9 9 0 1 0 .49-3.31"/>
@@ -1240,7 +1248,7 @@ const WEATHER_API =
 
 // RWS watertemperatuur — dichtstbijzijnde meetstation Waal
 // Aanpassen naar 'NIJM' voor Nijmegen Haven
-const RWS_WATER_STATION = 'LOBH';
+const RWS_WATER_STATION = 'NIJM'; // Nijmegen Haven — dichtstbij Lentse Plas
 const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
 
 const SKY = [
@@ -1563,20 +1571,32 @@ async function fetchAndFill() {
   }
 }
 
-async function updateAirTemp() {
-  const t = await fetchAirTemp();
-  if (t !== null) {
-    document.getElementById('cur-air').textContent = t + '°C';
-    document.getElementById('cur-air').style.color = tempColor(t);
-    document.getElementById('cur-updated').textContent =
-      'Bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+async function updateLiveTemps() {
+  const [at, wt] = await Promise.all([fetchAirTemp(), fetchWaterTemp()]);
+  const timeStr = 'Bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+  if (at !== null) {
+    document.getElementById('cur-air').textContent = at + '°C';
+    document.getElementById('cur-air').style.color = tempColor(at);
+    document.getElementById('cur-updated').textContent = timeStr;
     document.getElementById('cur-icon').textContent =
-      t < 5  ? '🥶' : t < 12 ? '🧥' :
-      t < 18 ? '😊' : t < 25 ? '⛅' : '☀️';
+      at < 5  ? '🥶' : at < 12 ? '🧥' :
+      at < 18 ? '😊' : at < 25 ? '⛅' : '☀️';
   } else {
     document.getElementById('cur-updated').textContent = 'Niet beschikbaar';
   }
+  const rwsEl = document.getElementById('cur-water-rws');
+  if (rwsEl) {
+    if (wt !== null) {
+      rwsEl.textContent = wt + '°C';
+      rwsEl.style.color = tempColor(wt);
+    } else {
+      rwsEl.textContent = '--°C';
+      rwsEl.style.color = 'var(--muted)';
+    }
+  }
 }
+// Backwards compat alias
+function updateAirTemp() { return updateLiveTemps(); }
 
 // ─── NAVIGATION ───────────────────────────────
 function goPage(name, btn) {
