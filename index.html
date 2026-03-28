@@ -734,21 +734,21 @@
       </div>
     </div>
     <div style="width:1px;background:var(--border);margin:0 4px;align-self:stretch"></div>
-    <div class="air-left" style="flex:1">
+    <div class="air-left" style="flex:1;min-width:0">
       <div class="air-icon">🌊</div>
-      <div>
-        <div class="air-lbl">RWS Waal (Lobith)</div>
+      <div style="min-width:0">
+        <div class="air-lbl" style="white-space:nowrap">RWS Waal (Lobith)</div>
         <div class="air-val" id="cur-water-rws">--°C</div>
       </div>
     </div>
-    <div class="air-right">
-      <div class="air-meta" id="cur-updated">Ophalen…</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;padding-left:4px">
       <button class="air-refresh-btn" onclick="updateLiveTemps()" aria-label="Verversen">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="1 4 1 10 7 10"/>
           <path d="M3.51 15a9 9 0 1 0 .49-3.31"/>
         </svg>
       </button>
+      <div class="air-meta" id="cur-updated">Ophalen…</div>
     </div>
   </div>
   <div class="stats-grid" id="stats-grid">
@@ -1247,10 +1247,15 @@ const WEATHER_API =
   `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
-// RWS watertemperatuur — meetstation Waal bij Lobith (heeft watertemperatuur sensor)
-// NIJM (Nijmegen Haven) meet alleen waterstand, geen temperatuur
-const RWS_WATER_STATION = 'LOBH'; // Lobith — Waal, heeft watertemperatuur
-const RWS_API = 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen';
+// RWS watertemperatuur — Lobith (Waal)
+// Nieuwe API (dec 2025) gebruikt lowercase locatiecodes
+// Fallback naar oude API als nieuwe niet werkt (oud stopt april 2026)
+const RWS_CANDIDATES = [
+  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobith.ponton' },
+  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobh' },
+  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'LOBH' },
+  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'NIJK' },
+];
 
 const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },  // amber
@@ -1539,26 +1544,27 @@ async function fetchAirTemp() {
 
 // ─── RWS WATERTEMPERATUUR ─────────────────────
 async function fetchWaterTemp() {
-  try {
-    const body = {
-      LocatieLijst: [{ Code: RWS_WATER_STATION }],
-      AquoPlusWaarnemingMetadataLijst: [{
-        AquoMetadata: {
-          Compartiment: { Code: 'OW' },
-          Grootheid:    { Code: 'T'  }
-        }
-      }]
-    };
-    const r = await fetch(RWS_API, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const d = await r.json();
-    const val = d?.WaarnemingenLijst?.[0]?.MetingenLijst?.[0]?.Meetwaarde?.Waarde_Numeriek;
-    return val != null ? Math.round(val * 10) / 10 : null;
-  } catch { return null; }
+  for (const { url, code } of RWS_CANDIDATES) {
+    try {
+      const body = {
+        LocatieLijst: [{ Code: code }],
+        AquoPlusWaarnemingMetadataLijst: [{
+          AquoMetadata: { Compartiment: { Code: 'OW' }, Grootheid: { Code: 'T' } }
+        }]
+      };
+      const r = await fetch(url, {
+        method: 'POST', mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      // Zoek door alle MetingenLijsten heen (nieuwe API splitst soms series)
+      const metingen = (d?.WaarnemingenLijst || []).flatMap(w => w.MetingenLijst || []);
+      const val = metingen.find(m => m.Meetwaarde?.Waarde_Numeriek != null)?.Meetwaarde?.Waarde_Numeriek;
+      if (val != null) return Math.round(val * 10) / 10;
+    } catch { /* probeer volgende kandidaat */ }
+  }
+  return null;
 }
 
 async function fetchAndFill() {
