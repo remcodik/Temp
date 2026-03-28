@@ -14,7 +14,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch water temperature from RWS
+      - name: Fetch watertemperatuur Lentse Plas (waterkaart.net)
+        id: waterkaart
+        run: |
+          RESP=$(curl -s --max-time 10 -X POST \
+            "https://waterkaart.net/items/php/dbase_ophalen.php" \
+            -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+            -H "X-Requested-With: XMLHttpRequest" \
+            -H "Referer: https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas" \
+            --data "a=51.865256042791536&b=5.894079208374023&c=51.891749018068246&d=5.834341049194336&e=1&f=1&g=1&h=1&i=1&j=1&k=1&l=1&m=1&n=1&o=1&p=1&q=1&r=1&s=1&t=1&u=1&v=1&w=1&x=1&y=0&z=0&een=0&z1=1&z2=1&z3=1&z4=1&z5=1&zoomlevel=14&userLang=nl" 2>/dev/null)
+
+          # Haal temperatuur op uit patroon: zwemwater ~ 10&deg;C
+          TEMP=$(echo "$RESP" | grep -oP 'zwemwater\s*~\s*\K[\d,\.]+(?=&deg;C)' | head -1)
+          echo "waterkaart_temp=$TEMP" >> $GITHUB_OUTPUT
+          echo "Waterkaart.net response (eerste 500 tekens): ${RESP:0:500}"
+          echo "Gevonden temperatuur: $TEMP"
+
+      - name: Fetch water temperature from RWS (fallback)
         id: fetch
         run: |
           RESULT=""
@@ -40,29 +56,44 @@ jobs:
       - name: Parse en sla op als water-temp.json
         run: |
           python3 - <<'PYEOF'
-          import json, datetime, sys
+          import json, datetime, sys, re, os
 
-          raw = """${{ steps.fetch.outputs.rws_response }}"""
+          waterkaart_temp = os.environ.get("WATERKAART_TEMP", "").strip()
+          rws_raw = """${{ steps.fetch.outputs.rws_response }}"""
 
           val = None
-          label = "Lobith"
+          label = "Lentse Plas"
+          source = "waterkaart.net"
 
-          try:
-              data = json.loads(raw)
-              metingen = []
-              for w in data.get("WaarnemingenLijst", []):
-                  metingen.extend(w.get("MetingenLijst", []))
-              for m in metingen:
-                  v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
-                  if v is not None:
-                      val = round(v * 10) / 10
-                      break
-          except Exception as e:
-              print(f"Parse fout: {e}", file=sys.stderr)
+          # Eerste keus: waterkaart.net (Lentse Plas)
+          if waterkaart_temp:
+              try:
+                  val = round(float(waterkaart_temp.replace(",", ".")) * 10) / 10
+                  print(f"Waterkaart.net temperatuur gebruikt: {val}")
+              except Exception as e:
+                  print(f"Kon waterkaart temp niet parsen: {e}", file=sys.stderr)
+
+          # Fallback: RWS (Lobith)
+          if val is None:
+              label = "Lobith"
+              source = "RWS"
+              try:
+                  data = json.loads(rws_raw)
+                  metingen = []
+                  for w in data.get("WaarnemingenLijst", []):
+                      metingen.extend(w.get("MetingenLijst", []))
+                  for m in metingen:
+                      v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                      if v is not None:
+                          val = round(v * 10) / 10
+                          break
+              except Exception as e:
+                  print(f"Parse fout RWS: {e}", file=sys.stderr)
 
           result = {
               "temperature": val,
               "label": label,
+              "source": source,
               "updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
           }
 
@@ -71,6 +102,8 @@ jobs:
 
           print("Resultaat:", result)
           PYEOF
+        env:
+          WATERKAART_TEMP: ${{ steps.waterkaart.outputs.waterkaart_temp }}
 
       - name: Commit en push
         run: |

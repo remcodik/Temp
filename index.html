@@ -1536,9 +1536,13 @@ async function fetchWaterTemp() {
   try {
     const r = await fetch('./water-temp.json?t=' + Date.now());
     const d = await r.json();
-    if (d.temperature != null) return { val: d.temperature, label: d.label || 'Lobith' };
+    if (d.temperature != null) return {
+      val: d.temperature,
+      label: d.label || 'Lobith',
+      source: d.source || null
+    };
   } catch { /* geen data beschikbaar */ }
-  return { val: null, label: 'Lobith' };
+  return { val: null, label: 'Lobith', source: null };
 }
 
 async function fetchAndFill() {
@@ -1571,7 +1575,12 @@ async function updateLiveTemps() {
       rwsEl.textContent = '--°C';
       rwsEl.style.color = 'var(--muted)';
     }
-    if (srcEl) srcEl.textContent = wtResult.label;
+    if (srcEl) {
+      const bronTekst = wtResult.source === 'waterkaart.net'
+        ? `${wtResult.label} · waterkaart.net`
+        : wtResult.label;
+      srcEl.textContent = bronTekst;
+    }
   }
 }
 // Backwards compat alias
