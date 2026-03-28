@@ -192,6 +192,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      overflow: hidden;
     }
     .air-left { display:flex; align-items:center; gap:12px; }
     .air-icon { font-size:28px; line-height:1; }
@@ -2035,14 +2036,15 @@ function _bestDayCard(top, label) {
   const condHTML = (skyIc || feelIc || windIc)
     ? `<div class="rc-cond-icons" style="justify-content:flex-start;gap:6px;margin-top:6px">${skyIc}${feelIc}${windIc}</div>` : '';
   const airStr = top.airTemp != null ? `<span style="opacity:.7"> · Lucht ${top.airTemp.toFixed(1)}°</span>` : '';
-  const byStr  = top.createdBy ? `<span style="font-size:10px;opacity:.6"> · ${getProfileName(top.createdBy)}</span>` : '';
+  const byStr  = top.createdBy ? `<div style="font-size:11px;font-weight:600;margin-top:3px;opacity:.75">door ${getProfileName(top.createdBy)}</div>` : '';
   return `
     <div class="best-day-card">
       <div class="bd-label">${label}</div>
       <div class="bd-body">
         <div>
           <div class="bd-temp" style="color:${tempColor(top.waterTemp)}">${top.waterTemp.toFixed(1)}°</div>
-          <div class="bd-date">${new Date(top.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${airStr}${byStr}</div>
+          <div class="bd-date">${new Date(top.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${airStr}</div>
+          ${byStr}
           ${condHTML}
         </div>
         <div style="font-size:44px;line-height:1">${bs.e}</div>
