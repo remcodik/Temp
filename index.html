@@ -736,7 +736,7 @@
     <div class="air-left" style="flex:1">
       <div class="air-icon">🌊</div>
       <div>
-        <div class="air-lbl">RWS Nijmegen nu</div>
+        <div class="air-lbl">RWS Waal (Lobith)</div>
         <div class="air-val" id="cur-water-rws">--°C</div>
       </div>
     </div>
@@ -1246,10 +1246,10 @@ const WEATHER_API =
   `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
-// RWS watertemperatuur — dichtstbijzijnde meetstation Waal
-// Aanpassen naar 'NIJM' voor Nijmegen Haven
-const RWS_WATER_STATION = 'NIJM'; // Nijmegen Haven — dichtstbij Lentse Plas
-const RWS_API = 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen';
+// RWS watertemperatuur — meetstation Waal bij Lobith (heeft watertemperatuur sensor)
+// NIJM (Nijmegen Haven) meet alleen waterstand, geen temperatuur
+const RWS_WATER_STATION = 'LOBH'; // Lobith — Waal, heeft watertemperatuur
+const RWS_API = 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen';
 
 const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },  // amber
