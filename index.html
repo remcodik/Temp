@@ -191,22 +191,19 @@
       box-shadow: var(--shadow);
       overflow: hidden;
     }
-    .cur-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 8px;
-      margin-bottom: 6px;
-      border-bottom: 1px solid var(--border);
+    .cur-title {
+      font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.8px; color:var(--muted);
+      padding-bottom:8px; margin-bottom:8px;
+      border-bottom:1px solid var(--border);
     }
-    .cur-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); }
-    .cur-row   { display:flex; align-items:center; gap:10px; padding:5px 0; }
-    .cur-row + .cur-row { border-top:1px solid var(--border); }
-    .cur-ico   { font-size:22px; line-height:1; width:26px; text-align:center; }
-    .cur-lbl   { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); width:46px; }
-    .cur-val   { font-size:26px; font-weight:900; line-height:1; letter-spacing:-1px; white-space:nowrap; color:var(--muted); flex:1; }
-    .cur-src   { font-size:10px; color:var(--muted); opacity:.7; }
-    .air-meta  { font-size:10px; color:var(--muted); line-height:1.5; }
+    .cur-grid { display:grid; grid-template-columns:1fr 1fr; }
+    .cur-col  { padding:0 12px; }
+    .cur-col:first-child { padding-left:0; border-right:1px solid var(--border); }
+    .cur-col:last-child  { padding-right:0; }
+    .cur-lbl  { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px; }
+    .cur-val  { font-size:30px; font-weight:900; line-height:1; letter-spacing:-1px; white-space:nowrap; color:var(--muted); }
+    .cur-sub  { font-size:11px; color:var(--muted); margin-top:4px; min-height:15px; }
 
     /* ── Stats grid ── */
     .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:9px; }
@@ -734,20 +731,18 @@
 <div id="page-home" class="page active">
   <div id="water-hero-section"></div>
   <div class="air-secondary">
-    <div class="cur-header">
-      <span class="cur-title">Huidige temperatuur</span>
-      <span class="air-meta" id="cur-updated">Ophalen…</span>
-    </div>
-    <div class="cur-row">
-      <span class="cur-ico" id="cur-icon">🌡️</span>
-      <span class="cur-lbl">Lucht</span>
-      <span class="cur-val" id="cur-air">--°C</span>
-    </div>
-    <div class="cur-row">
-      <span class="cur-ico">🌊</span>
-      <span class="cur-lbl">Water</span>
-      <span class="cur-val" id="cur-water-rws">--°C</span>
-      <span class="cur-src" id="cur-water-rws-src"></span>
+    <div class="cur-title">Huidige temperatuur</div>
+    <div class="cur-grid">
+      <div class="cur-col">
+        <div class="cur-lbl">🌡️ Lucht</div>
+        <div class="cur-val" id="cur-air">--°C</div>
+        <div class="cur-sub" id="cur-icon"></div>
+      </div>
+      <div class="cur-col">
+        <div class="cur-lbl">🌊 Water</div>
+        <div class="cur-val" id="cur-water-rws">--°C</div>
+        <div class="cur-sub" id="cur-water-rws-src"></div>
+      </div>
     </div>
   </div>
   <div class="stats-grid" id="stats-grid">
@@ -1580,16 +1575,12 @@ async function fetchAndFill() {
 
 async function updateLiveTemps() {
   const [at, wtResult] = await Promise.all([fetchAirTemp(), fetchWaterTemp()]);
-  const timeStr = 'Bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
   if (at !== null) {
     document.getElementById('cur-air').textContent = at.toFixed(1) + '°C';
     document.getElementById('cur-air').style.color = tempColor(at);
-    document.getElementById('cur-updated').textContent = timeStr;
     document.getElementById('cur-icon').textContent =
       at < 5  ? '🥶' : at < 12 ? '🧥' :
       at < 18 ? '😊' : at < 25 ? '⛅' : '☀️';
-  } else {
-    document.getElementById('cur-updated').textContent = 'Niet beschikbaar';
   }
   const rwsEl  = document.getElementById('cur-water-rws');
   const srcEl  = document.getElementById('cur-water-rws-src');
