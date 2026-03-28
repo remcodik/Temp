@@ -738,7 +738,7 @@
       <div class="air-icon">🌊</div>
       <div style="min-width:0">
         <div class="air-lbl">RWS Waal</div>
-        <div class="air-val" id="cur-water-rws">--°C</div>
+        <div class="air-val" id="cur-water-rws" style="white-space:nowrap">--°C</div>
         <div id="cur-water-rws-src" style="font-size:10px;color:var(--muted);margin-top:1px"></div>
       </div>
     </div>
@@ -1544,7 +1544,8 @@ async function fetchWaterTemp() {
       const body = {
         LocatieLijst: [{ Code: code }],
         AquoPlusWaarnemingMetadataLijst: [{
-          AquoMetadata: { Compartiment: { Code: 'OW' }, Grootheid: { Code: 'T' } }
+          AquoMetadata: { Compartiment: { Code: 'OW' }, Grootheid: { Code: 'T' } },
+          WaarnemingMetadata: { KwaliteitswaardecodeLijst: ['00','10','20','25','30','40'] }
         }]
       };
       const r = await fetch(url, {
@@ -1553,10 +1554,11 @@ async function fetchWaterTemp() {
         body: JSON.stringify(body)
       });
       const d = await r.json();
+      console.log(`RWS [${code}]:`, JSON.stringify(d).slice(0, 300));
       const metingen = (d?.WaarnemingenLijst || []).flatMap(w => w.MetingenLijst || []);
       const val = metingen.find(m => m.Meetwaarde?.Waarde_Numeriek != null)?.Meetwaarde?.Waarde_Numeriek;
       if (val != null) return { val: Math.round(val * 10) / 10, label };
-    } catch { /* probeer volgende kandidaat */ }
+    } catch(e) { console.warn(`RWS [${code}] fout:`, e.message); }
   }
   return { val: null, label: RWS_CANDIDATES[0].label };
 }
