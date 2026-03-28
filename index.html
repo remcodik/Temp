@@ -737,17 +737,12 @@
     <div class="air-left" style="flex:1;min-width:0">
       <div class="air-icon">🌊</div>
       <div style="min-width:0">
-        <div class="air-lbl" style="white-space:nowrap">RWS Waal (Lobith)</div>
+        <div class="air-lbl">RWS Waal</div>
         <div class="air-val" id="cur-water-rws">--°C</div>
+        <div id="cur-water-rws-src" style="font-size:10px;color:var(--muted);margin-top:1px"></div>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;padding-left:4px">
-      <button class="air-refresh-btn" onclick="updateLiveTemps()" aria-label="Verversen">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="1 4 1 10 7 10"/>
-          <path d="M3.51 15a9 9 0 1 0 .49-3.31"/>
-        </svg>
-      </button>
+    <div style="flex-shrink:0;padding-left:6px;text-align:right">
       <div class="air-meta" id="cur-updated">Ophalen…</div>
     </div>
   </div>
@@ -1251,10 +1246,10 @@ const WEATHER_API =
 // Nieuwe API (dec 2025) gebruikt lowercase locatiecodes
 // Fallback naar oude API als nieuwe niet werkt (oud stopt april 2026)
 const RWS_CANDIDATES = [
-  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobith.ponton' },
-  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobh' },
-  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'LOBH' },
-  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'NIJK' },
+  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobith.ponton', label: 'Lobith' },
+  { url: 'https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen', code: 'lobh',          label: 'Lobith' },
+  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'LOBH',          label: 'Lobith' },
+  { url: 'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen',   code: 'NIJK',          label: 'Nijmegen Kanaal' },
 ];
 
 const SKY = [
@@ -1544,7 +1539,7 @@ async function fetchAirTemp() {
 
 // ─── RWS WATERTEMPERATUUR ─────────────────────
 async function fetchWaterTemp() {
-  for (const { url, code } of RWS_CANDIDATES) {
+  for (const { url, code, label } of RWS_CANDIDATES) {
     try {
       const body = {
         LocatieLijst: [{ Code: code }],
@@ -1558,13 +1553,12 @@ async function fetchWaterTemp() {
         body: JSON.stringify(body)
       });
       const d = await r.json();
-      // Zoek door alle MetingenLijsten heen (nieuwe API splitst soms series)
       const metingen = (d?.WaarnemingenLijst || []).flatMap(w => w.MetingenLijst || []);
       const val = metingen.find(m => m.Meetwaarde?.Waarde_Numeriek != null)?.Meetwaarde?.Waarde_Numeriek;
-      if (val != null) return Math.round(val * 10) / 10;
+      if (val != null) return { val: Math.round(val * 10) / 10, label };
     } catch { /* probeer volgende kandidaat */ }
   }
-  return null;
+  return { val: null, label: RWS_CANDIDATES[0].label };
 }
 
 async function fetchAndFill() {
@@ -1579,10 +1573,10 @@ async function fetchAndFill() {
 }
 
 async function updateLiveTemps() {
-  const [at, wt] = await Promise.all([fetchAirTemp(), fetchWaterTemp()]);
+  const [at, wtResult] = await Promise.all([fetchAirTemp(), fetchWaterTemp()]);
   const timeStr = 'Bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
   if (at !== null) {
-    document.getElementById('cur-air').textContent = at + '°C';
+    document.getElementById('cur-air').textContent = at.toFixed(1) + '°C';
     document.getElementById('cur-air').style.color = tempColor(at);
     document.getElementById('cur-updated').textContent = timeStr;
     document.getElementById('cur-icon').textContent =
@@ -1591,15 +1585,17 @@ async function updateLiveTemps() {
   } else {
     document.getElementById('cur-updated').textContent = 'Niet beschikbaar';
   }
-  const rwsEl = document.getElementById('cur-water-rws');
+  const rwsEl  = document.getElementById('cur-water-rws');
+  const srcEl  = document.getElementById('cur-water-rws-src');
   if (rwsEl) {
-    if (wt !== null) {
-      rwsEl.textContent = wt + '°C';
-      rwsEl.style.color = tempColor(wt);
+    if (wtResult.val !== null) {
+      rwsEl.textContent = wtResult.val.toFixed(1) + '°C';
+      rwsEl.style.color = tempColor(wtResult.val);
     } else {
       rwsEl.textContent = '--°C';
       rwsEl.style.color = 'var(--muted)';
     }
+    if (srcEl) srcEl.textContent = wtResult.label;
   }
 }
 // Backwards compat alias
