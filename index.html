@@ -197,13 +197,14 @@
       padding-bottom:8px; margin-bottom:8px;
       border-bottom:1px solid var(--border);
     }
-    .cur-grid { display:grid; grid-template-columns:1fr 1fr; }
-    .cur-col  { padding:0 12px; }
+    .cur-grid  { display:grid; grid-template-columns:1fr 1fr; }
+    .cur-col   { padding:0 12px; }
     .cur-col:first-child { padding-left:0; border-right:1px solid var(--border); }
     .cur-col:last-child  { padding-right:0; }
-    .cur-lbl  { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px; }
-    .cur-val  { font-size:30px; font-weight:900; line-height:1; letter-spacing:-1px; white-space:nowrap; color:var(--muted); }
-    .cur-sub  { font-size:11px; color:var(--muted); margin-top:4px; min-height:15px; }
+    .cur-lbl   { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:3px; }
+    .cur-val   { font-size:28px; font-weight:900; line-height:1; letter-spacing:-1px; white-space:nowrap; color:var(--muted); }
+    .cur-val-lg{ font-size:42px; font-weight:900; line-height:1; letter-spacing:-2px; white-space:nowrap; color:var(--muted); }
+    .cur-sub   { font-size:11px; color:var(--muted); margin-top:4px; min-height:15px; }
 
     /* ── Stats grid ── */
     .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:9px; }
@@ -734,14 +735,14 @@
     <div class="cur-title">Huidige temperatuur</div>
     <div class="cur-grid">
       <div class="cur-col">
+        <div class="cur-lbl">🌊 Water</div>
+        <div class="cur-val-lg" id="cur-water-rws">--°C</div>
+        <div class="cur-sub" id="cur-water-rws-src"></div>
+      </div>
+      <div class="cur-col">
         <div class="cur-lbl">🌡️ Lucht</div>
         <div class="cur-val" id="cur-air">--°C</div>
         <div class="cur-sub" id="cur-icon"></div>
-      </div>
-      <div class="cur-col">
-        <div class="cur-lbl">🌊 Water</div>
-        <div class="cur-val" id="cur-water-rws">--°C</div>
-        <div class="cur-sub" id="cur-water-rws-src"></div>
       </div>
     </div>
   </div>
