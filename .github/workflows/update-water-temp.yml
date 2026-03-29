@@ -108,7 +108,7 @@ jobs:
       - name: Update temp-history.json
         run: |
           python3 - <<'PYEOF'
-          import json, datetime, os, urllib.request
+          import json, datetime, os, sys, urllib.request
 
           now   = datetime.datetime.utcnow()
           today = now.strftime("%Y-%m-%d")
@@ -166,8 +166,12 @@ jobs:
           except Exception:
               history = []
 
-          # Zoek vandaag op en update (of voeg toe)
+          # Sla over als vandaag al volledig is opgeslagen
           today_entry = next((e for e in history if e.get("date") == today), None)
+          if today_entry and "waterkaart" in today_entry and "lobith" in today_entry:
+              print("Vandaag al opgeslagen, overgeslagen.")
+              sys.exit(0)
+
           if today_entry is None:
               today_entry = {"date": today}
               history.append(today_entry)
