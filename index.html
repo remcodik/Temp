@@ -2410,7 +2410,6 @@ function toggleA11yContrast() {
 // ─── VERGELIJKINGSGRAFIEK ─────────────────────
 let chartCompare     = null;
 let tempHistoryCache = null;
-let lobithRwsCache   = null;
 
 async function fetchTempHistory() {
   if (tempHistoryCache !== null) return tempHistoryCache;
@@ -2422,55 +2421,12 @@ async function fetchTempHistory() {
   } catch { tempHistoryCache = []; return []; }
 }
 
-// Haal Lobith daggemiddelden direct uit RWS API (vanaf startDate t/m vandaag)
-async function fetchLobithFromRWS(startDate) {
-  if (lobithRwsCache !== null) return lobithRwsCache;
-  const now   = new Date();
-  const end   = now.toISOString().slice(0,19) + '.000+00:00';
-  const start = startDate + 'T00:00:00.000+01:00';
-  try {
-    const resp = await fetch(
-      'https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen',
-      { method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          Locatie: { Code:'LOBH', Naam:'Lobith' },
-          AquoPlusWaarnemingMetadata: {
-            AquoMetadata: { Compartiment:{Code:'OW'}, Grootheid:{Code:'T'} }
-          },
-          Periode: { Begindatumtijd: start, Einddatumtijd: end }
-        })
-      });
-    if (!resp.ok) { lobithRwsCache = {}; return {}; }
-    const data = await resp.json();
-    const perDag = {};
-    for (const w of (data.WaarnemingenLijst || [])) {
-      for (const m of (w.MetingenLijst || [])) {
-        const v = m.Meetwaarde?.Waarde_Numeriek;
-        const t = m.Tijdstip;
-        if (v == null || !t) continue;
-        const dag = t.slice(0,10);
-        if (!perDag[dag]) perDag[dag] = [];
-        perDag[dag].push(v);
-      }
-    }
-    // Daggemiddelden
-    const result = {};
-    for (const [dag, vals] of Object.entries(perDag)) {
-      result[dag] = +(vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1);
-    }
-    lobithRwsCache = result;
-    return result;
-  } catch { lobithRwsCache = {}; return {}; }
-}
-
 async function renderComparisonChart() {
   const canvas  = document.getElementById('chart-compare');
   const emptyEl = document.getElementById('chart-compare-empty');
-  const titleEl = canvas?.closest('.card')?.querySelector('.card-title');
   if (!canvas) return;
 
-  if (titleEl) titleEl.textContent = 'Watert. vergelijking — laden…';
+  const history = await fetchTempHistory();
 
   // Eigen metingen: gemiddelde per dag
   const ownByDay = {};
@@ -2480,24 +2436,13 @@ async function renderComparisonChart() {
     ownByDay[d].push(r.waterTemp);
   });
 
-  // Haal history (waterkaart.net opgeslagen via Action) + Lobith direct van RWS
-  const startDate = '2026-01-01';
-  const [history, lobithRws] = await Promise.all([
-    fetchTempHistory(),
-    fetchLobithFromRWS(startDate)
-  ]);
-
   const histMap = {};
   history.forEach(h => { histMap[h.date] = h; });
 
-  // Merge alle datumreeksen
   const allDates = [...new Set([
     ...Object.keys(ownByDay),
-    ...history.map(h => h.date),
-    ...Object.keys(lobithRws)
+    ...history.map(h => h.date)
   ])].sort();
-
-  if (titleEl) titleEl.textContent = 'Watert. vergelijking: eigen · Lentse Plas · Lobith';
 
   if (!allDates.length) {
     if (emptyEl) emptyEl.style.display = 'block';
@@ -2507,11 +2452,10 @@ async function renderComparisonChart() {
   if (emptyEl) emptyEl.style.display = 'none';
   canvas.style.display = '';
 
-  const dsOwn       = allDates.map(d => ownByDay[d]
+  const dsOwn        = allDates.map(d => ownByDay[d]
     ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
   const dsWaterkaart = allDates.map(d => histMap[d]?.waterkaart ?? null);
-  const dsLobith     = allDates.map(d =>
-    histMap[d]?.lobith ?? lobithRws[d] ?? null);
+  const dsLobith     = allDates.map(d => histMap[d]?.lobith     ?? null);
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
