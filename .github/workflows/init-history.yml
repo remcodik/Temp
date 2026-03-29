@@ -1,6 +1,7 @@
 name: Init historische watertemperatuur
 
 on:
+  workflow_dispatch:    # Handmatig starten via GitHub Actions UI
   push:
     paths:
       - '.github/workflows/init-history.yml'
