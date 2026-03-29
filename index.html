@@ -672,21 +672,78 @@
     .firebase-details[open] .toggle-icon { transform:rotate(180deg); }
     .firebase-inner { margin-top:12px; }
 
-    /* ── Toegankelijkheidsmodus (grote tekst + hoog contrast) ── */
-    body.a11y { font-size: 16px; }
-    body.a11y .cur-val-lg { font-size:52px; }
-    body.a11y .cur-val    { font-size:36px; }
-    body.a11y .cur-lbl, body.a11y .cur-sub,
-    body.a11y .wh-label, body.a11y .stat-label,
-    body.a11y .cur-title  { font-size:13px; letter-spacing:.5px; }
-    body.a11y .wh-temp    { font-size:72px; }
-    body.a11y .rc-water   { font-size:34px; }
-    body.a11y .nav-btn span:last-child { font-size:13px; }
-    body.a11y .nav-btn    { min-width:60px; }
-    body.a11y .card       { padding:16px; }
-    body.a11y :root, body.a11y { --border: #999; }
-    body.a11y .stat-value { font-size:26px; }
-    body.a11y .rc-card    { padding:14px 10px; }
+    /* ── Grote tekst ── */
+    body.a11y-text { font-size: 16px; }
+    body.a11y-text .cur-val-lg { font-size:52px; }
+    body.a11y-text .cur-val    { font-size:36px; }
+    body.a11y-text .cur-lbl, body.a11y-text .cur-sub,
+    body.a11y-text .wh-label,  body.a11y-text .stat-label,
+    body.a11y-text .cur-title  { font-size:13px; letter-spacing:.5px; }
+    body.a11y-text .wh-temp    { font-size:72px; }
+    body.a11y-text .rc-water   { font-size:34px; }
+    body.a11y-text .rc-air     { font-size:24px; }
+    body.a11y-text .rc-date    { font-size:13px; }
+    body.a11y-text .nav-btn span:last-child { font-size:13px; }
+    body.a11y-text .nav-btn    { min-width:60px; }
+    body.a11y-text .card       { padding:16px; }
+    body.a11y-text .stat-value { font-size:26px; }
+    body.a11y-text .stat-label { font-size:12px; }
+    body.a11y-text .rc-card    { padding:14px 10px; }
+    body.a11y-text .fab        { width:62px; height:62px; }
+    body.a11y-text .trend-lbl, body.a11y-text .trend-val { font-size:14px; }
+
+    /* ── Hoog contrast ── */
+    body.a11y-contrast {
+      --muted:  #1a3a4a;
+      --border: #666;
+      --text:   #000;
+    }
+    body.a11y-contrast .wh-label,
+    body.a11y-contrast .wh-date,
+    body.a11y-contrast .wh-status  { opacity:1 !important; color:#000 !important; }
+    body.a11y-contrast .water-hero-neutral .wh-temp { color:#000 !important; }
+    body.a11y-contrast .cur-lbl,
+    body.a11y-contrast .cur-sub,
+    body.a11y-contrast .cur-val,
+    body.a11y-contrast .cur-val-lg { color:#000 !important; }
+    body.a11y-contrast .stat-label,
+    body.a11y-contrast .stat-record,
+    body.a11y-contrast .stat-sub,
+    body.a11y-contrast .stat-all   { color:#000 !important; opacity:1 !important; }
+    body.a11y-contrast .rc-date,
+    body.a11y-contrast .rc-notes,
+    body.a11y-contrast .trend-lbl  { color:#000 !important; }
+    body.a11y-contrast .delta-neg  { color:#8b0000 !important; }
+    body.a11y-contrast .delta-pos  { color:#005500 !important; }
+    body.a11y-contrast .rc-sep     { color:#333 !important; }
+    body.a11y-contrast .card-title { color:#000 !important; font-weight:800; }
+    body.a11y-contrast .rc-card    { border:1.5px solid #444; }
+
+    @media (prefers-color-scheme: dark) {
+      body.a11y-contrast {
+        --muted:  #d0e8ff;
+        --border: #888;
+        --text:   #fff;
+        --bg:     #000;
+        --card:   #0d1b2a;
+      }
+      body.a11y-contrast .wh-label,
+      body.a11y-contrast .wh-date,
+      body.a11y-contrast .wh-status  { color:#fff !important; }
+      body.a11y-contrast .cur-lbl,
+      body.a11y-contrast .cur-sub,
+      body.a11y-contrast .cur-val,
+      body.a11y-contrast .cur-val-lg { color:#fff !important; }
+      body.a11y-contrast .stat-label,
+      body.a11y-contrast .stat-record,
+      body.a11y-contrast .stat-sub,
+      body.a11y-contrast .stat-all,
+      body.a11y-contrast .rc-date,
+      body.a11y-contrast .rc-notes,
+      body.a11y-contrast .trend-lbl  { color:#fff !important; opacity:1 !important; }
+      body.a11y-contrast .card-title { color:#fff !important; }
+      body.a11y-contrast .rc-card    { border-color:#666; }
+    }
 
     /* ── Dark mode ── */
     @media (prefers-color-scheme: dark) {
@@ -877,7 +934,14 @@
     <div id="follow-list"><p style="font-size:12px;color:var(--muted)">Kies eerst een profiel.</p></div>
   </div>
   <!-- Toegankelijkheid -->
-  <button id="a11y-btn" class="btn btn-primary" onclick="toggleA11y()" style="width:100%;margin-bottom:10px;background:#455a64;">👁 Grote tekst &amp; hoog contrast: <span id="a11y-state">Uit</span></button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <button id="a11y-text-btn" class="btn btn-primary" onclick="toggleA11yText()" style="background:#455a64;font-size:13px;">
+      🔤 Grote tekst<br><span id="a11y-text-state" style="font-size:11px;opacity:.8">Uit</span>
+    </button>
+    <button id="a11y-contrast-btn" class="btn btn-primary" onclick="toggleA11yContrast()" style="background:#455a64;font-size:13px;">
+      🔆 Hoog contrast<br><span id="a11y-contrast-state" style="font-size:11px;opacity:.8">Uit</span>
+    </button>
+  </div>
 
   <!-- Update -->
   <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px;background:#1b5e20;">🔄 Nieuwe versie ophalen</button>
@@ -2316,16 +2380,28 @@ function renderList(containerId, items) {
 }
 
 // ─── TOEGANKELIJKHEID ─────────────────────────
-function toggleA11y() {
-  const on = document.body.classList.toggle('a11y');
-  document.getElementById('a11y-state').textContent = on ? 'Aan' : 'Uit';
-  try { localStorage.setItem('a11y', on ? '1' : '0'); } catch {}
+function toggleA11yText() {
+  const on = document.body.classList.toggle('a11y-text');
+  const el = document.getElementById('a11y-text-state');
+  if (el) el.textContent = on ? 'Aan' : 'Uit';
+  try { localStorage.setItem('a11y-text', on ? '1' : '0'); } catch {}
+}
+function toggleA11yContrast() {
+  const on = document.body.classList.toggle('a11y-contrast');
+  const el = document.getElementById('a11y-contrast-state');
+  if (el) el.textContent = on ? 'Aan' : 'Uit';
+  try { localStorage.setItem('a11y-contrast', on ? '1' : '0'); } catch {}
 }
 (function initA11y() {
   try {
-    if (localStorage.getItem('a11y') === '1') {
-      document.body.classList.add('a11y');
-      const el = document.getElementById('a11y-state');
+    if (localStorage.getItem('a11y-text') === '1') {
+      document.body.classList.add('a11y-text');
+      const el = document.getElementById('a11y-text-state');
+      if (el) el.textContent = 'Aan';
+    }
+    if (localStorage.getItem('a11y-contrast') === '1') {
+      document.body.classList.add('a11y-contrast');
+      const el = document.getElementById('a11y-contrast-state');
       if (el) el.textContent = 'Aan';
     }
   } catch {}
