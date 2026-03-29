@@ -105,10 +105,60 @@ jobs:
         env:
           WATERKAART_TEMP: ${{ steps.waterkaart.outputs.waterkaart_temp }}
 
+      - name: Update temp-history.json
+        run: |
+          python3 - <<'PYEOF'
+          import json, datetime, os
+
+          today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+
+          # Lees huidige water-temp.json
+          try:
+              with open("water-temp.json") as f:
+                  wt = json.load(f)
+          except Exception:
+              wt = {}
+
+          # Bepaal welke waarden bij welke bron horen
+          waterkaart_val = None
+          lobith_val     = None
+          if wt.get("source") == "waterkaart.net":
+              waterkaart_val = wt.get("temperature")
+          elif wt.get("source") == "RWS":
+              lobith_val = wt.get("temperature")
+
+          # Lees bestaande history
+          try:
+              with open("temp-history.json") as f:
+                  history = json.load(f)
+          except Exception:
+              history = []
+
+          # Zoek vandaag op en update (of voeg toe)
+          today_entry = next((e for e in history if e.get("date") == today), None)
+          if today_entry is None:
+              today_entry = {"date": today}
+              history.append(today_entry)
+
+          if waterkaart_val is not None:
+              today_entry["waterkaart"] = waterkaart_val
+          if lobith_val is not None:
+              today_entry["lobith"] = lobith_val
+
+          # Maximaal 365 dagen bewaren, nieuwste eerst
+          history.sort(key=lambda e: e.get("date",""), reverse=True)
+          history = history[:365]
+
+          with open("temp-history.json", "w") as f:
+              json.dump(history, f, indent=2)
+
+          print(f"History bijgewerkt: {today_entry}")
+          PYEOF
+
       - name: Commit en push
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add water-temp.json
+          git add water-temp.json temp-history.json
           git diff --staged --quiet && echo "Geen wijziging" || git commit -m "Update watertemperatuur [skip ci]"
           git push

@@ -182,6 +182,26 @@
     .wh-empty { text-align:center; padding:6px 0 2px; opacity:.65; }
     .wh-empty-num { font-size:44px; font-weight:900; opacity:.4; letter-spacing:-2px; }
 
+    /* ── Water-hero neutraal (geen kleurverloop, laatste meting) ── */
+    .water-hero-neutral {
+      background: var(--card) !important;
+      box-shadow: var(--shadow) !important;
+      color: var(--text) !important;
+    }
+    .water-hero-neutral .wh-label { opacity:.55; color:var(--muted); }
+    .water-hero-neutral .wh-status { background:var(--bg); color:var(--text); }
+    .water-hero-neutral .wh-date   { color:var(--muted); opacity:.7; }
+    .water-hero-neutral .delta-pos { color:#00897b; }
+    .water-hero-neutral .delta-neg { color:#c62828; }
+
+    /* ── Huidige temperatuur blok (gekleurd) ── */
+    .air-colored .cur-title { color:rgba(255,255,255,.75); border-bottom-color:rgba(255,255,255,.2); }
+    .air-colored .cur-lbl   { color:rgba(255,255,255,.75); }
+    .air-colored .cur-sub   { color:rgba(255,255,255,.8); }
+    .air-colored .cur-col:first-child { border-right-color:rgba(255,255,255,.25); }
+    .air-colored .cur-val,
+    .air-colored .cur-val-lg { color:white !important; }
+
     /* ── Huidige temperatuur blok ── */
     .air-secondary {
       background: var(--card);
@@ -367,8 +387,8 @@
 
     /* ── Photo thumbnail in card ── */
     .rc-thumb {
-      width:36px; height:36px; object-fit:cover;
-      border-radius:5px; cursor:pointer;
+      width:56px; height:56px; object-fit:cover;
+      border-radius:8px; cursor:pointer;
       flex-shrink:0; margin-left:auto;
     }
 
@@ -652,6 +672,22 @@
     .firebase-details[open] .toggle-icon { transform:rotate(180deg); }
     .firebase-inner { margin-top:12px; }
 
+    /* ── Toegankelijkheidsmodus (grote tekst + hoog contrast) ── */
+    body.a11y { font-size: 16px; }
+    body.a11y .cur-val-lg { font-size:52px; }
+    body.a11y .cur-val    { font-size:36px; }
+    body.a11y .cur-lbl, body.a11y .cur-sub,
+    body.a11y .wh-label, body.a11y .stat-label,
+    body.a11y .cur-title  { font-size:13px; letter-spacing:.5px; }
+    body.a11y .wh-temp    { font-size:72px; }
+    body.a11y .rc-water   { font-size:34px; }
+    body.a11y .nav-btn span:last-child { font-size:13px; }
+    body.a11y .nav-btn    { min-width:60px; }
+    body.a11y .card       { padding:16px; }
+    body.a11y :root, body.a11y { --border: #999; }
+    body.a11y .stat-value { font-size:26px; }
+    body.a11y .rc-card    { padding:14px 10px; }
+
     /* ── Dark mode ── */
     @media (prefers-color-scheme: dark) {
       :root {
@@ -730,8 +766,7 @@
 
 <!-- HOME -->
 <div id="page-home" class="page active">
-  <div id="water-hero-section"></div>
-  <div class="air-secondary">
+  <div class="air-secondary" id="cur-temp-block">
     <div class="cur-title">Huidige temperatuur</div>
     <div class="cur-grid">
       <div class="cur-col">
@@ -746,6 +781,7 @@
       </div>
     </div>
   </div>
+  <div id="water-hero-section"></div>
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
       <div class="stat-value" id="s-count" style="color:var(--primary)">0</div>
@@ -819,6 +855,13 @@
       <canvas id="chart-cond"></canvas>
     </div>
   </div>
+  <div class="card" style="margin-top:10px">
+    <div class="card-title">Watert. vergelijking: eigen · Lentse Plas · Lobith</div>
+    <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
+    <div id="chart-compare-empty" style="display:none;font-size:12px;color:var(--muted);text-align:center;padding:12px 0">
+      Nog geen historische data beschikbaar. Wordt dagelijks opgebouwd.
+    </div>
+  </div>
 </div>
 
 <!-- EXPORT / SETTINGS -->
@@ -833,6 +876,9 @@
     <div class="card-title">Volgen</div>
     <div id="follow-list"><p style="font-size:12px;color:var(--muted)">Kies eerst een profiel.</p></div>
   </div>
+  <!-- Toegankelijkheid -->
+  <button id="a11y-btn" class="btn btn-primary" onclick="toggleA11y()" style="width:100%;margin-bottom:10px;background:#455a64;">👁 Grote tekst &amp; hoog contrast: <span id="a11y-state">Uit</span></button>
+
   <!-- Update -->
   <button class="btn btn-primary" onclick="forceUpdate()" style="width:100%;margin-bottom:13px;background:#1b5e20;">🔄 Nieuwe versie ophalen</button>
 
@@ -1585,6 +1631,22 @@ async function updateLiveTemps() {
         : wtResult.label;
       srcEl.textContent = bronTekst;
     }
+    // Kleur het huidige-temp blok op basis van watertemperatuur
+    const curBlock = document.getElementById('cur-temp-block');
+    if (curBlock) {
+      if (wtResult.val !== null) {
+        const hg = heroGradient(wtResult.val);
+        curBlock.style.background  = hg.grad;
+        curBlock.style.boxShadow   = `0 6px 24px ${hg.shadow}`;
+        curBlock.classList.add('air-colored');
+        if (rwsEl) rwsEl.style.color = 'white';
+        if (srcEl) srcEl.style.color = 'rgba(255,255,255,.8)';
+        const airEl  = document.getElementById('cur-air');
+        const iconEl = document.getElementById('cur-icon');
+        if (airEl)  airEl.style.color  = 'white';
+        if (iconEl) iconEl.style.color = 'rgba(255,255,255,.8)';
+      }
+    }
   }
 }
 // Backwards compat alias
@@ -1596,7 +1658,7 @@ function goPage(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); }, 50);
+  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 50);
 }
 
 // ─── FORM ─────────────────────────────────────
@@ -1941,12 +2003,11 @@ function renderWaterHero() {
     deltaHTML = `<div class="wh-delta"><span class="${cls}">${arrow} ${Math.abs(delta).toFixed(1)}°</span><span style="opacity:.6;font-size:10px;font-weight:400"> vs vorige</span></div>`;
   }
 
-  const hg = heroGradient(latest.waterTemp);
   el.innerHTML = `
-    <div class="water-hero" style="background:${hg.grad};box-shadow:0 6px 24px ${hg.shadow}">
-      <div class="wh-label">Watertemperatuur</div>
+    <div class="water-hero water-hero-neutral">
+      <div class="wh-label">Laatste meting</div>
       <div class="wh-main">
-        <div class="wh-temp">${latest.waterTemp.toFixed(1)}°</div>
+        <div class="wh-temp" style="color:${tempColor(latest.waterTemp)}">${latest.waterTemp.toFixed(1)}°</div>
         <div class="wh-right">
           <div class="wh-status">${status.e} ${status.l}</div>
           ${deltaHTML}
@@ -2151,7 +2212,7 @@ function renderAll() {
   renderBestDay();
   const chartPage = document.getElementById('page-chart');
   if (chartPage && chartPage.classList.contains('active')) {
-    renderCharts(); renderMonthChart(); renderCondChart();
+    renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart();
   }
 
   renderList('preview-list', primary.slice(0,5));
@@ -2251,6 +2312,103 @@ function renderList(containerId, items) {
   items.forEach(r => {
     const wrap = document.getElementById('wrap-' + r.id);
     if (wrap) setupSwipe(wrap, r.id);
+  });
+}
+
+// ─── TOEGANKELIJKHEID ─────────────────────────
+function toggleA11y() {
+  const on = document.body.classList.toggle('a11y');
+  document.getElementById('a11y-state').textContent = on ? 'Aan' : 'Uit';
+  try { localStorage.setItem('a11y', on ? '1' : '0'); } catch {}
+}
+(function initA11y() {
+  try {
+    if (localStorage.getItem('a11y') === '1') {
+      document.body.classList.add('a11y');
+      const el = document.getElementById('a11y-state');
+      if (el) el.textContent = 'Aan';
+    }
+  } catch {}
+})();
+
+// ─── VERGELIJKINGSGRAFIEK ─────────────────────
+let chartCompare = null;
+let tempHistoryCache = null;
+
+async function fetchTempHistory() {
+  if (tempHistoryCache) return tempHistoryCache;
+  try {
+    const r = await fetch('./temp-history.json?t=' + Date.now());
+    if (!r.ok) return [];
+    tempHistoryCache = await r.json();
+    return tempHistoryCache;
+  } catch { return []; }
+}
+
+async function renderComparisonChart() {
+  const history = await fetchTempHistory();
+  const emptyEl = document.getElementById('chart-compare-empty');
+  const canvas  = document.getElementById('chart-compare');
+  if (!canvas) return;
+
+  // Eigen metingen: gemiddelde per dag
+  const ownByDay = {};
+  readings.forEach(r => {
+    const d = r.datetime.slice(0, 10);
+    if (!ownByDay[d]) ownByDay[d] = [];
+    ownByDay[d].push(r.waterTemp);
+  });
+  const ownDates = Object.keys(ownByDay).sort();
+
+  // Alle unieke datums samenvoegen
+  const histDates = history.map(h => h.date);
+  const allDates  = [...new Set([...ownDates, ...histDates])].sort();
+
+  if (!allDates.length) {
+    if (emptyEl) emptyEl.style.display = 'block';
+    canvas.style.display = 'none';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  canvas.style.display = '';
+
+  const histMap = {};
+  history.forEach(h => { histMap[h.date] = h; });
+
+  const dsOwn      = allDates.map(d => ownByDay[d] ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
+  const dsWaterkaart = allDates.map(d => histMap[d]?.waterkaart ?? null);
+  const dsLobith   = allDates.map(d => histMap[d]?.lobith   ?? null);
+
+  const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const tc   = dark ? '#90caf9' : '#546e7a';
+  const gc   = dark ? 'rgba(144,202,249,.1)' : 'rgba(0,0,0,.05)';
+
+  const labels = allDates.map(d => {
+    const dt = new Date(d);
+    return dt.toLocaleDateString('nl-NL', { day:'numeric', month:'short' });
+  });
+
+  if (chartCompare) chartCompare.destroy();
+  chartCompare = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'Eigen metingen °C', data:dsOwn, borderColor:'#0288d1', backgroundColor:'rgba(2,136,209,.08)',
+        tension:.3, pointRadius:3, spanGaps:true },
+      { label:'Lentse Plas (waterkaart.net)', data:dsWaterkaart, borderColor:'#00897b', backgroundColor:'rgba(0,137,123,.08)',
+        tension:.3, pointRadius:3, borderDash:[4,3], spanGaps:true },
+      { label:'Lobith (RWS)', data:dsLobith, borderColor:'#43a047', backgroundColor:'rgba(67,160,71,.08)',
+        tension:.3, pointRadius:3, borderDash:[2,4], spanGaps:true },
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ labels:{ color:tc, font:{ size:11 } } },
+        tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y+'°C' : '--'}` } } },
+      scales:{
+        x:{ ticks:{ color:tc, maxTicksLimit:8, font:{size:10} }, grid:{ color:gc } },
+        y:{ ticks:{ color:tc, callback: v => v+'°' }, grid:{ color:gc } }
+      }
+    }
   });
 }
 
@@ -2520,7 +2678,7 @@ function renderCondChart() {
 const _reloadCharts = () => {
   const page = document.getElementById('page-chart');
   if (page && page.classList.contains('active')) {
-    setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); }, 200);
+    setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 200);
   }
 };
 window.addEventListener('resize', _reloadCharts);
