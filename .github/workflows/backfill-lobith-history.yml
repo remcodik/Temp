@@ -60,19 +60,22 @@ jobs:
             print(f"Fout: {e}", file=sys.stderr)
             sys.exit(1)
 
-          # Verwerk metingen per dag
-          metingen = data.get("WaarnemingenLijst", [])
-          per_dag = {}
-          for waarn in metingen:
+          # Meting dichtstbij 08:30 per dag
+          TARGET = 8 * 60 + 30
+          per_dag = {}  # dag -> (waarde, verschil)
+          for waarn in data.get("WaarnemingenLijst", []):
             for m in waarn.get("MetingenLijst", []):
               v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
               t = m.get("Tijdstip")
-              if v is None or t is None:
-                continue
+              if v is None or t is None: continue
               dag = t[:10]
-              if dag not in per_dag:
-                per_dag[dag] = []
-              per_dag[dag].append(v)
+              try:
+                h, mn = int(t[11:13]), int(t[14:16])
+                diff = abs(h * 60 + mn - TARGET)
+              except Exception:
+                diff = 9999
+              if dag not in per_dag or diff < per_dag[dag][1]:
+                per_dag[dag] = (v, diff)
 
           print(f"Gevonden: {len(per_dag)} dagen met data")
 
@@ -84,13 +87,8 @@ jobs:
             history = []
 
           hist_map = {e["date"]: e for e in history}
-
-          # Voeg Lobith daggemiddelden toe
-          for dag, waarden in per_dag.items():
-            gem = round(sum(waarden) / len(waarden) * 10) / 10
-            if dag not in hist_map:
-              hist_map[dag] = {"date": dag}
-            hist_map[dag]["lobith"] = gem
+          for dag, (val, _) in per_dag.items():
+            hist_map.setdefault(dag, {"date": dag})["lobith"] = round(val * 10) / 10
 
           history = sorted(hist_map.values(), key=lambda e: e["date"], reverse=True)[:365]
 

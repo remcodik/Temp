@@ -108,24 +108,56 @@ jobs:
       - name: Update temp-history.json
         run: |
           python3 - <<'PYEOF'
-          import json, datetime, os
+          import json, datetime, os, urllib.request
 
-          today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+          now   = datetime.datetime.utcnow()
+          today = now.strftime("%Y-%m-%d")
 
-          # Lees huidige water-temp.json
+          # Lees huidige water-temp.json voor waterkaart-waarde
           try:
               with open("water-temp.json") as f:
                   wt = json.load(f)
           except Exception:
               wt = {}
 
-          # Bepaal welke waarden bij welke bron horen
-          waterkaart_val = None
-          lobith_val     = None
-          if wt.get("source") == "waterkaart.net":
-              waterkaart_val = wt.get("temperature")
-          elif wt.get("source") == "RWS":
-              lobith_val = wt.get("temperature")
+          waterkaart_val = wt.get("temperature") if wt.get("source") == "waterkaart.net" else None
+
+          # Haal Lobith meting dichtstbij 08:30 op voor vandaag
+          lobith_val = None
+          TARGET = 8 * 60 + 30
+          try:
+              start = today + "T00:00:00.000+01:00"
+              end   = today + "T23:59:00.000+01:00"
+              payload = json.dumps({
+                  "Locatie": {"Code": "LOBH", "Naam": "Lobith"},
+                  "AquoPlusWaarnemingMetadata": {
+                      "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
+                  },
+                  "Periode": {"Begindatumtijd": start, "Einddatumtijd": end}
+              }).encode()
+              url = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
+              req = urllib.request.Request(url, data=payload,
+                      headers={"Content-Type": "application/json"}, method="POST")
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  data = json.loads(r.read())
+              best_val, best_diff = None, 9999
+              for w in data.get("WaarnemingenLijst", []):
+                  for m in w.get("MetingenLijst", []):
+                      v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                      t = m.get("Tijdstip", "")
+                      if v is None or not t: continue
+                      try:
+                          h, mn = int(t[11:13]), int(t[14:16])
+                          diff = abs(h * 60 + mn - TARGET)
+                      except Exception:
+                          diff = 9999
+                      if diff < best_diff:
+                          best_val, best_diff = v, diff
+              if best_val is not None:
+                  lobith_val = round(best_val * 10) / 10
+                  print(f"Lobith 08:30-meting: {lobith_val}°C (verschil: {best_diff} min)")
+          except Exception as e:
+              print(f"Lobith history-fetch fout: {e}")
 
           # Lees bestaande history
           try:
