@@ -43,14 +43,22 @@ jobs:
           except Exception as e:
             print(f"Fout: {e}", file=sys.stderr); sys.exit(1)
 
-          per_dag = {}
+          # Meting dichtstbij 08:30 per dag
+          TARGET = 8 * 60 + 30  # minuten
+          per_dag = {}  # dag -> (waarde, verschil)
           for w in data.get("WaarnemingenLijst", []):
             for m in w.get("MetingenLijst", []):
               v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
               t = m.get("Tijdstip", "")
               if v is None or not t: continue
               dag = t[:10]
-              per_dag.setdefault(dag, []).append(v)
+              try:
+                h, mn = int(t[11:13]), int(t[14:16])
+                diff = abs(h * 60 + mn - TARGET)
+              except Exception:
+                diff = 9999
+              if dag not in per_dag or diff < per_dag[dag][1]:
+                per_dag[dag] = (v, diff)
 
           print(f"Dagen gevonden: {len(per_dag)}")
 
@@ -62,9 +70,8 @@ jobs:
             history = []
 
           hist_map = {e["date"]: e for e in history}
-          for dag, vals in per_dag.items():
-            gem = round(sum(vals) / len(vals) * 10) / 10
-            hist_map.setdefault(dag, {"date": dag})["lobith"] = gem
+          for dag, (val, _) in per_dag.items():
+            hist_map.setdefault(dag, {"date": dag})["lobith"] = round(val * 10) / 10
 
           history = sorted(hist_map.values(), key=lambda e: e["date"], reverse=True)[:365]
           with open("temp-history.json", "w") as f:
