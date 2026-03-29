@@ -27,19 +27,8 @@ jobs:
           echo "Pagina response (eerste 2000 tekens):"
           echo "${PAGE:0:2000}"
 
-          # Probeer temperatuur te vinden via diverse patronen
-          TEMP=$(echo "$PAGE" | grep -oP 'zwemwater\s*~\s*\K[\d,\.]+(?=\s*&deg;)' | head -1)
-          if [ -z "$TEMP" ]; then
-            TEMP=$(echo "$PAGE" | grep -oP 'zwemwater[^<]{0,20}?\K[\d]+[,\.][\d]+(?=\s*°)' | head -1)
-          fi
-          if [ -z "$TEMP" ]; then
-            TEMP=$(echo "$PAGE" | grep -oP '(?i)watertemperatuur[^<]{0,30}?\K[\d]+[,\.][\d]+' | head -1)
-          fi
-          if [ -z "$TEMP" ]; then
-            # Zoek alle getallen rond graden op de pagina
-            echo "Alle temp-patronen gevonden:"
-            echo "$PAGE" | grep -oP '[\d]+[,\.][\d]+\s*(?:°|&deg;|graden)' | head -10
-          fi
+          # Extraheer getal direct voor &deg; of ° (pagina bevat maar één zo'n waarde)
+          TEMP=$(echo "$PAGE" | grep -oP '[\d]+[,\.][\d]+(?=\s*(?:°|&deg;))' | head -1)
 
           echo "waterkaart_temp=$TEMP" >> $GITHUB_OUTPUT
           echo "Gevonden temperatuur: '$TEMP'"
