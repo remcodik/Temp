@@ -17,7 +17,16 @@ jobs:
       - name: Fetch watertemperatuur Lentse Plas (waterkaart.net)
         id: waterkaart
         run: |
+          # Bezoek eerst de pagina om een sessie-cookie te krijgen
+          curl -s --max-time 10 \
+            -c /tmp/wk_cookies.txt \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
+            "https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas" > /dev/null
+
+          # Gebruik cookie + browser-headers voor de data-aanvraag
           RESP=$(curl -s --max-time 10 -X POST \
+            -b /tmp/wk_cookies.txt \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
             "https://waterkaart.net/items/php/dbase_ophalen.php" \
             -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
             -H "X-Requested-With: XMLHttpRequest" \
