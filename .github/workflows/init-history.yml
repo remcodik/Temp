@@ -1,0 +1,83 @@
+name: Init historische watertemperatuur
+
+on:
+  push:
+    paths:
+      - '.github/workflows/init-history.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Haal Lobith data op vanaf 1 jan
+        run: |
+          python3 - <<'PYEOF'
+          import json, datetime, sys, urllib.request, urllib.error
+
+          start = "2026-01-01T00:00:00.000+01:00"
+          end   = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:00.000+00:00")
+
+          payload = json.dumps({
+            "Locatie": {"Code": "LOBH", "Naam": "Lobith"},
+            "AquoPlusWaarnemingMetadata": {
+              "AquoMetadata": {
+                "Compartiment": {"Code": "OW"},
+                "Grootheid":    {"Code": "T"}
+              }
+            },
+            "Periode": {"Begindatumtijd": start, "Einddatumtijd": end}
+          }).encode()
+
+          url = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
+          req = urllib.request.Request(url, data=payload,
+                  headers={"Content-Type": "application/json"}, method="POST")
+
+          try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+              data = json.loads(r.read())
+          except Exception as e:
+            print(f"Fout: {e}", file=sys.stderr); sys.exit(1)
+
+          per_dag = {}
+          for w in data.get("WaarnemingenLijst", []):
+            for m in w.get("MetingenLijst", []):
+              v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+              t = m.get("Tijdstip", "")
+              if v is None or not t: continue
+              dag = t[:10]
+              per_dag.setdefault(dag, []).append(v)
+
+          print(f"Dagen gevonden: {len(per_dag)}")
+
+          # Lees bestaande history
+          try:
+            with open("temp-history.json") as f:
+              history = json.load(f)
+          except Exception:
+            history = []
+
+          hist_map = {e["date"]: e for e in history}
+          for dag, vals in per_dag.items():
+            gem = round(sum(vals) / len(vals) * 10) / 10
+            hist_map.setdefault(dag, {"date": dag})["lobith"] = gem
+
+          history = sorted(hist_map.values(), key=lambda e: e["date"], reverse=True)[:365]
+          with open("temp-history.json", "w") as f:
+            json.dump(history, f, indent=2)
+
+          print(f"Opgeslagen: {len(history)} dagen in temp-history.json")
+          PYEOF
+
+      - name: Commit en push
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add temp-history.json
+          git diff --staged --quiet && echo "Geen wijziging" || \
+            git commit -m "Init Lobith historische watertemperatuur [skip ci]"
+          git push
