@@ -1,0 +1,109 @@
+name: Backfill Lobith historische data
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Startdatum (YYYY-MM-DD)'
+        required: true
+        default: '2026-01-01'
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch historische Lobith data en sla op
+        run: |
+          python3 - <<'PYEOF'
+          import json, datetime, sys, urllib.request, urllib.error
+
+          start_str = "${{ github.event.inputs.start_date }}"
+          end_dt    = datetime.datetime.utcnow()
+          start_dt  = datetime.datetime.strptime(start_str, "%Y-%m-%d")
+
+          # RWS historische API
+          url = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
+          payload = json.dumps({
+            "Locatie": {"Code": "LOBH", "Naam": "Lobith"},
+            "AquoPlusWaarnemingMetadata": {
+              "AquoMetadata": {
+                "Compartiment": {"Code": "OW"},
+                "Grootheid":    {"Code": "T"}
+              }
+            },
+            "Periode": {
+              "Begindatumtijd": start_dt.strftime("%Y-%m-%dT00:00:00.000+01:00"),
+              "Einddatumtijd":  end_dt.strftime("%Y-%m-%dT%H:%M:00.000+00:00")
+            }
+          }).encode()
+
+          req = urllib.request.Request(url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST")
+
+          print(f"Ophalen Lobith data van {start_str} t/m {end_dt.date()}...")
+          try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+              data = json.loads(resp.read())
+          except urllib.error.HTTPError as e:
+            print(f"HTTP fout: {e.code} {e.reason}", file=sys.stderr)
+            body = e.read().decode()
+            print("Response:", body[:500], file=sys.stderr)
+            sys.exit(1)
+          except Exception as e:
+            print(f"Fout: {e}", file=sys.stderr)
+            sys.exit(1)
+
+          # Verwerk metingen per dag
+          metingen = data.get("WaarnemingenLijst", [])
+          per_dag = {}
+          for waarn in metingen:
+            for m in waarn.get("MetingenLijst", []):
+              v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+              t = m.get("Tijdstip")
+              if v is None or t is None:
+                continue
+              dag = t[:10]
+              if dag not in per_dag:
+                per_dag[dag] = []
+              per_dag[dag].append(v)
+
+          print(f"Gevonden: {len(per_dag)} dagen met data")
+
+          # Lees bestaande history
+          try:
+            with open("temp-history.json") as f:
+              history = json.load(f)
+          except Exception:
+            history = []
+
+          hist_map = {e["date"]: e for e in history}
+
+          # Voeg Lobith daggemiddelden toe
+          for dag, waarden in per_dag.items():
+            gem = round(sum(waarden) / len(waarden) * 10) / 10
+            if dag not in hist_map:
+              hist_map[dag] = {"date": dag}
+            hist_map[dag]["lobith"] = gem
+
+          history = sorted(hist_map.values(), key=lambda e: e["date"], reverse=True)[:365]
+
+          with open("temp-history.json", "w") as f:
+            json.dump(history, f, indent=2)
+
+          print(f"Klaar. {len(history)} dagen opgeslagen in temp-history.json")
+          PYEOF
+
+      - name: Commit en push
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add temp-history.json
+          git diff --staged --quiet && echo "Geen wijziging" || git commit -m "Backfill Lobith historische watertemperatuur [skip ci]"
+          git push
