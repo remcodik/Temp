@@ -14,49 +14,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch watertemperatuur (Nijmegen Waal + Lobith fallback)
+      - name: Fetch watertemperatuur (Nijmegen of Lobith via RWS)
         id: fetch
         run: |
-          # Nieuwe DD-API v2.0 — probeer Nijmegen-haven eerst (dichter bij Lentse Plas)
-          STATION_CODES=("nijmegen-haven" "nijmegen.boven" "NIJM" "NijmegenBoven")
           RESP=""
           USED_STATION=""
 
-          for CODE in "${STATION_CODES[@]}"; do
-            RESP=$(curl -s --max-time 10 -X POST \
-              "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen" \
-              -H "Content-Type: application/json" \
-              -d "{\"LocatieLijst\":[{\"Code\":\"$CODE\"}],\"AquoPlusWaarnemingMetadataLijst\":[{\"AquoMetadata\":{\"Compartiment\":{\"Code\":\"OW\"},\"Grootheid\":{\"Code\":\"T\"}},\"WaarnemingMetadata\":{\"KwaliteitswaardecodeLijst\":[\"00\",\"10\",\"20\",\"25\",\"30\",\"40\"]}}]}" 2>/dev/null)
-            echo "Station $CODE: ${RESP:0:200}"
-            if echo "$RESP" | grep -q "Waarde_Numeriek"; then
-              USED_STATION="$CODE"
-              echo "Gevonden bij station: $CODE"
-              break
-            fi
-          done
+          # Probeer Nijmegen-haven op oude API (code NIJM)
+          RESP=$(curl -s --max-time 10 -X POST \
+            "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen" \
+            -H "Content-Type: application/json" \
+            -d '{"LocatieLijst":[{"Code":"NIJM"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
+          if echo "$RESP" | grep -q "Waarde_Numeriek"; then
+            USED_STATION="NIJM"
+            echo "Nijmegen gevonden: ${RESP:0:200}"
+          fi
 
-          # Fallback: Lobith op nieuwe API
+          # Fallback: Lobith op nieuwe DD-API v2.0
           if [ -z "$USED_STATION" ]; then
             RESP=$(curl -s --max-time 10 -X POST \
               "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen" \
               -H "Content-Type: application/json" \
               -d '{"LocatieLijst":[{"Code":"lobith.ponton"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
-            echo "Lobith nieuw API: ${RESP:0:200}"
             if echo "$RESP" | grep -q "Waarde_Numeriek"; then
               USED_STATION="lobith.ponton"
             fi
           fi
 
-          # Fallback: Lobith op oude API
+          # Laatste fallback: Lobith op oude API
           if [ -z "$USED_STATION" ]; then
             RESP=$(curl -s --max-time 10 -X POST \
               "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen" \
               -H "Content-Type: application/json" \
               -d '{"LocatieLijst":[{"Code":"LOBH"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
-            echo "Lobith oud API: ${RESP:0:200}"
             USED_STATION="LOBH"
           fi
 
+          echo "Gebruikt station: $USED_STATION"
           echo "rws_response=$RESP" >> $GITHUB_OUTPUT
           echo "used_station=$USED_STATION" >> $GITHUB_OUTPUT
 
