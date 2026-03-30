@@ -12,86 +12,70 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Haal Lobith data op per maand
+      - name: Haal Lobith data op per week
         run: |
-          python3 << 'PYEOF'
-          import json, datetime, sys, urllib.request, time
+          python3 -u << 'PYEOF'
+          import json, datetime, urllib.request, time
 
-          OLD_URL = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
-          NEW_URL = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
+          URL = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
           TARGET = 8 * 60 + 30  # 08:30
 
-          def fetch_maand(start_str, end_str):
-              for api_url, locatie in [
-                  (NEW_URL, {"Code": "lobith.ponton"}),
-                  (OLD_URL, {"Code": "LOBH", "Naam": "Lobith"}),
-              ]:
-                  for poging in range(3):
-                      try:
-                          payload = json.dumps({
-                              "Locatie": locatie,
-                              "AquoPlusWaarnemingMetadata": {
-                                  "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
-                              },
-                              "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
-                          }).encode()
-                          req = urllib.request.Request(api_url, data=payload,
-                                  headers={"Content-Type": "application/json"}, method="POST")
-                          with urllib.request.urlopen(req, timeout=30) as r:
-                              data = json.loads(r.read())
-                          if data.get("WaarnemingenLijst"):
-                              return data
-                      except Exception as e:
-                          print(f"  {api_url[-30:]} poging {poging+1}: {e}")
-                          if poging < 2:
-                              time.sleep(5 * (poging + 1))
+          def fetch_week(start_date, end_date):
+              start_str = start_date.strftime("%Y-%m-%dT00:00:00.000+01:00")
+              end_str   = end_date.strftime("%Y-%m-%dT23:59:00.000+01:00")
+              payload = json.dumps({
+                  "Locatie": {"Code": "LOBH", "Naam": "Lobith"},
+                  "AquoPlusWaarnemingMetadata": {
+                      "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
+                  },
+                  "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
+              }).encode()
+              for poging in range(3):
+                  try:
+                      req = urllib.request.Request(URL, data=payload,
+                              headers={"Content-Type": "application/json"}, method="POST")
+                      with urllib.request.urlopen(req, timeout=20) as r:
+                          data = json.loads(r.read())
+                      if data.get("WaarnemingenLijst"):
+                          return data
+                      return None
+                  except Exception as e:
+                      print(f"  poging {poging+1}: {e}", flush=True)
+                      if poging < 2:
+                          time.sleep(5)
               return None
 
-          # Bouw maandlijst van jan 2026 tot vandaag
           today = datetime.date.today()
-          maanden = []
-          d = datetime.date(2026, 1, 1)
-          while d <= today:
-              if d.month == 12:
-                  eind = datetime.date(d.year + 1, 1, 1) - datetime.timedelta(days=1)
-              else:
-                  eind = datetime.date(d.year, d.month + 1, 1) - datetime.timedelta(days=1)
-              eind = min(eind, today)
-              maanden.append((
-                  d.strftime("%Y-%m-%dT00:00:00.000+01:00"),
-                  eind.strftime("%Y-%m-%dT23:59:00.000+01:00"),
-                  d.strftime("%Y-%m")
-              ))
-              d = (eind + datetime.timedelta(days=1)).replace(day=1)
-
-          print(f"Ophalen van {len(maanden)} maanden...")
-
+          start = datetime.date(2026, 1, 1)
           per_dag = {}
-          for start_str, end_str, label in maanden:
-              print(f"Ophalen {label}...", flush=True)
-              data = fetch_maand(start_str, end_str)
-              if data is None:
-                  print(f"  {label} mislukt, overgeslagen")
-                  time.sleep(3)
-                  continue
-              for w in data.get("WaarnemingenLijst", []):
-                  for m in w.get("MetingenLijst", []):
-                      v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
-                      t = m.get("Tijdstip", "")
-                      if v is None or not t:
-                          continue
-                      dag = t[:10]
-                      try:
-                          h, mn = int(t[11:13]), int(t[14:16])
-                          diff = abs(h * 60 + mn - TARGET)
-                      except Exception:
-                          diff = 9999
-                      if dag not in per_dag or diff < per_dag[dag][1]:
-                          per_dag[dag] = (v, diff)
-              print(f"  {label}: {len(per_dag)} dagen totaal")
-              time.sleep(2)
 
-          print(f"Totaal gevonden: {len(per_dag)} dagen")
+          week_start = start
+          while week_start <= today:
+              week_end = min(week_start + datetime.timedelta(days=6), today)
+              print(f"Ophalen {week_start} t/m {week_end}...", flush=True)
+              data = fetch_week(week_start, week_end)
+              if data is None:
+                  print(f"  mislukt, overgeslagen", flush=True)
+              else:
+                  for w in data.get("WaarnemingenLijst", []):
+                      for m in w.get("MetingenLijst", []):
+                          v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                          t = m.get("Tijdstip", "")
+                          if v is None or not t:
+                              continue
+                          dag = t[:10]
+                          try:
+                              h, mn = int(t[11:13]), int(t[14:16])
+                              diff = abs(h * 60 + mn - TARGET)
+                          except Exception:
+                              diff = 9999
+                          if dag not in per_dag or diff < per_dag[dag][1]:
+                              per_dag[dag] = (v, diff)
+                  print(f"  OK — {len(per_dag)} dagen totaal", flush=True)
+              time.sleep(1)
+              week_start = week_end + datetime.timedelta(days=1)
+
+          print(f"Klaar: {len(per_dag)} dagen gevonden", flush=True)
 
           try:
               with open("temp-history.json") as f:
@@ -107,7 +91,7 @@ jobs:
           with open("temp-history.json", "w") as f:
               json.dump(history, f, indent=2)
 
-          print(f"Opgeslagen: {len(history)} dagen in temp-history.json")
+          print(f"Opgeslagen: {len(history)} regels in temp-history.json", flush=True)
           PYEOF
 
       - name: Commit en push
