@@ -27,8 +27,8 @@ jobs:
           echo "Pagina response (eerste 2000 tekens):"
           echo "${PAGE:0:2000}"
 
-          # Extraheer getal direct voor &deg; of ° (pagina bevat maar één zo'n waarde)
-          TEMP=$(echo "$PAGE" | grep -oP '[\d]+[,\.][\d]+(?=\s*(?:°|&deg;))' | head -1)
+          # Watertemperatuur heeft altijd een ~ prefix: "~9.9 °C"
+          TEMP=$(echo "$PAGE" | grep -oP '~\s*\K[\d]+[,\.][\d]+(?=\s*(?:°|&deg;))' | head -1)
 
           echo "waterkaart_temp=$TEMP" >> $GITHUB_OUTPUT
           echo "Gevonden temperatuur: '$TEMP'"
