@@ -1,10 +1,7 @@
 name: Init historische watertemperatuur
 
 on:
-  workflow_dispatch:    # Handmatig starten via GitHub Actions UI
-  push:
-    paths:
-      - '.github/workflows/init-history.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,75 +12,100 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Haal Lobith data op vanaf 1 jan
+      - name: Haal Lobith data op per maand
         run: |
-          python3 - <<'PYEOF'
-          import json, datetime, sys, urllib.request, urllib.error
+          python3 << 'PYEOF'
+          import json, datetime, sys, urllib.request, time
 
-          start = "2026-01-01T00:00:00.000+01:00"
-          end   = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:00.000+00:00")
+          OLD_URL = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
+          NEW_URL = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
+          TARGET = 8 * 60 + 30  # 08:30
 
-          payload = json.dumps({
-            "Locatie": {"Code": "LOBH", "Naam": "Lobith"},
-            "AquoPlusWaarnemingMetadata": {
-              "AquoMetadata": {
-                "Compartiment": {"Code": "OW"},
-                "Grootheid":    {"Code": "T"}
-              }
-            },
-            "Periode": {"Begindatumtijd": start, "Einddatumtijd": end}
-          }).encode()
+          def fetch_maand(start_str, end_str):
+              for api_url, locatie in [
+                  (NEW_URL, {"Code": "lobith.ponton"}),
+                  (OLD_URL, {"Code": "LOBH", "Naam": "Lobith"}),
+              ]:
+                  for poging in range(3):
+                      try:
+                          payload = json.dumps({
+                              "Locatie": locatie,
+                              "AquoPlusWaarnemingMetadata": {
+                                  "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
+                              },
+                              "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
+                          }).encode()
+                          req = urllib.request.Request(api_url, data=payload,
+                                  headers={"Content-Type": "application/json"}, method="POST")
+                          with urllib.request.urlopen(req, timeout=30) as r:
+                              data = json.loads(r.read())
+                          if data.get("WaarnemingenLijst"):
+                              return data
+                      except Exception as e:
+                          print(f"  {api_url[-30:]} poging {poging+1}: {e}")
+                          if poging < 2:
+                              time.sleep(5 * (poging + 1))
+              return None
 
-          url = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
-          req = urllib.request.Request(url, data=payload,
-                  headers={"Content-Type": "application/json"}, method="POST")
+          # Bouw maandlijst van jan 2026 tot vandaag
+          today = datetime.date.today()
+          maanden = []
+          d = datetime.date(2026, 1, 1)
+          while d <= today:
+              if d.month == 12:
+                  eind = datetime.date(d.year + 1, 1, 1) - datetime.timedelta(days=1)
+              else:
+                  eind = datetime.date(d.year, d.month + 1, 1) - datetime.timedelta(days=1)
+              eind = min(eind, today)
+              maanden.append((
+                  d.strftime("%Y-%m-%dT00:00:00.000+01:00"),
+                  eind.strftime("%Y-%m-%dT23:59:00.000+01:00"),
+                  d.strftime("%Y-%m")
+              ))
+              d = (eind + datetime.timedelta(days=1)).replace(day=1)
 
-          data = None
-          for poging in range(4):
-            try:
-              with urllib.request.urlopen(req, timeout=60) as r:
-                data = json.loads(r.read())
-              break
-            except Exception as e:
-              print(f"Poging {poging+1} mislukt: {e}", file=sys.stderr)
-              if poging < 3:
-                import time; time.sleep(10 * (poging + 1))
-          if data is None:
-            print("API niet bereikbaar na 4 pogingen", file=sys.stderr); sys.exit(1)
+          print(f"Ophalen van {len(maanden)} maanden...")
 
-          # Meting dichtstbij 08:30 per dag
-          TARGET = 8 * 60 + 30  # minuten
-          per_dag = {}  # dag -> (waarde, verschil)
-          for w in data.get("WaarnemingenLijst", []):
-            for m in w.get("MetingenLijst", []):
-              v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
-              t = m.get("Tijdstip", "")
-              if v is None or not t: continue
-              dag = t[:10]
-              try:
-                h, mn = int(t[11:13]), int(t[14:16])
-                diff = abs(h * 60 + mn - TARGET)
-              except Exception:
-                diff = 9999
-              if dag not in per_dag or diff < per_dag[dag][1]:
-                per_dag[dag] = (v, diff)
+          per_dag = {}
+          for start_str, end_str, label in maanden:
+              print(f"Ophalen {label}...", flush=True)
+              data = fetch_maand(start_str, end_str)
+              if data is None:
+                  print(f"  {label} mislukt, overgeslagen")
+                  time.sleep(3)
+                  continue
+              for w in data.get("WaarnemingenLijst", []):
+                  for m in w.get("MetingenLijst", []):
+                      v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                      t = m.get("Tijdstip", "")
+                      if v is None or not t:
+                          continue
+                      dag = t[:10]
+                      try:
+                          h, mn = int(t[11:13]), int(t[14:16])
+                          diff = abs(h * 60 + mn - TARGET)
+                      except Exception:
+                          diff = 9999
+                      if dag not in per_dag or diff < per_dag[dag][1]:
+                          per_dag[dag] = (v, diff)
+              print(f"  {label}: {len(per_dag)} dagen totaal")
+              time.sleep(2)
 
-          print(f"Dagen gevonden: {len(per_dag)}")
+          print(f"Totaal gevonden: {len(per_dag)} dagen")
 
-          # Lees bestaande history
           try:
-            with open("temp-history.json") as f:
-              history = json.load(f)
+              with open("temp-history.json") as f:
+                  history = json.load(f)
           except Exception:
-            history = []
+              history = []
 
           hist_map = {e["date"]: e for e in history}
           for dag, (val, _) in per_dag.items():
-            hist_map.setdefault(dag, {"date": dag})["lobith"] = round(val * 10) / 10
+              hist_map.setdefault(dag, {"date": dag})["lobith"] = round(val * 10) / 10
 
           history = sorted(hist_map.values(), key=lambda e: e["date"], reverse=True)[:365]
           with open("temp-history.json", "w") as f:
-            json.dump(history, f, indent=2)
+              json.dump(history, f, indent=2)
 
           print(f"Opgeslagen: {len(history)} dagen in temp-history.json")
           PYEOF
