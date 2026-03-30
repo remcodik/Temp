@@ -1690,9 +1690,7 @@ async function updateLiveTemps() {
       rwsEl.style.color = 'var(--muted)';
     }
     if (srcEl) {
-      const bronTekst = wtResult.source === 'waterkaart.net'
-        ? `${wtResult.label} · waterkaart.net`
-        : wtResult.label;
+      const bronTekst = wtResult.label;
       srcEl.textContent = bronTekst;
     }
     // Kleur het huidige-temp blok op basis van watertemperatuur
@@ -2454,7 +2452,7 @@ async function renderComparisonChart() {
 
   const dsOwn        = allDates.map(d => ownByDay[d]
     ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
-  const dsWaterkaart = allDates.map(d => histMap[d]?.waterkaart ?? null);
+  const dsNijmegen   = allDates.map(d => histMap[d]?.nijmegen ?? histMap[d]?.waterkaart ?? null);
   const dsLobith     = allDates.map(d => histMap[d]?.lobith     ?? null);
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
@@ -2470,7 +2468,7 @@ async function renderComparisonChart() {
     data: { labels, datasets: [
       { label:'Eigen metingen',          data:dsOwn,        borderColor:'#0288d1',
         backgroundColor:'rgba(2,136,209,.08)', tension:.3, pointRadius:3, spanGaps:true },
-      { label:'Lentse Plas (waterkaart)', data:dsWaterkaart, borderColor:'#00897b',
+      { label:'Nijmegen (Waal)',           data:dsNijmegen,   borderColor:'#00897b',
         backgroundColor:'rgba(0,137,123,.08)', tension:.3, pointRadius:2,
         borderDash:[4,3], spanGaps:true },
       { label:'Lobith (RWS)',             data:dsLobith,     borderColor:'#43a047',

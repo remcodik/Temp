@@ -14,101 +14,81 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch watertemperatuur Lentse Plas (waterkaart.net)
-        id: waterkaart
-        run: |
-          # Stap 1: GET pagina voor sessie-cookie
-          curl -s --max-time 15 -L \
-            -c /tmp/wk_cookies.txt \
-            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
-            "https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas" > /dev/null
-
-          # Stap 2: POST naar dbase_ophalen.php met sessie-cookie (zoals browser doet)
-          RESP=$(curl -s --max-time 15 -X POST \
-            -b /tmp/wk_cookies.txt \
-            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
-            -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
-            -H "X-Requested-With: XMLHttpRequest" \
-            -H "Referer: https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas" \
-            "https://waterkaart.net/items/php/dbase_ophalen.php" \
-            --data "a=51.865256042791536&b=5.894079208374023&c=51.891749018068246&d=5.834341049194336&e=1&f=1&g=1&h=1&i=1&j=1&k=1&l=1&m=1&n=1&o=1&p=1&q=1&r=1&s=1&t=1&u=1&v=1&w=1&x=1&y=0&z=0&een=0&z1=1&z2=1&z3=1&z4=1&z5=1&zoomlevel=14&userLang=nl" 2>/dev/null)
-
-          # Log volledige respons voor debugging
-          echo "=== dbase_ophalen.php respons (eerste 3000 tekens) ==="
-          echo "${RESP:0:3000}"
-          echo "=== einde respons ==="
-
-          # Extraheer temperatuur - probeer meerdere patronen
-          TEMP=$(echo "$RESP" | grep -oP 'zwemwater\s*~\s*\K[\d,\.]+(?=\s*&deg;)' | head -1)
-          if [ -z "$TEMP" ]; then
-            TEMP=$(echo "$RESP" | grep -oP 'zwemwater\s*~\s*\K[\d,\.]+(?=\s*°)' | head -1)
-          fi
-          if [ -z "$TEMP" ]; then
-            TEMP=$(echo "$RESP" | grep -oP '(?i)temp[^>]{0,50}~\s*\K[\d,\.]+' | head -1)
-          fi
-
-          echo "waterkaart_temp=$TEMP" >> $GITHUB_OUTPUT
-          echo "Gevonden temperatuur: '$TEMP'"
-
-      - name: Fetch water temperature from RWS (fallback)
+      - name: Fetch watertemperatuur (Nijmegen Waal + Lobith fallback)
         id: fetch
         run: |
-          RESULT=""
+          # Nieuwe DD-API v2.0 — probeer Nijmegen-haven eerst (dichter bij Lentse Plas)
+          STATION_CODES=("nijmegen-haven" "nijmegen.boven" "NIJM" "NijmegenBoven")
+          RESP=""
+          USED_STATION=""
 
-          # Probeer nieuwe RWS API (lobith.ponton)
-          RESP=$(curl -s --max-time 10 -X POST \
-            "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen" \
-            -H "Content-Type: application/json" \
-            -d '{"LocatieLijst":[{"Code":"lobith.ponton"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
-          echo "Nieuw API (lobith.ponton): $RESP"
+          for CODE in "${STATION_CODES[@]}"; do
+            RESP=$(curl -s --max-time 10 -X POST \
+              "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen" \
+              -H "Content-Type: application/json" \
+              -d "{\"LocatieLijst\":[{\"Code\":\"$CODE\"}],\"AquoPlusWaarnemingMetadataLijst\":[{\"AquoMetadata\":{\"Compartiment\":{\"Code\":\"OW\"},\"Grootheid\":{\"Code\":\"T\"}},\"WaarnemingMetadata\":{\"KwaliteitswaardecodeLijst\":[\"00\",\"10\",\"20\",\"25\",\"30\",\"40\"]}}]}" 2>/dev/null)
+            echo "Station $CODE: ${RESP:0:200}"
+            if echo "$RESP" | grep -q "Waarde_Numeriek"; then
+              USED_STATION="$CODE"
+              echo "Gevonden bij station: $CODE"
+              break
+            fi
+          done
 
-          # Probeer oude RWS API als fallback
-          if ! echo "$RESP" | grep -q "Waarde_Numeriek"; then
+          # Fallback: Lobith op nieuwe API
+          if [ -z "$USED_STATION" ]; then
+            RESP=$(curl -s --max-time 10 -X POST \
+              "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen" \
+              -H "Content-Type: application/json" \
+              -d '{"LocatieLijst":[{"Code":"lobith.ponton"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
+            echo "Lobith nieuw API: ${RESP:0:200}"
+            if echo "$RESP" | grep -q "Waarde_Numeriek"; then
+              USED_STATION="lobith.ponton"
+            fi
+          fi
+
+          # Fallback: Lobith op oude API
+          if [ -z "$USED_STATION" ]; then
             RESP=$(curl -s --max-time 10 -X POST \
               "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenLaatsteWaarnemingen" \
               -H "Content-Type: application/json" \
               -d '{"LocatieLijst":[{"Code":"LOBH"}],"AquoPlusWaarnemingMetadataLijst":[{"AquoMetadata":{"Compartiment":{"Code":"OW"},"Grootheid":{"Code":"T"}},"WaarnemingMetadata":{"KwaliteitswaardecodeLijst":["00","10","20","25","30","40"]}}]}' 2>/dev/null)
-            echo "Oud API (LOBH): $RESP"
+            echo "Lobith oud API: ${RESP:0:200}"
+            USED_STATION="LOBH"
           fi
 
           echo "rws_response=$RESP" >> $GITHUB_OUTPUT
+          echo "used_station=$USED_STATION" >> $GITHUB_OUTPUT
 
       - name: Parse en sla op als water-temp.json
         run: |
           python3 - <<'PYEOF'
-          import json, datetime, sys, re, os
+          import json, datetime, sys, os
 
-          waterkaart_temp = os.environ.get("WATERKAART_TEMP", "").strip()
           rws_raw = """${{ steps.fetch.outputs.rws_response }}"""
+          used_station = os.environ.get("USED_STATION", "").strip()
 
-          val = None
-          label = "Lentse Plas"
-          source = "waterkaart.net"
-
-          # Eerste keus: waterkaart.net (Lentse Plas)
-          if waterkaart_temp:
-              try:
-                  val = round(float(waterkaart_temp.replace(",", ".")) * 10) / 10
-                  print(f"Waterkaart.net temperatuur gebruikt: {val}")
-              except Exception as e:
-                  print(f"Kon waterkaart temp niet parsen: {e}", file=sys.stderr)
-
-          # Fallback: RWS (Lobith)
-          if val is None:
+          # Bepaal label op basis van station
+          if any(x in used_station.lower() for x in ["nijmegen", "nijm"]):
+              label = "Nijmegen (Waal)"
+              source = "RWS"
+          else:
               label = "Lobith"
               source = "RWS"
-              try:
-                  data = json.loads(rws_raw)
-                  metingen = []
-                  for w in data.get("WaarnemingenLijst", []):
-                      metingen.extend(w.get("MetingenLijst", []))
-                  for m in metingen:
+
+          val = None
+          try:
+              data = json.loads(rws_raw)
+              for w in data.get("WaarnemingenLijst", []):
+                  for m in w.get("MetingenLijst", []):
                       v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
                       if v is not None:
                           val = round(v * 10) / 10
                           break
-              except Exception as e:
-                  print(f"Parse fout RWS: {e}", file=sys.stderr)
+                  if val is not None:
+                      break
+          except Exception as e:
+              print(f"Parse fout: {e}", file=sys.stderr)
 
           result = {
               "temperature": val,
@@ -123,7 +103,7 @@ jobs:
           print("Resultaat:", result)
           PYEOF
         env:
-          WATERKAART_TEMP: ${{ steps.waterkaart.outputs.waterkaart_temp }}
+          USED_STATION: ${{ steps.fetch.outputs.used_station }}
 
       - name: Update temp-history.json
         run: |
@@ -133,51 +113,52 @@ jobs:
           now   = datetime.datetime.utcnow()
           today = now.strftime("%Y-%m-%d")
 
-          # Lees huidige water-temp.json voor waterkaart-waarde
+          # Lees huidige water-temp.json
           try:
               with open("water-temp.json") as f:
                   wt = json.load(f)
           except Exception:
               wt = {}
 
-          waterkaart_val = wt.get("temperature") if wt.get("source") == "waterkaart.net" else None
+          nijmegen_val = wt.get("temperature") if "Nijmegen" in wt.get("label", "") else None
 
-          # Haal Lobith meting dichtstbij 08:30 op voor vandaag
+          # Haal Lobith 08:30-meting op voor history (vergelijkingsgrafiek)
           lobith_val = None
           TARGET = 8 * 60 + 30
-          try:
-              start = today + "T00:00:00.000+01:00"
-              end   = today + "T23:59:00.000+01:00"
-              payload = json.dumps({
-                  "Locatie": {"Code": "LOBH", "Naam": "Lobith"},
-                  "AquoPlusWaarnemingMetadata": {
-                      "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
-                  },
-                  "Periode": {"Begindatumtijd": start, "Einddatumtijd": end}
-              }).encode()
-              url = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
-              req = urllib.request.Request(url, data=payload,
-                      headers={"Content-Type": "application/json"}, method="POST")
-              with urllib.request.urlopen(req, timeout=15) as r:
-                  data = json.loads(r.read())
-              best_val, best_diff = None, 9999
-              for w in data.get("WaarnemingenLijst", []):
-                  for m in w.get("MetingenLijst", []):
-                      v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
-                      t = m.get("Tijdstip", "")
-                      if v is None or not t: continue
-                      try:
-                          h, mn = int(t[11:13]), int(t[14:16])
-                          diff = abs(h * 60 + mn - TARGET)
-                      except Exception:
-                          diff = 9999
-                      if diff < best_diff:
-                          best_val, best_diff = v, diff
-              if best_val is not None:
-                  lobith_val = round(best_val * 10) / 10
-                  print(f"Lobith 08:30-meting: {lobith_val}°C (verschil: {best_diff} min)")
-          except Exception as e:
-              print(f"Lobith history-fetch fout: {e}")
+          for api_url, payload_dict in [
+              (
+                "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen",
+                {"Locatie": {"Code": "lobith.ponton"}, "AquoPlusWaarnemingMetadata": {"AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}}, "Periode": {"Begindatumtijd": today + "T00:00:00.000+01:00", "Einddatumtijd": today + "T23:59:00.000+01:00"}}
+              ),
+              (
+                "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen",
+                {"Locatie": {"Code": "LOBH", "Naam": "Lobith"}, "AquoPlusWaarnemingMetadata": {"AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}}, "Periode": {"Begindatumtijd": today + "T00:00:00.000+01:00", "Einddatumtijd": today + "T23:59:00.000+01:00"}}
+              )
+          ]:
+              try:
+                  payload = json.dumps(payload_dict).encode()
+                  req = urllib.request.Request(api_url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      data = json.loads(r.read())
+                  best_val, best_diff = None, 9999
+                  for w in data.get("WaarnemingenLijst", []):
+                      for m in w.get("MetingenLijst", []):
+                          v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                          t = m.get("Tijdstip", "")
+                          if v is None or not t: continue
+                          try:
+                              h, mn = int(t[11:13]), int(t[14:16])
+                              diff = abs(h * 60 + mn - TARGET)
+                          except Exception:
+                              diff = 9999
+                          if diff < best_diff:
+                              best_val, best_diff = v, diff
+                  if best_val is not None:
+                      lobith_val = round(best_val * 10) / 10
+                      print(f"Lobith 08:30-meting: {lobith_val}°C")
+                      break
+              except Exception as e:
+                  print(f"Lobith fetch fout ({api_url}): {e}")
 
           # Lees bestaande history
           try:
@@ -186,9 +167,8 @@ jobs:
           except Exception:
               history = []
 
-          # Sla over als vandaag al volledig is opgeslagen
           today_entry = next((e for e in history if e.get("date") == today), None)
-          if today_entry and "waterkaart" in today_entry and "lobith" in today_entry:
+          if today_entry and "nijmegen" in today_entry and "lobith" in today_entry:
               print("Vandaag al opgeslagen, overgeslagen.")
               sys.exit(0)
 
@@ -196,13 +176,12 @@ jobs:
               today_entry = {"date": today}
               history.append(today_entry)
 
-          if waterkaart_val is not None:
-              today_entry["waterkaart"] = waterkaart_val
+          if nijmegen_val is not None:
+              today_entry["nijmegen"] = nijmegen_val
           if lobith_val is not None:
               today_entry["lobith"] = lobith_val
 
-          # Maximaal 365 dagen bewaren, nieuwste eerst
-          history.sort(key=lambda e: e.get("date",""), reverse=True)
+          history.sort(key=lambda e: e.get("date", ""), reverse=True)
           history = history[:365]
 
           with open("temp-history.json", "w") as f:
