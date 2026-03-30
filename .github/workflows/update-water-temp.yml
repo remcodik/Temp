@@ -17,16 +17,35 @@ jobs:
       - name: Fetch watertemperatuur Lentse Plas (waterkaart.net)
         id: waterkaart
         run: |
-          # Haal de zwemplek-pagina op (bevat temperatuur direct in HTML)
-          PAGE=$(curl -s --max-time 15 -L \
+          # Stap 1: GET pagina voor sessie-cookie
+          curl -s --max-time 15 -L \
+            -c /tmp/wk_cookies.txt \
             -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
-            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-            -H "Accept-Language: nl-NL,nl;q=0.9,en;q=0.8" \
-            "https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas" 2>/dev/null)
+            "https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas" > /dev/null
 
-          # Zoek temperatuur specifiek NA het label "Watertemperatuur" in de HTML
-          # (?s) = dotall zodat . ook newlines matcht
-          TEMP=$(echo "$PAGE" | grep -oP '(?s)[Ww]atertemperatuur.{0,300}?~\s*\K[\d]+[,\.]\d+' | head -1)
+          # Stap 2: POST naar dbase_ophalen.php met sessie-cookie (zoals browser doet)
+          RESP=$(curl -s --max-time 15 -X POST \
+            -b /tmp/wk_cookies.txt \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36" \
+            -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+            -H "X-Requested-With: XMLHttpRequest" \
+            -H "Referer: https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas" \
+            "https://waterkaart.net/items/php/dbase_ophalen.php" \
+            --data "a=51.865256042791536&b=5.894079208374023&c=51.891749018068246&d=5.834341049194336&e=1&f=1&g=1&h=1&i=1&j=1&k=1&l=1&m=1&n=1&o=1&p=1&q=1&r=1&s=1&t=1&u=1&v=1&w=1&x=1&y=0&z=0&een=0&z1=1&z2=1&z3=1&z4=1&z5=1&zoomlevel=14&userLang=nl" 2>/dev/null)
+
+          # Log volledige respons voor debugging
+          echo "=== dbase_ophalen.php respons (eerste 3000 tekens) ==="
+          echo "${RESP:0:3000}"
+          echo "=== einde respons ==="
+
+          # Extraheer temperatuur - probeer meerdere patronen
+          TEMP=$(echo "$RESP" | grep -oP 'zwemwater\s*~\s*\K[\d,\.]+(?=\s*&deg;)' | head -1)
+          if [ -z "$TEMP" ]; then
+            TEMP=$(echo "$RESP" | grep -oP 'zwemwater\s*~\s*\K[\d,\.]+(?=\s*°)' | head -1)
+          fi
+          if [ -z "$TEMP" ]; then
+            TEMP=$(echo "$RESP" | grep -oP '(?i)temp[^>]{0,50}~\s*\K[\d,\.]+' | head -1)
+          fi
 
           echo "waterkaart_temp=$TEMP" >> $GITHUB_OUTPUT
           echo "Gevonden temperatuur: '$TEMP'"
