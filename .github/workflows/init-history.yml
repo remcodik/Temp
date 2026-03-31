@@ -15,63 +15,92 @@ jobs:
       - name: Haal Lobith data op per week
         run: |
           python3 -u << 'PYEOF'
-          import json, datetime, urllib.request, time
+          import json, datetime, urllib.request, urllib.parse, time, csv, io
 
-          BASE = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES"
           TARGET = 8 * 60 + 30  # 08:30
 
-          # Stap 1: zoek alle stations met watertemperatuur via catalogus
-          def find_lobith_stations():
+          def fetch_waterinfo_csv(start_date, end_date):
+              """Probeer waterinfo.rws.nl download API voor historische Lobith data."""
+              start_str = start_date.strftime("%Y-%m-%dT00:00:00")
+              end_str   = end_date.strftime("%Y-%m-%dT23:59:59")
+              url = (
+                  "https://waterinfo.rws.nl/api/Download/CSV"
+                  "?expertParameter=Watertemperatuur___20"
+                  "&locationSlug=lobith-ponton"
+                  f"&startDate={urllib.parse.quote(start_str)}"
+                  f"&endDate={urllib.parse.quote(end_str)}"
+              )
               try:
-                  payload = json.dumps({
-                      "AquoMetadataLijst": [{"Grootheid": {"Code": "T"}, "Compartiment": {"Code": "OW"}}],
-                      "LocatieLijst": [], "PeriodeLijst": []
-                  }).encode()
-                  req = urllib.request.Request(f"{BASE}/OphalenCatalogus", data=payload,
-                          headers={"Content-Type": "application/json"}, method="POST")
+                  req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
                   with urllib.request.urlopen(req, timeout=20) as r:
-                      cat = json.loads(r.read())
-                  locs = cat.get("LocatieLijst", [])
-                  print(f"Catalogus: {len(locs)} stations met watertemperatuur gevonden", flush=True)
-                  lobith = [l for l in locs if "lobith" in l.get("Code","").lower() or "lobith" in l.get("Naam","").lower()]
-                  print(f"Lobith stations: {[l.get('Code') for l in lobith]}", flush=True)
-                  return [l["Code"] for l in lobith] if lobith else ["lobith.ponton"]
+                      body = r.read().decode("utf-8-sig")
+                  if not body.strip() or body.strip().startswith("<"):
+                      return None
+                  reader = csv.DictReader(io.StringIO(body), delimiter=";")
+                  rows = list(reader)
+                  print(f"  [waterinfo csv] {len(rows)} rijen", flush=True)
+                  return rows
               except Exception as e:
-                  print(f"Catalogus fout: {e}, gebruik lobith.ponton als fallback", flush=True)
-                  return ["lobith.ponton"]
+                  print(f"  [waterinfo csv] fout: {e}", flush=True)
+                  return None
 
-          station_codes = find_lobith_stations()
-
-          def fetch_week(start_date, end_date):
+          def fetch_ddapi_week(start_date, end_date):
+              """Probeer DD-API v2.0 met lobith.ponton."""
+              BASE = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES"
               start_str = start_date.strftime("%Y-%m-%dT00:00:00.000+01:00")
               end_str   = end_date.strftime("%Y-%m-%dT23:59:00.000+01:00")
-              for code in station_codes:
-                  payload = json.dumps({
-                      "Locatie": {"Code": code},
-                      "AquoPlusWaarnemingMetadata": {
-                          "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
-                      },
-                      "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
-                  }).encode()
-                  for poging in range(2):
+              payload = json.dumps({
+                  "Locatie": {"Code": "lobith.ponton"},
+                  "AquoPlusWaarnemingMetadata": {
+                      "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
+                  },
+                  "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
+              }).encode()
+              try:
+                  req = urllib.request.Request(f"{BASE}/OphalenWaarnemingen", data=payload,
+                          headers={"Content-Type": "application/json"}, method="POST")
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      body = r.read()
+                  if not body:
+                      return None
+                  data = json.loads(body)
+                  return data if data.get("WaarnemingenLijst") else None
+              except Exception as e:
+                  print(f"  [ddapi] fout: {e}", flush=True)
+                  return None
+
+          def fetch_week(start_date, end_date):
+              # Probeer waterinfo CSV eerst
+              rows = fetch_waterinfo_csv(start_date, end_date)
+              if rows:
+                  result = {}
+                  for row in rows:
+                      # Zoek datum en waarde kolommen (namen kunnen variëren)
+                      t = row.get("Tijdstip") or row.get("DateTime") or row.get("Datum") or ""
+                      v_str = row.get("Waarde") or row.get("Value") or row.get("Numeriekewaarde") or ""
+                      if not t or not v_str:
+                          # Probeer eerste twee kolommen
+                          vals = list(row.values())
+                          if len(vals) >= 2:
+                              t, v_str = vals[0], vals[1]
                       try:
-                          req = urllib.request.Request(f"{BASE}/OphalenWaarnemingen", data=payload,
-                                  headers={"Content-Type": "application/json"}, method="POST")
-                          with urllib.request.urlopen(req, timeout=20) as r:
-                              body = r.read()
-                          if not body:
-                              print(f"  [{code}] lege response", flush=True)
-                              break
-                          data = json.loads(body)
-                          if data.get("WaarnemingenLijst"):
-                              print(f"  [{code}] data gevonden", flush=True)
-                              return data
-                          print(f"  [{code}] geen data: {str(data)[:200]}", flush=True)
-                          break
-                      except Exception as e:
-                          print(f"  [{code}] poging {poging+1}: {e}", flush=True)
-                          if poging < 1:
-                              time.sleep(3)
+                          v = float(v_str.replace(",", "."))
+                          dag = t[:10]
+                          h = int(t[11:13]) if len(t) > 12 else 8
+                          mn = int(t[14:16]) if len(t) > 15 else 30
+                          diff = abs(h * 60 + mn - TARGET)
+                          if dag not in result or diff < result[dag][1]:
+                              result[dag] = (v, diff)
+                      except Exception:
+                          pass
+                  if result:
+                      print(f"  [waterinfo] {len(result)} dagen gevonden", flush=True)
+                      return ("csv", result)
+
+              # Fallback: DD-API
+              data = fetch_ddapi_week(start_date, end_date)
+              if data:
+                  return ("ddapi", data)
               return None
 
           today = datetime.date.today()
@@ -82,24 +111,30 @@ jobs:
           while week_start <= today:
               week_end = min(week_start + datetime.timedelta(days=6), today)
               print(f"Ophalen {week_start} t/m {week_end}...", flush=True)
-              data = fetch_week(week_start, week_end)
-              if data is None:
+              result = fetch_week(week_start, week_end)
+              if result is None:
                   print(f"  mislukt, overgeslagen", flush=True)
               else:
-                  for w in data.get("WaarnemingenLijst", []):
-                      for m in w.get("MetingenLijst", []):
-                          v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
-                          t = m.get("Tijdstip", "")
-                          if v is None or not t:
-                              continue
-                          dag = t[:10]
-                          try:
-                              h, mn = int(t[11:13]), int(t[14:16])
-                              diff = abs(h * 60 + mn - TARGET)
-                          except Exception:
-                              diff = 9999
+                  kind, data = result
+                  if kind == "csv":
+                      for dag, (v, diff) in data.items():
                           if dag not in per_dag or diff < per_dag[dag][1]:
                               per_dag[dag] = (v, diff)
+                  else:
+                      for w in data.get("WaarnemingenLijst", []):
+                          for m in w.get("MetingenLijst", []):
+                              v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                              t = m.get("Tijdstip", "")
+                              if v is None or not t:
+                                  continue
+                              dag = t[:10]
+                              try:
+                                  h, mn = int(t[11:13]), int(t[14:16])
+                                  diff = abs(h * 60 + mn - TARGET)
+                              except Exception:
+                                  diff = 9999
+                              if dag not in per_dag or diff < per_dag[dag][1]:
+                                  per_dag[dag] = (v, diff)
                   print(f"  OK — {len(per_dag)} dagen totaal", flush=True)
               time.sleep(1)
               week_start = week_end + datetime.timedelta(days=1)
