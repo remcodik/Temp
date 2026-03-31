@@ -17,17 +17,17 @@ jobs:
           python3 -u << 'PYEOF'
           import json, datetime, urllib.request, time
 
-          URL = "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen"
+          URL = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
           TARGET = 8 * 60 + 30  # 08:30
 
           def fetch_week(start_date, end_date):
               start_str = start_date.strftime("%Y-%m-%dT00:00:00.000+01:00")
               end_str   = end_date.strftime("%Y-%m-%dT23:59:00.000+01:00")
               payload = json.dumps({
-                  "LocatieLijst": [{"Code": "LOBH", "Naam": "Lobith"}],
-                  "AquoPlusWaarnemingMetadataLijst": [
-                      {"AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}}
-                  ],
+                  "Locatie": {"Code": "lobith.ponton"},
+                  "AquoPlusWaarnemingMetadata": {
+                      "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
+                  },
                   "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
               }).encode()
               for poging in range(3):
