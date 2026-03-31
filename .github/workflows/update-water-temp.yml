@@ -122,11 +122,7 @@ jobs:
           for api_url, payload_dict in [
               (
                 "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen",
-                {"LocatieLijst": [{"Code": "lobith.ponton"}], "AquoPlusWaarnemingMetadataLijst": [{"AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}}], "Periode": {"Begindatumtijd": today + "T00:00:00.000+01:00", "Einddatumtijd": today + "T23:59:00.000+01:00"}}
-              ),
-              (
-                "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen",
-                {"LocatieLijst": [{"Code": "LOBH", "Naam": "Lobith"}], "AquoPlusWaarnemingMetadataLijst": [{"AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}}], "Periode": {"Begindatumtijd": today + "T00:00:00.000+01:00", "Einddatumtijd": today + "T23:59:00.000+01:00"}}
+                {"Locatie": {"Code": "lobith.ponton"}, "AquoPlusWaarnemingMetadata": {"AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}}, "Periode": {"Begindatumtijd": today + "T00:00:00.000+01:00", "Einddatumtijd": today + "T23:59:00.000+01:00"}}
               )
           ]:
               try:
