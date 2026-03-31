@@ -38,6 +38,7 @@ jobs:
                           data = json.loads(r.read())
                       if data.get("WaarnemingenLijst"):
                           return data
+                      print(f"  Geen data: {str(data)[:300]}", flush=True)
                       return None
                   except Exception as e:
                       print(f"  poging {poging+1}: {e}", flush=True)
