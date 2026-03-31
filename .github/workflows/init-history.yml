@@ -17,19 +17,37 @@ jobs:
           python3 -u << 'PYEOF'
           import json, datetime, urllib.request, time
 
-          APIS = [
-              ("ddapi20 lobith.ponton", "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen", "lobith.ponton"),
-              ("ddapi20 LOBH", "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen", "LOBH"),
-          ]
+          BASE = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES"
           TARGET = 8 * 60 + 30  # 08:30
+
+          # Stap 1: zoek alle stations met watertemperatuur via catalogus
+          def find_lobith_stations():
+              try:
+                  payload = json.dumps({
+                      "AquoMetadataLijst": [{"Grootheid": {"Code": "T"}, "Compartiment": {"Code": "OW"}}],
+                      "LocatieLijst": [], "PeriodeLijst": []
+                  }).encode()
+                  req = urllib.request.Request(f"{BASE}/OphalenCatalogus", data=payload,
+                          headers={"Content-Type": "application/json"}, method="POST")
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      cat = json.loads(r.read())
+                  locs = cat.get("LocatieLijst", [])
+                  print(f"Catalogus: {len(locs)} stations met watertemperatuur gevonden", flush=True)
+                  lobith = [l for l in locs if "lobith" in l.get("Code","").lower() or "lobith" in l.get("Naam","").lower()]
+                  print(f"Lobith stations: {[l.get('Code') for l in lobith]}", flush=True)
+                  return [l["Code"] for l in lobith] if lobith else ["lobith.ponton"]
+              except Exception as e:
+                  print(f"Catalogus fout: {e}, gebruik lobith.ponton als fallback", flush=True)
+                  return ["lobith.ponton"]
+
+          station_codes = find_lobith_stations()
 
           def fetch_week(start_date, end_date):
               start_str = start_date.strftime("%Y-%m-%dT00:00:00.000+01:00")
               end_str   = end_date.strftime("%Y-%m-%dT23:59:00.000+01:00")
-              for label, url, code in APIS:
-                  loc = {"Code": code}
+              for code in station_codes:
                   payload = json.dumps({
-                      "Locatie": loc,
+                      "Locatie": {"Code": code},
                       "AquoPlusWaarnemingMetadata": {
                           "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
                       },
@@ -37,21 +55,21 @@ jobs:
                   }).encode()
                   for poging in range(2):
                       try:
-                          req = urllib.request.Request(url, data=payload,
+                          req = urllib.request.Request(f"{BASE}/OphalenWaarnemingen", data=payload,
                                   headers={"Content-Type": "application/json"}, method="POST")
                           with urllib.request.urlopen(req, timeout=20) as r:
                               body = r.read()
                           if not body:
-                              print(f"  [{label}] lege response (geen data)", flush=True)
+                              print(f"  [{code}] lege response", flush=True)
                               break
                           data = json.loads(body)
                           if data.get("WaarnemingenLijst"):
-                              print(f"  [{label}] data gevonden", flush=True)
+                              print(f"  [{code}] data gevonden", flush=True)
                               return data
-                          print(f"  [{label}] geen data: {str(data)[:200]}", flush=True)
+                          print(f"  [{code}] geen data: {str(data)[:200]}", flush=True)
                           break
                       except Exception as e:
-                          print(f"  [{label}] poging {poging+1}: {e}", flush=True)
+                          print(f"  [{code}] poging {poging+1}: {e}", flush=True)
                           if poging < 1:
                               time.sleep(3)
               return None
