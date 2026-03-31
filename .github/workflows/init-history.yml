@@ -19,7 +19,7 @@ jobs:
 
           APIS = [
               ("ddapi20 lobith.ponton", "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen", "lobith.ponton"),
-              ("old LOBH", "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen", "LOBH"),
+              ("ddapi20 LOBH", "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen", "LOBH"),
           ]
           TARGET = 8 * 60 + 30  # 08:30
 
