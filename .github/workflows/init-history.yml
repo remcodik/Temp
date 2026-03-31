@@ -17,33 +17,43 @@ jobs:
           python3 -u << 'PYEOF'
           import json, datetime, urllib.request, time
 
-          URL = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
+          APIS = [
+              ("ddapi20 lobith.ponton", "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen", "lobith.ponton"),
+              ("old LOBH", "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen", "LOBH"),
+          ]
           TARGET = 8 * 60 + 30  # 08:30
 
           def fetch_week(start_date, end_date):
               start_str = start_date.strftime("%Y-%m-%dT00:00:00.000+01:00")
               end_str   = end_date.strftime("%Y-%m-%dT23:59:00.000+01:00")
-              payload = json.dumps({
-                  "Locatie": {"Code": "lobith.ponton"},
-                  "AquoPlusWaarnemingMetadata": {
-                      "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
-                  },
-                  "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
-              }).encode()
-              for poging in range(3):
-                  try:
-                      req = urllib.request.Request(URL, data=payload,
-                              headers={"Content-Type": "application/json"}, method="POST")
-                      with urllib.request.urlopen(req, timeout=20) as r:
-                          data = json.loads(r.read())
-                      if data.get("WaarnemingenLijst"):
-                          return data
-                      print(f"  Geen data: {str(data)[:300]}", flush=True)
-                      return None
-                  except Exception as e:
-                      print(f"  poging {poging+1}: {e}", flush=True)
-                      if poging < 2:
-                          time.sleep(5)
+              for label, url, code in APIS:
+                  loc = {"Code": code}
+                  payload = json.dumps({
+                      "Locatie": loc,
+                      "AquoPlusWaarnemingMetadata": {
+                          "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
+                      },
+                      "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
+                  }).encode()
+                  for poging in range(2):
+                      try:
+                          req = urllib.request.Request(url, data=payload,
+                                  headers={"Content-Type": "application/json"}, method="POST")
+                          with urllib.request.urlopen(req, timeout=20) as r:
+                              body = r.read()
+                          if not body:
+                              print(f"  [{label}] lege response (geen data)", flush=True)
+                              break
+                          data = json.loads(body)
+                          if data.get("WaarnemingenLijst"):
+                              print(f"  [{label}] data gevonden", flush=True)
+                              return data
+                          print(f"  [{label}] geen data: {str(data)[:200]}", flush=True)
+                          break
+                      except Exception as e:
+                          print(f"  [{label}] poging {poging+1}: {e}", flush=True)
+                          if poging < 1:
+                              time.sleep(3)
               return None
 
           today = datetime.date.today()
@@ -102,4 +112,5 @@ jobs:
           git add temp-history.json
           git diff --staged --quiet && echo "Geen wijziging" || \
             git commit -m "Init Lobith historische watertemperatuur [skip ci]"
+          git pull --rebase origin HEAD
           git push
