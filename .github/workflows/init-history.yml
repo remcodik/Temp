@@ -24,10 +24,10 @@ jobs:
               start_str = start_date.strftime("%Y-%m-%dT00:00:00.000+01:00")
               end_str   = end_date.strftime("%Y-%m-%dT23:59:00.000+01:00")
               payload = json.dumps({
-                  "Locatie": {"Code": "LOBH", "Naam": "Lobith"},
-                  "AquoPlusWaarnemingMetadata": {
-                      "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
-                  },
+                  "LocatieLijst": [{"Code": "LOBH", "Naam": "Lobith"}],
+                  "AquoPlusWaarnemingMetadataLijst": [
+                      {"AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}}
+                  ],
                   "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
               }).encode()
               for poging in range(3):
