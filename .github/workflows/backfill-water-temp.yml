@@ -1,0 +1,148 @@
+name: Backfill Water Temperature History
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Backfill ontbrekende datums
+        run: |
+          python3 - <<'PYEOF'
+          import json, datetime, urllib.request, time
+
+          DATES_TO_FILL = [
+              "2026-04-09",
+              "2026-04-08",
+              "2026-04-07",
+              "2026-04-06",
+              "2026-04-05",
+              "2026-04-04",
+              "2026-04-03",
+              "2026-04-02",
+              "2026-04-01",
+              "2026-03-31",
+          ]
+
+          TARGET_HOUR = 8
+          TARGET_MIN  = 30
+
+          def fetch_lobith(date_str):
+              """Haalt de meting dichtstbij 08:30 op voor Lobith via DD-API v2."""
+              for api_url, payload in [
+                  (
+                      "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen",
+                      {
+                          "Locatie": {"Code": "lobith.ponton"},
+                          "AquoPlusWaarnemingMetadata": {
+                              "AquoMetadata": {
+                                  "Compartiment": {"Code": "OW"},
+                                  "Grootheid": {"Code": "T"}
+                              }
+                          },
+                          "Periode": {
+                              "Begindatumtijd": date_str + "T06:00:00.000+01:00",
+                              "Einddatumtijd":  date_str + "T12:00:00.000+01:00"
+                          }
+                      }
+                  ),
+                  (
+                      "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen",
+                      {
+                          "LocatieLijst": [{"Code": "LOBH"}],
+                          "AquoPlusWaarnemingMetadataLijst": [{
+                              "AquoMetadata": {
+                                  "Compartiment": {"Code": "OW"},
+                                  "Grootheid": {"Code": "T"}
+                              },
+                              "WaarnemingMetadata": {
+                                  "KwaliteitswaardecodeLijst": ["00","10","20","25","30","40"]
+                              }
+                          }],
+                          "Periode": {
+                              "Begindatumtijd": date_str + "T06:00:00.000+01:00",
+                              "Einddatumtijd":  date_str + "T12:00:00.000+01:00"
+                          }
+                      }
+                  ),
+              ]:
+                  try:
+                      body = json.dumps(payload).encode()
+                      req  = urllib.request.Request(api_url, data=body,
+                                                    headers={"Content-Type": "application/json"},
+                                                    method="POST")
+                      with urllib.request.urlopen(req, timeout=20) as r:
+                          data = json.loads(r.read())
+
+                      TARGET = TARGET_HOUR * 60 + TARGET_MIN
+                      best_val, best_diff = None, 9999
+                      for w in data.get("WaarnemingenLijst", []):
+                          for m in w.get("MetingenLijst", []):
+                              v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                              t = m.get("Tijdstip", "")
+                              if v is None or not t:
+                                  continue
+                              try:
+                                  h  = int(t[11:13])
+                                  mn = int(t[14:16])
+                                  diff = abs(h * 60 + mn - TARGET)
+                              except Exception:
+                                  diff = 9999
+                              if diff < best_diff:
+                                  best_val, best_diff = v, diff
+
+                      if best_val is not None:
+                          result = round(best_val * 10) / 10
+                          print(f"  {date_str}: Lobith {result}°C (diff {best_diff} min via {api_url.split('/')[2]})")
+                          return result
+                  except Exception as e:
+                      print(f"  {date_str}: fout {api_url.split('/')[2]}: {e}")
+                  time.sleep(1)
+
+              print(f"  {date_str}: geen data gevonden")
+              return None
+
+          # Lees huidige history
+          try:
+              with open("temp-history.json") as f:
+                  history = json.load(f)
+          except Exception:
+              history = []
+
+          # Index op datum
+          by_date = {e["date"]: e for e in history}
+
+          changed = False
+          for date_str in DATES_TO_FILL:
+              entry = by_date.setdefault(date_str, {"date": date_str})
+              if "lobith" in entry:
+                  print(f"  {date_str}: al aanwezig ({entry['lobith']}°C), overgeslagen")
+                  continue
+
+              val = fetch_lobith(date_str)
+              if val is not None:
+                  entry["lobith"] = val
+                  changed = True
+
+          if not changed:
+              print("Niets gewijzigd.")
+          else:
+              history = sorted(by_date.values(), key=lambda e: e["date"], reverse=True)[:365]
+              with open("temp-history.json", "w") as f:
+                  json.dump(history, f, indent=2)
+              print("temp-history.json bijgewerkt.")
+          PYEOF
+
+      - name: Commit en push
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add temp-history.json
+          git diff --staged --quiet && echo "Geen wijziging" || git commit -m "Backfill watertemperatuur history"
+          git push
