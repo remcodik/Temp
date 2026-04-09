@@ -36,22 +36,7 @@ jobs:
           def fetch_lobith(date_str):
               """Haalt de meting dichtstbij 08:30 op voor Lobith via DD-API v2."""
               for api_url, payload in [
-                  (
-                      "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen",
-                      {
-                          "Locatie": {"Code": "lobith.ponton"},
-                          "AquoPlusWaarnemingMetadata": {
-                              "AquoMetadata": {
-                                  "Compartiment": {"Code": "OW"},
-                                  "Grootheid": {"Code": "T"}
-                              }
-                          },
-                          "Periode": {
-                              "Begindatumtijd": date_str + "T06:00:00.000+01:00",
-                              "Einddatumtijd":  date_str + "T12:00:00.000+01:00"
-                          }
-                      }
-                  ),
+                  # Oude API (LOBH) – meest betrouwbaar voor historische data
                   (
                       "https://waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES_DBO/OphalenWaarnemingen",
                       {
@@ -66,8 +51,28 @@ jobs:
                               }
                           }],
                           "Periode": {
-                              "Begindatumtijd": date_str + "T06:00:00.000+01:00",
-                              "Einddatumtijd":  date_str + "T12:00:00.000+01:00"
+                              "Begindatumtijd": date_str + "T05:00:00.000+00:00",
+                              "Einddatumtijd":  date_str + "T11:00:00.000+00:00"
+                          }
+                      }
+                  ),
+                  # DD-API v2 (lobith.ponton) als fallback
+                  (
+                      "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen",
+                      {
+                          "LocatieLijst": [{"Code": "lobith.ponton"}],
+                          "AquoPlusWaarnemingMetadataLijst": [{
+                              "AquoMetadata": {
+                                  "Compartiment": {"Code": "OW"},
+                                  "Grootheid": {"Code": "T"}
+                              },
+                              "WaarnemingMetadata": {
+                                  "KwaliteitswaardecodeLijst": ["00","10","20","25","30","40"]
+                              }
+                          }],
+                          "Periode": {
+                              "Begindatumtijd": date_str + "T05:00:00.000+00:00",
+                              "Einddatumtijd":  date_str + "T11:00:00.000+00:00"
                           }
                       }
                   ),
@@ -144,5 +149,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
           git add temp-history.json
-          git diff --staged --quiet && echo "Geen wijziging" || git commit -m "Backfill watertemperatuur history"
-          git push
+          if git diff --staged --quiet; then
+            echo "Geen wijziging, niets te pushen"
+          else
+            git commit -m "Backfill watertemperatuur history"
+            # Rebase op remote voor het geval de uurlijkse update tussendoor liep
+            git pull --rebase origin "$(git branch --show-current)"
+            git push origin HEAD
+          fi
