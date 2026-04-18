@@ -595,13 +595,16 @@
     }
 
     /* ── Sticky chart filter bar ── */
-    .chart-filter-bar {
-      position:sticky; top:56px; z-index:50;
+    .chart-filter-sticky {
+      position:sticky; top:var(--header-h, 56px); z-index:50;
       background:var(--bg);
+      border-bottom:1px solid var(--border);
+      margin:-10px -12px 10px;
+    }
+    .chart-filter-bar {
       display:flex; gap:6px;
       overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-      border-bottom:1px solid var(--border);
-      margin:-12px -16px 10px; padding:8px 16px 6px;
+      padding:8px 12px 6px;
     }
     .chart-filter-bar::-webkit-scrollbar { display:none; }
     .cf-btn {
@@ -895,7 +898,9 @@
 
 <!-- CHART -->
 <div id="page-chart" class="page">
-  <div class="chart-filter-bar" id="chart-filter-bar"></div>
+  <div class="chart-filter-sticky">
+    <div class="chart-filter-bar" id="chart-filter-bar"></div>
+  </div>
   <div class="card">
     <div class="card-title">Water- &amp; luchttemperatuur over tijd</div>
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
@@ -1388,6 +1393,8 @@ const FEELING = [
   { v:'hot',      l:'Heet',      c:'#dc2626', bg:'#fee2e2' },
 ];
 // Windkracht (nieuw veld 'windStr')
+const YEAR_COLORS = ['#0288d1','#e65100','#2e7d32','#6a1b9a','#c62828','#00695c','#f57f17','#1565c0'];
+
 const WIND_STR = [
   { v:'calm',     l:'Windstil', c:'#94a3b8', bg:'#f1f5f9' },
   { v:'gentle',   l:'Zacht',    c:'#60a5fa', bg:'#dbeafe' },
@@ -2551,6 +2558,7 @@ function renderChartFilterBar() {
   if (!bar) return;
   const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b) => b - a);
   let html = `<button class="cf-btn ${chartYearFilter === 'all' ? 'active' : ''}" onclick="setYearFilter('all',this)">Alles</button>`;
+  html += `<button class="cf-btn ${chartYearFilter === 'grouped' ? 'active' : ''}" onclick="setYearFilter('grouped',this)">Jaren ↔</button>`;
   years.forEach(y => {
     html += `<button class="cf-btn ${chartYearFilter === y ? 'active' : ''}" onclick="setYearFilter(${y},this)">${y}</button>`;
   });
@@ -2559,7 +2567,7 @@ function renderChartFilterBar() {
 
 function renderCharts() {
   let sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
-  if (chartYearFilter !== 'all') {
+  if (typeof chartYearFilter === 'number') {
     sorted = sorted.filter(r => new Date(r.datetime).getFullYear() === chartYearFilter);
   }
 
@@ -2611,39 +2619,64 @@ function renderMonthChart() {
   renderChartFilterBar();
 
   const MONTH_NAMES = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-  let labels = [], avgs = [];
-
-  if (chartYearFilter !== 'all') {
-    // Specifiek jaar geselecteerd — altijd alle 12 maanden tonen
-    const year = chartYearFilter;
-    labels = MONTH_NAMES;
-    avgs = MONTH_NAMES.map((_, m) => {
-      const sub = readings.filter(r => {
-        const d = new Date(r.datetime);
-        return d.getFullYear() === year && d.getMonth() === m;
-      });
-      return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
-    });
-
-  } else {
-    // Alles — per jaar alle 12 maanden tonen
-    const yearSet = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>a-b);
-    yearSet.forEach(year => {
-      MONTH_NAMES.forEach((mn, m) => {
-        const sub = readings.filter(r => {
-          const d = new Date(r.datetime);
-          return d.getFullYear() === year && d.getMonth() === m;
-        });
-        labels.push(mn + ' \'' + String(year).slice(2));
-        avgs.push(sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null);
-      });
-    });
-  }
-
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
   const gc   = dark ? 'rgba(144,202,249,.1)' : 'rgba(0,0,0,.05)';
+  const wrap = document.getElementById('chart-monthly-wrap');
+  const containerW = wrap.parentElement.clientWidth || 300;
 
+  if (chartMonthly) chartMonthly.destroy();
+
+  if (chartYearFilter === 'grouped') {
+    // Jaren naast elkaar: 12 maandgroepen, per groep een balk per jaar
+    const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>a-b);
+    wrap.style.width = Math.max(containerW, MONTH_NAMES.length * years.length * 18 + 40) + 'px';
+    const datasets = years.map((year, i) => ({
+      label: String(year),
+      data: MONTH_NAMES.map((_, m) => {
+        const sub = readings.filter(r => { const d = new Date(r.datetime); return d.getFullYear() === year && d.getMonth() === m; });
+        return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
+      }),
+      backgroundColor: YEAR_COLORS[i % YEAR_COLORS.length] + 'bb',
+      borderColor:     YEAR_COLORS[i % YEAR_COLORS.length],
+      borderWidth: 1, borderRadius: 3, borderSkipped: false,
+    }));
+    chartMonthly = new Chart(document.getElementById('chart-monthly'), {
+      type: 'bar',
+      data: { labels: MONTH_NAMES, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: tc, font: { size: 11 } } },
+          tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}°C` : 'Geen data' } }
+        },
+        scales: {
+          x: { ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
+          y: { ticks: { color: tc, callback: v => v + '°C', font: { size: 10 } }, grid: { color: gc }, beginAtZero: false },
+        }
+      }
+    });
+    return;
+  }
+
+  let labels = [], avgs = [];
+  if (typeof chartYearFilter === 'number') {
+    // Specifiek jaar — 12 vaste maanden
+    labels = MONTH_NAMES;
+    avgs = MONTH_NAMES.map((_, m) => {
+      const sub = readings.filter(r => { const d = new Date(r.datetime); return d.getFullYear() === chartYearFilter && d.getMonth() === m; });
+      return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
+    });
+  } else {
+    // Alles — 12 maanden gemiddeld over alle jaren
+    labels = MONTH_NAMES;
+    avgs = MONTH_NAMES.map((_, m) => {
+      const sub = readings.filter(r => new Date(r.datetime).getMonth() === m);
+      return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
+    });
+  }
+
+  wrap.style.width = containerW + 'px';
   const bgColors = avgs.map(v => {
     if (v === null) return 'rgba(180,180,180,.15)';
     if (v < 12) return 'rgba(100,181,246,.65)';
@@ -2652,20 +2685,6 @@ function renderMonthChart() {
     return 'rgba(255,167,38,.8)';
   });
 
-  // Stel canvas breedte in: bij specifiek jaar altijd passend in viewport (geen scroll)
-  const wrap = document.getElementById('chart-monthly-wrap');
-  const containerW = wrap.parentElement.clientWidth || 300;
-  let canvasW;
-  if (chartYearFilter !== 'all') {
-    // 12 vaste maanden — passen altijd in beeld, geen horizontale scroll
-    canvasW = containerW;
-  } else {
-    // Alles — bij veel maanden wél horizontaal scrollen
-    canvasW = Math.max(containerW, labels.length * 40);
-  }
-  wrap.style.width = canvasW + 'px';
-
-  if (chartMonthly) chartMonthly.destroy();
   chartMonthly = new Chart(document.getElementById('chart-monthly'), {
     type: 'bar',
     data: {
@@ -2674,20 +2693,14 @@ function renderMonthChart() {
         label: 'Gem. watertemperatuur °C',
         data: avgs,
         backgroundColor: bgColors,
-        borderRadius: 5,
-        borderSkipped: false,
+        borderRadius: 5, borderSkipped: false,
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => ctx.parsed.y !== null ? `${ctx.parsed.y.toFixed(1)}°C` : 'Geen data',
-          }
-        }
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y !== null ? `${ctx.parsed.y.toFixed(1)}°C` : 'Geen data' } }
       },
       scales: {
         x: { ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
@@ -2730,9 +2743,8 @@ function renderCondChart() {
   // Maanden (label) ophalen — zelfde logica als renderMonthChart
   const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
   let monthKeys, labels;
-  if (chartYearFilter !== 'all') {
-    const year = chartYearFilter;
-    monthKeys = MAAND.map((_, i) => `${year}-${String(i + 1).padStart(2,'0')}`);
+  if (typeof chartYearFilter === 'number') {
+    monthKeys = MAAND.map((_, i) => `${chartYearFilter}-${String(i + 1).padStart(2,'0')}`);
     labels    = MAAND;
   } else {
     const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
@@ -3104,6 +3116,14 @@ const BUILD_TIME = '2026-03-16T12:00:00Z'; // UTC — weergave altijd in CET
 })();
 
 // ─── INIT ─────────────────────────────────────
+function syncHeaderHeight() {
+  const h = document.querySelector('header');
+  if (h) document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
+}
+window.addEventListener('resize', syncHeaderHeight);
+window.addEventListener('load', syncHeaderHeight);
+setTimeout(syncHeaderHeight, 100);
+
 load();
 loadDeletedIds();
 loadProfile();
