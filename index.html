@@ -1411,14 +1411,13 @@ const _W = (lines) => {
     `<circle cx="8" cy="10" r="1.5"/>` +         // naaf
     `<line x1="8" y1="11" x2="8"  y2="22"/>` +  // mast
     `<line x1="5" y1="22" x2="11" y2="22"/>`;   // sokkel
-  // Golvende windlijnen rechts — S-golven (stripstijl), 0–4 golven
-  const ws = [
-    `<path d="M15 10 Q17 8  19 10 Q21 12 23 10"/>`,  // midden
-    `<path d="M15 7  Q17 5  19 7  Q21 9  23 7"/>`,   // boven
-    `<path d="M15 14 Q17 12 19 14 Q21 16 23 14"/>`,  // onder
-    `<path d="M15 4  Q17 2  19 4  Q21 6  23 4"/>`,   // extra boven (storm)
-  ];
-  return mill + ws.slice(0, lines).join('');
+  // Golvende windlijnen: zwart, dun, symmetrisch geplaatst
+  // [y, amplitude] — midden=10, 5 boven=5, 5 onder=15, extra boven=1
+  const waveYs = [[10,2],[5,2],[15,2],[1,1]];
+  const windLines = waveYs.slice(0, lines).map(([y,a]) =>
+    `<path d="M15 ${y} Q17 ${y-a} 19 ${y} Q21 ${y+a} 23 ${y}" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>`
+  ).join('');
+  return mill + windLines;
 };
 
 const SVG_ICONS = {
@@ -1440,9 +1439,7 @@ const SVG_ICONS = {
 
 function mkIcon(key, color, size) {
   const inner = SVG_ICONS[key] || '';
-  const isWind = ['calm','gentle','moderate','strong','storm'].includes(key);
-  const sw = isWind ? '2.5' : '2';
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" style="color:${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" style="color:${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
 function condIconCircle(opts, val, size=20) {
   const o = opts.find(x => x.v === val);
