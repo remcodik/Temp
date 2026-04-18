@@ -482,6 +482,9 @@
       background:#fff8e1; border-color:#f9a825; color:#e65100;
       border-style:solid;
     }
+    .topday-sm { font-size:11px; padding:5px 8px; }
+    .gear-row { display:flex; gap:6px; margin-top:6px; }
+    .gear-row .topday-btn { flex:1; }
     .photo-input-wrap {
       display:flex; align-items:center; gap:10px;
     }
@@ -1080,11 +1083,19 @@
           <button type="button" class="photo-btn" onclick="document.getElementById('f-photo').click()">
             📷 Foto
           </button>
-          <button type="button" id="f-topday-btn" onclick="toggleTopDay()" class="topday-btn" style="flex:1">
-            🏅 Top dag
-          </button>
           <img id="photo-preview" class="photo-preview" alt="preview">
           <button type="button" id="photo-clear" class="photo-clear" onclick="clearPhoto()">✕</button>
+        </div>
+        <div class="gear-row">
+          <button type="button" id="f-topday-btn" onclick="toggleTopDay()" class="topday-btn topday-sm">
+            🏅 Top dag
+          </button>
+          <button type="button" id="f-neosocks-btn" class="topday-btn" onclick="toggleNeoSocks()">
+            🧦 Sokken
+          </button>
+          <button type="button" id="f-neogloves-btn" class="topday-btn" onclick="toggleNeoGloves()">
+            🧤 Handschoenen
+          </button>
         </div>
         <input type="file" id="f-photo" accept="image/*" style="display:none"
                onchange="handlePhotoSelect(event)">
@@ -1462,7 +1473,9 @@ let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
 let undoBuffer  = null;
 let undoTimer   = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
-let selTopDay = false;
+let selTopDay  = false;
+let selNeoSocks  = false;
+let selNeoGloves = false;
 
 // ─── PERSISTENCE ─────────────────────────────
 function load() {
@@ -1738,12 +1751,26 @@ function setTopDayUI(val) {
 
 function toggleTopDay() { setTopDayUI(!selTopDay); }
 
+function setNeoSocksUI(val) {
+  selNeoSocks = !!val;
+  document.getElementById('f-neosocks-btn').classList.toggle('active', selNeoSocks);
+}
+function toggleNeoSocks() { setNeoSocksUI(!selNeoSocks); }
+
+function setNeoGlovesUI(val) {
+  selNeoGloves = !!val;
+  document.getElementById('f-neogloves-btn').classList.toggle('active', selNeoGloves);
+}
+function toggleNeoGloves() { setNeoGlovesUI(!selNeoGloves); }
+
 function openForm(id) {
   if (isGuest()) { showToast('🚫 Gasten kunnen geen metingen toevoegen'); return; }
   editingId = id || null;
   selSky = selWind = selWindStr = null;
   pendingPhotoData = null;
   setTopDayUI(false);
+  setNeoSocksUI(false);
+  setNeoGlovesUI(false);
 
   renderPicker('sky-picker',     SKY,     'sky');
   renderPicker('feeling-picker', FEELING, 'feeling');
@@ -1766,6 +1793,8 @@ function openForm(id) {
       document.getElementById('f-wt').value = r.waterTemp;
       document.getElementById('f-at').value = r.airTemp ?? '';
       setTopDayUI(r.isTopDay || false);
+      setNeoSocksUI(r.neoSocks   || false);
+      setNeoGlovesUI(r.neoGloves || false);
       if (r.sky)     pickIcon('sky',     r.sky);
       if (r.wind)    pickIcon('feeling', r.wind);
       if (r.windStr) pickIcon('windstr', r.windStr);
@@ -1858,6 +1887,8 @@ function saveReading(ev) {
     windStr   : selWindStr, // windkracht
     notes     : (readings.find(x => x.id === id) || {}).notes || '',
     isTopDay  : selTopDay,
+    neoSocks  : selNeoSocks,
+    neoGloves : selNeoGloves,
   };
   const idx = readings.findIndex(x => x.id === id);
   if (idx >= 0) {
@@ -2008,6 +2039,8 @@ function readingHTML(r, showSwipeHint) {
   const iconsHTML = (skyIcon || feelIcon || windIcon)
     ? `<div class="rc-cond-icons">${skyIcon}${feelIcon}${windIcon}</div>` : '';
   const topdayHTML = r.isTopDay ? `<span class="rc-topday" title="Top dag">🏅</span>` : '';
+  const neoHTML = (r.neoSocks ? `<span title="Neopreen sokken">🧦</span>` : '')
+                + (r.neoGloves ? `<span title="Neopreen handschoenen">🧤</span>` : '');
 
   return `
     <div class="reading-wrap" id="wrap-${r.id}">
@@ -2016,7 +2049,7 @@ function readingHTML(r, showSwipeHint) {
         ${hintHTML}
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
-          ${topdayHTML}
+          ${topdayHTML}${neoHTML}
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
             ${r.createdBy ? `<div class="rc-date">${getProfileName(r.createdBy)}</div>` : ''}
           ${!isGuest() && isOwn ? `<button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
