@@ -2478,9 +2478,13 @@ async function renderComparisonChart() {
 
   const history = await fetchTempHistory();
 
-  // Eigen metingen: gemiddelde per dag
+  // Eigen metingen gefilterd op jaar
+  const filteredReadings = typeof chartYearFilter === 'number'
+    ? readings.filter(r => new Date(r.datetime).getFullYear() === chartYearFilter)
+    : readings;
+
   const ownByDay = {};
-  readings.forEach(r => {
+  filteredReadings.forEach(r => {
     const d = r.datetime.slice(0, 10);
     if (!ownByDay[d]) ownByDay[d] = [];
     ownByDay[d].push(r.waterTemp);
@@ -2489,9 +2493,14 @@ async function renderComparisonChart() {
   const histMap = {};
   history.forEach(h => { histMap[h.date] = h; });
 
+  // Historische data ook filteren op jaar indien van toepassing
+  const filteredHistory = typeof chartYearFilter === 'number'
+    ? history.filter(h => new Date(h.date).getFullYear() === chartYearFilter)
+    : history;
+
   const allDates = [...new Set([
     ...Object.keys(ownByDay),
-    ...history.map(h => h.date)
+    ...filteredHistory.map(h => h.date)
   ])].sort();
 
   if (!allDates.length) {
@@ -2502,10 +2511,13 @@ async function renderComparisonChart() {
   if (emptyEl) emptyEl.style.display = 'none';
   canvas.style.display = '';
 
-  const dsOwn        = allDates.map(d => ownByDay[d]
+  const filteredHistMap = {};
+  filteredHistory.forEach(h => { filteredHistMap[h.date] = h; });
+
+  const dsOwn      = allDates.map(d => ownByDay[d]
     ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
-  const dsNijmegen   = allDates.map(d => histMap[d]?.nijmegen ?? histMap[d]?.waterkaart ?? null);
-  const dsLobith     = allDates.map(d => histMap[d]?.lobith     ?? null);
+  const dsNijmegen = allDates.map(d => filteredHistMap[d]?.nijmegen ?? filteredHistMap[d]?.waterkaart ?? null);
+  const dsLobith   = allDates.map(d => filteredHistMap[d]?.lobith ?? null);
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
@@ -2551,6 +2563,7 @@ function setYearFilter(year, btn) {
   renderCharts();
   renderMonthChart();
   renderCondChart();
+  renderComparisonChart();
 }
 
 function renderChartFilterBar() {
