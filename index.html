@@ -1062,28 +1062,29 @@
     <form onsubmit="saveReading(event)">
       <input type="hidden" id="f-id">
 
-      <!-- Datum + Water + Lucht op 1 rij -->
-      <div class="fg-row-3">
-        <div class="fg">
+      <!-- Rij 1: Datum + Lucht -->
+      <div class="fg-row">
+        <div class="fg" style="flex:1.4;margin-bottom:0">
           <label>Datum</label>
-          <input type="date" id="f-dt" required>
+          <input type="date" id="f-dt" required style="height:40px;box-sizing:border-box">
         </div>
-        <div class="fg">
-          <label>🌊 Water °C</label>
-          <input type="number" id="f-wt" placeholder="22.5" step="0.1" min="-5" max="45" required>
-        </div>
-        <div class="fg">
+        <div class="fg" style="flex:1;margin-bottom:0">
           <label>🌡️ Lucht °C</label>
-          <div class="input-row">
+          <div class="input-row" style="height:40px">
             <input type="number" id="f-at" placeholder="25.0" step="0.1" min="-30" max="50">
             <button type="button" class="fetch-btn" onclick="fetchAndFill()" title="Haal luchttemperatuur op">🔄</button>
           </div>
         </div>
       </div>
-      <div class="fg-row" style="margin-bottom:8px">
+      <!-- Rij 2: Water + Ref water even groot -->
+      <div class="fg-row">
         <div class="fg" style="margin-bottom:0">
-          <label style="font-size:11px">🌐 Ref. watertemp °C <span style="opacity:.6">(van website)</span></label>
-          <input type="number" id="f-rt" placeholder="bv. 18.5" step="0.1" min="-5" max="45" style="height:36px">
+          <label>🌊 Water °C</label>
+          <input type="number" id="f-wt" placeholder="22.5" step="0.1" min="-5" max="45" required style="height:40px;box-sizing:border-box">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>🌐 Ref. water °C</label>
+          <input type="number" id="f-rt" placeholder="bv. 18.5" step="0.1" min="-5" max="45" style="height:40px;box-sizing:border-box">
         </div>
       </div>
 
