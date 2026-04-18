@@ -935,7 +935,7 @@
     </div>
   </div>
   <div class="card" style="margin-top:10px">
-    <div class="card-title">Watertemperatuur: eigen · Nijmegen (Waal) · Lobith</div>
+    <div class="card-title">Watertemperatuur: eigen meting vs. referentie</div>
     <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
     <div id="chart-compare-empty" style="display:none;font-size:12px;color:var(--muted);text-align:center;padding:12px 0">
       Nog geen historische data beschikbaar. Wordt dagelijks opgebouwd.
@@ -1070,6 +1070,10 @@
         <div class="fg">
           <label>🌊 Water °C</label>
           <input type="number" id="f-wt" placeholder="22.5" step="0.1" min="-5" max="45" required>
+        </div>
+        <div class="fg">
+          <label>🌐 Ref. watertemp °C <span style="font-size:10px;opacity:.7">(website)</span></label>
+          <input type="number" id="f-rt" placeholder="bv. 18.5" step="0.1" min="-5" max="45">
         </div>
         <div class="fg">
           <label>🌡️ Lucht °C</label>
@@ -1809,8 +1813,9 @@ function openForm(id) {
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
   document.getElementById('f-dt').value = local;
-  document.getElementById('f-wt').value = liveWaterTemp !== null ? liveWaterTemp : '';
-  document.getElementById('f-at').value = liveAirTemp   !== null ? liveAirTemp   : '';
+  document.getElementById('f-wt').value = '';
+  document.getElementById('f-rt').value = '';
+  document.getElementById('f-at').value = liveAirTemp !== null ? liveAirTemp : '';
   document.getElementById('f-id').value = '';
   clearPhoto();
 
@@ -1822,6 +1827,7 @@ function openForm(id) {
       document.getElementById('f-dt').value    = r.datetime.slice(0,10);
       document.getElementById('f-wt').value = r.waterTemp;
       document.getElementById('f-at').value = r.airTemp ?? '';
+      document.getElementById('f-rt').value = r.refTemp ?? '';
       setTopDayUI(r.isTopDay || false);
       setNeoSocksUI(r.neoSocks   || false);
       setNeoGlovesUI(r.neoGloves || false);
@@ -1911,6 +1917,7 @@ function saveReading(ev) {
     id,
     datetime : dateVal + 'T12:00',
     waterTemp : parseFloat(document.getElementById('f-wt').value),
+    refTemp   : parseFloat(document.getElementById('f-rt').value) || null,
     airTemp   : parseFloat(document.getElementById('f-at').value) || null,
     sky       : selSky,
     wind      : selWind,    // gevoel (backward compat)
@@ -2474,49 +2481,27 @@ function toggleA11yContrast() {
 
 // ─── VERGELIJKINGSGRAFIEK ─────────────────────
 let chartCompare     = null;
-let tempHistoryCache = null;
-
-async function fetchTempHistory() {
-  if (tempHistoryCache !== null) return tempHistoryCache;
-  try {
-    const r = await fetch('./temp-history.json?t=' + Date.now());
-    if (!r.ok) { tempHistoryCache = []; return []; }
-    tempHistoryCache = await r.json();
-    return tempHistoryCache;
-  } catch { tempHistoryCache = []; return []; }
-}
-
-async function renderComparisonChart() {
+function renderComparisonChart() {
   const canvas  = document.getElementById('chart-compare');
   const emptyEl = document.getElementById('chart-compare-empty');
   if (!canvas) return;
 
-  const history = await fetchTempHistory();
-
-  // Eigen metingen gefilterd op jaar
-  const filteredReadings = typeof chartYearFilter === 'number'
+  const filtered = typeof chartYearFilter === 'number'
     ? readings.filter(r => new Date(r.datetime).getFullYear() === chartYearFilter)
     : readings;
 
-  const ownByDay = {};
-  filteredReadings.forEach(r => {
+  const ownByDay = {}, refByDay = {};
+  filtered.forEach(r => {
     const d = r.datetime.slice(0, 10);
     if (!ownByDay[d]) ownByDay[d] = [];
     ownByDay[d].push(r.waterTemp);
+    if (r.refTemp != null) {
+      if (!refByDay[d]) refByDay[d] = [];
+      refByDay[d].push(r.refTemp);
+    }
   });
 
-  const histMap = {};
-  history.forEach(h => { histMap[h.date] = h; });
-
-  // Historische data ook filteren op jaar indien van toepassing
-  const filteredHistory = typeof chartYearFilter === 'number'
-    ? history.filter(h => new Date(h.date).getFullYear() === chartYearFilter)
-    : history;
-
-  const allDates = [...new Set([
-    ...Object.keys(ownByDay),
-    ...filteredHistory.map(h => h.date)
-  ])].sort();
+  const allDates = [...new Set([...Object.keys(ownByDay), ...Object.keys(refByDay)])].sort();
 
   if (!allDates.length) {
     if (emptyEl) emptyEl.style.display = 'block';
@@ -2526,18 +2511,13 @@ async function renderComparisonChart() {
   if (emptyEl) emptyEl.style.display = 'none';
   canvas.style.display = '';
 
-  const filteredHistMap = {};
-  filteredHistory.forEach(h => { filteredHistMap[h.date] = h; });
-
-  const dsOwn      = allDates.map(d => ownByDay[d]
-    ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
-  const dsNijmegen = allDates.map(d => filteredHistMap[d]?.nijmegen ?? filteredHistMap[d]?.waterkaart ?? null);
-  const dsLobith   = allDates.map(d => filteredHistMap[d]?.lobith ?? null);
+  const avg = arr => +(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1);
+  const dsOwn = allDates.map(d => ownByDay[d] ? avg(ownByDay[d]) : null);
+  const dsRef = allDates.map(d => refByDay[d]  ? avg(refByDay[d])  : null);
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
   const gc   = dark ? 'rgba(144,202,249,.1)' : 'rgba(0,0,0,.05)';
-
   const labels = allDates.map(d =>
     new Date(d).toLocaleDateString('nl-NL', { day:'numeric', month:'short' }));
 
@@ -2545,14 +2525,12 @@ async function renderComparisonChart() {
   chartCompare = new Chart(canvas, {
     type: 'line',
     data: { labels, datasets: [
-      { label:'Eigen metingen',          data:dsOwn,        borderColor:'#0288d1',
-        backgroundColor:'rgba(2,136,209,.08)', tension:.3, pointRadius:3, spanGaps:true },
-      { label:'Nijmegen (Waal)',           data:dsNijmegen,   borderColor:'#00897b',
-        backgroundColor:'rgba(0,137,123,.08)', tension:.3, pointRadius:2,
-        borderDash:[4,3], spanGaps:true },
-      { label:'Lobith (RWS)',             data:dsLobith,     borderColor:'#43a047',
-        backgroundColor:'rgba(67,160,71,.08)', tension:.3, pointRadius:2,
-        borderDash:[2,4], spanGaps:true },
+      { label:'Eigen meting', data:dsOwn, borderColor:'#0288d1',
+        backgroundColor:'rgba(2,136,209,.10)', tension:.3, pointRadius:3,
+        borderWidth:2.5, spanGaps:true },
+      { label:'Ref. watertemp (website)', data:dsRef, borderColor:'#e65100',
+        backgroundColor:'rgba(230,81,0,.07)', tension:.3, pointRadius:2,
+        borderWidth:1.5, borderDash:[5,3], spanGaps:true },
     ]},
     options: {
       responsive:true, maintainAspectRatio:true,
@@ -3166,8 +3144,6 @@ loadProfile();
 loadFollowing();
 seedIfEmpty();
 renderAll();
-updateAirTemp();
-setInterval(updateAirTemp, 10 * 60 * 1000);
 
 // Profiel tonen of welkomstmodal
 if (currentProfile) {
