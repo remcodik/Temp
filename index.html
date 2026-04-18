@@ -528,13 +528,23 @@
     .chart-scroll-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .chart-scroll-inner { position:relative; height:200px; min-width:100%; }
 
-    /* ── Landscape: grotere grafieken ── */
-    @media (orientation: landscape) {
-      .chart-wrap { height: calc(80vh - 80px); min-height:180px; }
-      .chart-scroll-inner { height: calc(80vh - 80px); min-height:180px; }
-      #page-chart { padding: 4px 8px; }
-      #page-chart .card { margin-bottom:5px; padding:8px 12px; }
-      body { padding-bottom: 56px; }
+    /* ── Landscape volledig scherm grafieken ── */
+    body.chart-landscape header,
+    body.chart-landscape .nav { display: none !important; }
+
+    body.chart-landscape { padding-bottom: 0 !important; }
+
+    body.chart-landscape #page-chart {
+      position: fixed; inset: 0;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 0 8px; z-index: 10;
+    }
+
+    body.chart-landscape .chart-filter-sticky { top: 0; }
+
+    body.chart-landscape .chart-wrap,
+    body.chart-landscape .chart-scroll-inner {
+      height: calc(100vh - 90px); min-height: 150px;
     }
 
     /* ── Photo overlay / lightbox ── */
@@ -1741,7 +1751,12 @@ function goPage(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 50);
+  if (name === 'chart') {
+    updateChartLandscape();
+    setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 50);
+  } else {
+    document.body.classList.remove('chart-landscape');
+  }
 }
 
 // ─── FORM ─────────────────────────────────────
@@ -2819,9 +2834,16 @@ const _reloadCharts = () => {
     setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 200);
   }
 };
-window.addEventListener('resize', _reloadCharts);
+function updateChartLandscape() {
+  const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+  const isChart = document.getElementById('page-chart')?.classList.contains('active');
+  document.body.classList.toggle('chart-landscape', isLandscape && isChart);
+  syncHeaderHeight();
+}
+
+window.addEventListener('resize', () => { updateChartLandscape(); _reloadCharts(); });
 // iOS vuurt resize niet altijd bij draaien — orientationchange als fallback
-window.addEventListener('orientationchange', () => setTimeout(_reloadCharts, 300));
+window.addEventListener('orientationchange', () => setTimeout(() => { updateChartLandscape(); _reloadCharts(); }, 300));
 
 // ─── EXPORT / IMPORT ──────────────────────────
 function exportCSV() {
