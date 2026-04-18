@@ -2630,7 +2630,7 @@ function renderMonthChart() {
   if (chartYearFilter === 'grouped') {
     // Jaren naast elkaar: 12 maandgroepen, per groep een balk per jaar
     const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>a-b);
-    wrap.style.width = Math.max(containerW, MONTH_NAMES.length * years.length * 18 + 40) + 'px';
+    wrap.style.width = containerW + 'px';
     const datasets = years.map((year, i) => ({
       label: String(year),
       data: MONTH_NAMES.map((_, m) => {
@@ -2639,7 +2639,8 @@ function renderMonthChart() {
       }),
       backgroundColor: YEAR_COLORS[i % YEAR_COLORS.length] + 'bb',
       borderColor:     YEAR_COLORS[i % YEAR_COLORS.length],
-      borderWidth: 1, borderRadius: 3, borderSkipped: false,
+      borderWidth: 1, borderRadius: 2, borderSkipped: false,
+      maxBarThickness: 14,
     }));
     chartMonthly = new Chart(document.getElementById('chart-monthly'), {
       type: 'bar',
@@ -2744,21 +2745,21 @@ function renderCondChart() {
   const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
   let monthKeys, labels;
   if (typeof chartYearFilter === 'number') {
+    // Specifiek jaar: 12 maanden voor dat jaar
     monthKeys = MAAND.map((_, i) => `${chartYearFilter}-${String(i + 1).padStart(2,'0')}`);
     labels    = MAAND;
   } else {
-    const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
-    monthKeys = [...new Set(sorted.map(r => r.datetime.slice(0,7)))];
-    labels = monthKeys.map(k => {
-      const [y, m] = k.split('-');
-      return MAAND[+m - 1] + ' \'' + y.slice(2);
-    });
+    // Alles / Jaren ↔: 12 maanden, geteld over alle jaren samen
+    monthKeys = MAAND.map((_, i) => String(i));  // index als sleutel
+    labels    = MAAND;
   }
 
   // Datasets: één per optie
   const datasets = opts.map(o => {
-    const data = monthKeys.map(k =>
-      readings.filter(r => r.datetime.slice(0,7) === k && r[field] === o.v).length
+    const data = monthKeys.map((k, i) =>
+      typeof chartYearFilter === 'number'
+        ? readings.filter(r => r.datetime.slice(0,7) === k && r[field] === o.v).length
+        : readings.filter(r => new Date(r.datetime).getMonth() === i && r[field] === o.v).length
     );
     // Kleur: cc (SKY grafiekkleur) → c (FEELING/WIND_STR SVG-kleur) → bg fallback
     const bg = o.cc || o.c || '#90a4ae';
