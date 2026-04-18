@@ -594,15 +594,24 @@
       .wh-temp { font-size:50px; }
     }
 
-    /* ── Period filter (charts) ── */
-    .period-filter { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
-    .pf-btn {
-      padding:5px 14px; border-radius:20px; border:none;
+    /* ── Sticky chart filter bar ── */
+    .chart-filter-bar {
+      position:sticky; top:56px; z-index:50;
+      background:var(--bg);
+      display:flex; gap:6px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      border-bottom:1px solid var(--border);
+      margin:-12px -16px 10px; padding:8px 16px 6px;
+    }
+    .chart-filter-bar::-webkit-scrollbar { display:none; }
+    .cf-btn {
+      flex-shrink:0; padding:5px 14px; border-radius:20px;
+      border:1px solid var(--border);
       font-size:12px; font-weight:600; cursor:pointer;
       background:#eef2f5; color:var(--muted);
-      font-family:var(--font); transition:all .15s;
+      font-family:var(--font); transition:all .15s; white-space:nowrap;
     }
-    .pf-btn.active { background:var(--primary); color:white; }
+    .cf-btn.active { background:var(--primary); color:white; border-color:var(--primary); }
 
     /* ── Data filter (metingen) ── */
     .data-filters {
@@ -886,18 +895,13 @@
 
 <!-- CHART -->
 <div id="page-chart" class="page">
-  <div class="period-filter">
-    <button class="pf-btn active" onclick="setChartPeriod('all',this)">Alles</button>
-    <button class="pf-btn" onclick="setChartPeriod('year',this)">Dit jaar</button>
-    <button class="pf-btn" onclick="setChartPeriod('3m',this)">3 maanden</button>
-  </div>
+  <div class="chart-filter-bar" id="chart-filter-bar"></div>
   <div class="card">
     <div class="card-title">Water- &amp; luchttemperatuur over tijd</div>
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
   </div>
   <div class="card" style="margin-top:10px">
     <div class="card-title">Gem. watertemperatuur per maand</div>
-    <div class="year-filter" id="year-filter-btns"></div>
     <div class="chart-scroll-outer">
       <div class="chart-scroll-inner" id="chart-monthly-wrap">
         <canvas id="chart-monthly"></canvas>
@@ -1465,8 +1469,7 @@ let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
 let chartCond    = null;
-let chartPeriod  = 'all';
-let chartYearFilter = new Date().getFullYear(); // huidig jaar als standaard
+let chartYearFilter = 'all'; // huidig jaar als standaard
 let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
 let undoBuffer  = null;
 let undoTimer   = null;
@@ -2523,42 +2526,30 @@ async function renderComparisonChart() {
 }
 
 // ─── CHARTS ───────────────────────────────────
-function setChartPeriod(period, btn) {
-  chartPeriod = period;
-  document.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderCharts();
-  renderMonthChart();
-}
-
 function setYearFilter(year, btn) {
   chartYearFilter = year;
-  document.querySelectorAll('.yf-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cf-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  renderCharts();
   renderMonthChart();
   renderCondChart();
 }
 
-function renderYearFilterButtons() {
-  const container = document.getElementById('year-filter-btns');
-  if (!container) return;
+function renderChartFilterBar() {
+  const bar = document.getElementById('chart-filter-bar');
+  if (!bar) return;
   const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b) => b - a);
-  let html = `<button class="yf-btn ${chartYearFilter === 'all' ? 'active' : ''}" onclick="setYearFilter('all',this)">Alles</button>`;
+  let html = `<button class="cf-btn ${chartYearFilter === 'all' ? 'active' : ''}" onclick="setYearFilter('all',this)">Alles</button>`;
   years.forEach(y => {
-    html += `<button class="yf-btn ${chartYearFilter === y ? 'active' : ''}" onclick="setYearFilter(${y},this)">${y}</button>`;
+    html += `<button class="cf-btn ${chartYearFilter === y ? 'active' : ''}" onclick="setYearFilter(${y},this)">${y}</button>`;
   });
-  container.innerHTML = html;
+  bar.innerHTML = html;
 }
 
 function renderCharts() {
-  // Filter op periode
   let sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
-  if (chartPeriod === 'year') {
-    const y = new Date().getFullYear();
-    sorted = sorted.filter(r => new Date(r.datetime).getFullYear() === y);
-  } else if (chartPeriod === '3m') {
-    const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - 3);
-    sorted = sorted.filter(r => new Date(r.datetime) >= cutoff);
+  if (chartYearFilter !== 'all') {
+    sorted = sorted.filter(r => new Date(r.datetime).getFullYear() === chartYearFilter);
   }
 
   const labels = sorted.map(r => new Date(r.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}));
@@ -2606,7 +2597,7 @@ function renderMonthChart() {
     return;
   }
 
-  renderYearFilterButtons();
+  renderChartFilterBar();
 
   const MONTH_NAMES = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
   let labels = [], avgs = [];
