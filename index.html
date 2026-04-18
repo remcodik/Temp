@@ -1770,8 +1770,15 @@ function openForm(id) {
   selSky = selWind = selWindStr = null;
   pendingPhotoData = null;
   setTopDayUI(false);
-  setNeoSocksUI(false);
-  setNeoGlovesUI(false);
+  // Laad per-profiel neopreen voorkeur voor nieuwe metingen
+  if (!id && currentProfile) {
+    const pref = JSON.parse(localStorage.getItem('lp-neo-' + currentProfile.id) || 'null');
+    setNeoSocksUI(pref ? !!pref.neoSocks : false);
+    setNeoGlovesUI(pref ? !!pref.neoGloves : false);
+  } else {
+    setNeoSocksUI(false);
+    setNeoGlovesUI(false);
+  }
 
   renderPicker('sky-picker',     SKY,     'sky');
   renderPicker('feeling-picker', FEELING, 'feeling');
@@ -1898,6 +1905,10 @@ function saveReading(ev) {
   } else {
     r.createdBy = currentProfile ? currentProfile.id : null;
     readings.push(r);
+    // Onthoud neopreen-keuze per profiel voor volgende nieuwe meting
+    if (currentProfile) {
+      localStorage.setItem('lp-neo-' + currentProfile.id, JSON.stringify({ neoSocks: selNeoSocks, neoGloves: selNeoGloves }));
+    }
   }
 
   // Sla foto op
