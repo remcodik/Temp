@@ -1063,16 +1063,16 @@
       <input type="hidden" id="f-id">
 
       <!-- Rij 1: Datum + Lucht -->
-      <div class="fg-row">
+      <div class="fg-row" style="align-items:flex-end">
         <div class="fg" style="flex:1.4;margin-bottom:0">
           <label>Datum</label>
-          <input type="date" id="f-dt" required style="height:40px;box-sizing:border-box">
+          <input type="date" id="f-dt" required style="height:40px;box-sizing:border-box;-webkit-appearance:none;appearance:none">
         </div>
         <div class="fg" style="flex:1;margin-bottom:0">
           <label>🌡️ Lucht °C</label>
-          <div class="input-row" style="height:40px">
-            <input type="number" id="f-at" placeholder="25.0" step="0.1" min="-30" max="50">
-            <button type="button" class="fetch-btn" onclick="fetchAndFill()" title="Haal luchttemperatuur op">🔄</button>
+          <div class="input-row">
+            <input type="number" id="f-at" placeholder="25.0" step="0.1" min="-30" max="50" style="height:40px;box-sizing:border-box">
+            <button type="button" class="fetch-btn" onclick="fetchAndFill()" title="Haal luchttemperatuur op" style="height:40px;box-sizing:border-box;padding-top:0;padding-bottom:0">🔄</button>
           </div>
         </div>
       </div>
