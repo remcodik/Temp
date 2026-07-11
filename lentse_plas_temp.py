@@ -1,48 +1,42 @@
-import requests
-from bs4 import BeautifulSoup
+"""Haal de watertemperatuur van De Lentse Plas op van waterkaart.net.
+
+Dezelfde logica draait elk uur in .github/workflows/update-water-temp.yml;
+dit script is voor lokaal testen.
+"""
 import re
+import urllib.request
 
 URL = "https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas"
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "Chrome/120.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
     ),
     "Accept-Language": "nl-NL,nl;q=0.9",
 }
 
+# Voorbeeld in de pagina:
+# <span class="meet-label">Watertemperatuur</span><span class="meet-waarde">~23.2</span>
+TEMP_RE = re.compile(
+    r'Watertemperatuur</span>\s*<span class="meet-waarde">\s*~?\s*([0-9]+(?:[.,][0-9]+)?)'
+)
+
 
 def get_temperature():
-    response = requests.get(URL, headers=HEADERS, timeout=10)
-    response.raise_for_status()
+    req = urllib.request.Request(URL, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        html = r.read().decode("utf-8", errors="replace")
 
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Zoek naar temperatuur-gerelateerde tekst (bijv. "18°C" of "18 °C" of "18 graden")
-    temp_pattern = re.compile(r"(\d+[\.,]?\d*)\s*[°º]?\s*[Cc]")
-
-    # Probeer eerst specifieke elementen (pas aan op basis van de pagina-structuur)
-    for tag in soup.find_all(string=temp_pattern):
-        match = temp_pattern.search(tag)
-        if match:
-            temp = match.group(0).strip()
-            parent = tag.parent
-            print(f"Temperatuur gevonden: {temp}")
-            print(f"  In element: <{parent.name}> class={parent.get('class')} id={parent.get('id')}")
-            return temp
-
-    # Fallback: dump alle tekst met "temp" of "graden" of "°"
-    print("Geen duidelijke temperatuur gevonden. Relevante tekst:")
-    for tag in soup.find_all(string=re.compile(r"[°º]|graden|temp|water", re.I)):
-        print(f"  {tag.strip()[:200]}")
-
+    m = TEMP_RE.search(html)
+    if m:
+        return round(float(m.group(1).replace(",", ".")), 1)
     return None
 
 
 if __name__ == "__main__":
     temp = get_temperature()
-    if temp:
-        print(f"\nWatertemperatuur De Lentse Plas: {temp}")
+    if temp is not None:
+        print(f"Watertemperatuur De Lentse Plas: {temp}°C")
     else:
-        print("\nTemperatuur niet gevonden.")
+        print("Temperatuur niet gevonden.")

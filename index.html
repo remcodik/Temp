@@ -913,7 +913,7 @@
     </div>
   </div>
   <div class="card" style="margin-top:10px">
-    <div class="card-title">Watertemperatuur: eigen · Nijmegen (Waal) · Lobith</div>
+    <div class="card-title">Watertemperatuur: eigen · De Lentse Plas · Lobith</div>
     <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
     <div id="chart-compare-empty" style="display:none;font-size:12px;color:var(--muted);text-align:center;padding:12px 0">
       Nog geen historische data beschikbaar. Wordt dagelijks opgebouwd.
@@ -1648,13 +1648,16 @@ async function fetchWaterTemp() {
   try {
     const r = await fetch('./water-temp.json?t=' + Date.now());
     const d = await r.json();
-    if (d.temperature != null) return {
-      val: d.temperature,
+    const wk = (d.waterkaart && d.waterkaart.temperature != null) ? d.waterkaart.temperature : null;
+    if (d.temperature != null || wk !== null) return {
+      val: d.temperature ?? null,
+      wk,
+      wkLabel: (d.waterkaart && d.waterkaart.label) || 'De Lentse Plas (waterkaart)',
       label: d.label || 'Lobith',
       source: d.source || null
     };
   } catch { /* geen data beschikbaar */ }
-  return { val: null, label: 'Lobith', source: null };
+  return { val: null, wk: null, wkLabel: null, label: 'Lobith', source: null };
 }
 
 async function fetchAndFill() {
@@ -1678,26 +1681,29 @@ async function updateLiveTemps() {
       at < 5  ? '🥶' : at < 12 ? '🧥' :
       at < 18 ? '😊' : at < 25 ? '⛅' : '☀️';
   }
+  // Waterkaart (De Lentse Plas) heeft voorkeur boven het RWS-station
+  const bestWater      = wtResult.wk !== null ? wtResult.wk : wtResult.val;
+  const bestWaterLabel = wtResult.wk !== null ? wtResult.wkLabel : wtResult.label;
   const rwsEl  = document.getElementById('cur-water-rws');
   const srcEl  = document.getElementById('cur-water-rws-src');
   if (rwsEl) {
-    if (wtResult.val !== null) {
-      liveWaterTemp = wtResult.val;
-      rwsEl.textContent = wtResult.val.toFixed(1) + '°C';
-      rwsEl.style.color = tempColor(wtResult.val);
+    if (bestWater !== null) {
+      liveWaterTemp = bestWater;
+      rwsEl.textContent = bestWater.toFixed(1) + '°C';
+      rwsEl.style.color = tempColor(bestWater);
     } else {
       rwsEl.textContent = '--°C';
       rwsEl.style.color = 'var(--muted)';
     }
     if (srcEl) {
-      const bronTekst = wtResult.label;
+      const bronTekst = bestWaterLabel;
       srcEl.textContent = bronTekst;
     }
     // Kleur het huidige-temp blok op basis van watertemperatuur
     const curBlock = document.getElementById('cur-temp-block');
     if (curBlock) {
-      if (wtResult.val !== null) {
-        const hg = heroGradient(wtResult.val);
+      if (bestWater !== null) {
+        const hg = heroGradient(bestWater);
         curBlock.style.background  = hg.grad;
         curBlock.style.boxShadow   = `0 6px 24px ${hg.shadow}`;
         curBlock.classList.add('air-colored');
@@ -2452,7 +2458,7 @@ async function renderComparisonChart() {
 
   const dsOwn        = allDates.map(d => ownByDay[d]
     ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
-  const dsNijmegen   = allDates.map(d => histMap[d]?.nijmegen ?? histMap[d]?.waterkaart ?? null);
+  const dsNijmegen   = allDates.map(d => histMap[d]?.waterkaart ?? histMap[d]?.nijmegen ?? null);
   const dsLobith     = allDates.map(d => histMap[d]?.lobith     ?? null);
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
@@ -2468,7 +2474,7 @@ async function renderComparisonChart() {
     data: { labels, datasets: [
       { label:'Eigen metingen',          data:dsOwn,        borderColor:'#0288d1',
         backgroundColor:'rgba(2,136,209,.08)', tension:.3, pointRadius:3, spanGaps:true },
-      { label:'Nijmegen (Waal)',           data:dsNijmegen,   borderColor:'#00897b',
+      { label:'De Lentse Plas (waterkaart)', data:dsNijmegen,   borderColor:'#00897b',
         backgroundColor:'rgba(0,137,123,.08)', tension:.3, pointRadius:2,
         borderDash:[4,3], spanGaps:true },
       { label:'Lobith (RWS)',             data:dsLobith,     borderColor:'#43a047',

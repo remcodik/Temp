@@ -1,46 +1,133 @@
-name: Probe waterkaart.net (tijdelijk)
+name: Init historische watertemperatuur
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  probe:
+  init:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch zwemplek-pagina en inspecteer
+      - uses: actions/checkout@v4
+
+      - name: Haal Lobith data op per week
         run: |
-          set -x
-          URL="https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas"
+          python3 -u << 'PYEOF'
+          import json, datetime, urllib.request, time
 
-          # Poging 1: kale curl
-          echo "=== Poging 1: kale curl ==="
-          curl -s -o page1.html -w "HTTP %{http_code}, %{size_download} bytes\n" --max-time 20 "$URL" || true
+          OBS_URL  = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen"
+          META_URL = "https://ddapi20-waterwebservices.rijkswaterstaat.nl/METADATASERVICES/OphalenCatalogus"
+          TARGET   = 8 * 60 + 30  # 08:30
 
-          # Poging 2: browser headers
-          echo "=== Poging 2: browser headers ==="
-          curl -s -o page2.html -w "HTTP %{http_code}, %{size_download} bytes\n" --max-time 20 \
-            -A "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" \
-            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-            -H "Accept-Language: nl-NL,nl;q=0.9" \
-            --compressed "$URL" || true
+          # Stap 1: ontdek alle Lobith-stations met watertemperatuur
+          def find_stations():
+              try:
+                  payload = json.dumps({
+                      "AquoMetadataLijst": [{"Grootheid": {"Code": "T"}, "Compartiment": {"Code": "OW"}}],
+                      "LocatieLijst": [], "PeriodeLijst": []
+                  }).encode()
+                  req = urllib.request.Request(META_URL, data=payload,
+                          headers={"Content-Type": "application/json"}, method="POST")
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      cat = json.loads(r.read())
+                  locs = cat.get("LocatieLijst", [])
+                  print(f"Catalogus: {len(locs)} stations totaal", flush=True)
+                  lobith = [l for l in locs
+                            if "lobith" in l.get("Code","").lower()
+                            or "lobith" in l.get("Naam","").lower()]
+                  print(f"Lobith stations: {lobith}", flush=True)
+                  return [l["Code"] for l in lobith] if lobith else ["lobith.ponton"]
+              except Exception as e:
+                  print(f"Catalogus fout: {e} — gebruik lobith.ponton", flush=True)
+                  return ["lobith.ponton"]
 
-          for f in page1.html page2.html; do
-            echo "=== Inhoud rond 'emperatu' in $f ==="
-            grep -i -n -C 3 "emperatu" "$f" | head -80 || echo "(niets gevonden)"
-            echo "=== Inhoud rond graden-teken in $f ==="
-            grep -n -C 2 "°C" "$f" | head -40 || echo "(niets gevonden)"
-            echo "=== Mogelijke XHR/API endpoints in $f ==="
-            grep -o -E "(fetch|ajax|XMLHttpRequest|\.php[^\"']*)" "$f" | sort | uniq -c | sort -rn | head -30 || true
-            grep -o -E "[a-zA-Z0-9_/.-]+\.php[^\"' <)]*" "$f" | sort -u | head -40 || true
-          done
+          station_codes = find_stations()
 
-          echo "=== Eerste 60 regels page2.html ==="
-          head -60 page2.html || true
+          def fetch_week(start_date, end_date):
+              start_str = start_date.strftime("%Y-%m-%dT00:00:00.000+01:00")
+              end_str   = end_date.strftime("%Y-%m-%dT23:59:00.000+01:00")
+              for code in station_codes:
+                  payload = json.dumps({
+                      "Locatie": {"Code": code},
+                      "AquoPlusWaarnemingMetadata": {
+                          "AquoMetadata": {"Compartiment": {"Code": "OW"}, "Grootheid": {"Code": "T"}}
+                      },
+                      "Periode": {"Begindatumtijd": start_str, "Einddatumtijd": end_str}
+                  }).encode()
+                  try:
+                      req = urllib.request.Request(OBS_URL, data=payload,
+                              headers={"Content-Type": "application/json"}, method="POST")
+                      with urllib.request.urlopen(req, timeout=20) as r:
+                          body = r.read()
+                      if not body:
+                          print(f"  [{code}] lege response", flush=True)
+                          continue
+                      data = json.loads(body)
+                      if data.get("WaarnemingenLijst"):
+                          print(f"  [{code}] data gevonden", flush=True)
+                          return data
+                      print(f"  [{code}] geen data: {str(data)[:150]}", flush=True)
+                  except Exception as e:
+                      print(f"  [{code}] fout: {e}", flush=True)
+              return None
 
-      - name: Upload HTML als artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: waterkaart-html
-          path: page*.html
-          if-no-files-found: ignore
+          today = datetime.date.today()
+          start = datetime.date(2026, 1, 1)
+          per_dag = {}
+
+          week_start = start
+          while week_start <= today:
+              week_end = min(week_start + datetime.timedelta(days=6), today)
+              print(f"Ophalen {week_start} t/m {week_end}...", flush=True)
+              data = fetch_week(week_start, week_end)
+              if data is None:
+                  print(f"  mislukt, overgeslagen", flush=True)
+              else:
+                  for w in data.get("WaarnemingenLijst", []):
+                      for m in w.get("MetingenLijst", []):
+                          v = m.get("Meetwaarde", {}).get("Waarde_Numeriek")
+                          t = m.get("Tijdstip", "")
+                          if v is None or not t:
+                              continue
+                          dag = t[:10]
+                          try:
+                              h, mn = int(t[11:13]), int(t[14:16])
+                              diff = abs(h * 60 + mn - TARGET)
+                          except Exception:
+                              diff = 9999
+                          if dag not in per_dag or diff < per_dag[dag][1]:
+                              per_dag[dag] = (v, diff)
+                  print(f"  OK — {len(per_dag)} dagen totaal", flush=True)
+              time.sleep(1)
+              week_start = week_end + datetime.timedelta(days=1)
+
+          print(f"Klaar: {len(per_dag)} dagen gevonden", flush=True)
+
+          try:
+              with open("temp-history.json") as f:
+                  history = json.load(f)
+          except Exception:
+              history = []
+
+          hist_map = {e["date"]: e for e in history}
+          for dag, (val, _) in per_dag.items():
+              hist_map.setdefault(dag, {"date": dag})["lobith"] = round(val * 10) / 10
+
+          history = sorted(hist_map.values(), key=lambda e: e["date"], reverse=True)[:365]
+          with open("temp-history.json", "w") as f:
+              json.dump(history, f, indent=2)
+
+          print(f"Opgeslagen: {len(history)} regels in temp-history.json", flush=True)
+          PYEOF
+
+      - name: Commit en push
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add temp-history.json
+          git diff --staged --quiet && echo "Geen wijziging" || \
+            git commit -m "Init Lobith historische watertemperatuur [skip ci]"
+          git pull --rebase origin HEAD
+          git push

@@ -91,6 +91,15 @@ jobs:
               "updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
           }
 
+          # Behoud waterkaart-veld uit vorige run als fallback
+          try:
+              with open("water-temp.json") as f:
+                  old = json.load(f)
+              if "waterkaart" in old:
+                  result["waterkaart"] = old["waterkaart"]
+          except Exception:
+              pass
+
           with open("water-temp.json", "w") as f:
               json.dump(result, f)
 
@@ -98,6 +107,53 @@ jobs:
           PYEOF
         env:
           USED_STATION: ${{ steps.fetch.outputs.used_station }}
+
+      - name: Fetch watertemperatuur De Lentse Plas (waterkaart.net)
+        run: |
+          python3 - <<'PYEOF'
+          import json, re, datetime, urllib.request
+
+          URL = "https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas"
+          val = None
+          try:
+              req = urllib.request.Request(URL, headers={
+                  "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                  "Accept-Language": "nl-NL,nl;q=0.9",
+              })
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  html = r.read().decode("utf-8", errors="replace")
+              # Voorbeeld: <span class="meet-label">Watertemperatuur</span><span class="meet-waarde">~23.2</span>
+              m = re.search(
+                  r'Watertemperatuur</span>\s*<span class="meet-waarde">\s*~?\s*([0-9]+(?:[.,][0-9]+)?)',
+                  html)
+              if m:
+                  val = round(float(m.group(1).replace(",", ".")), 1)
+                  print(f"Waterkaart De Lentse Plas: {val}°C")
+              else:
+                  print("Geen watertemperatuur gevonden op waterkaart-pagina")
+          except Exception as e:
+              print(f"Waterkaart fetch fout: {e}")
+
+          try:
+              with open("water-temp.json") as f:
+                  wt = json.load(f)
+          except Exception:
+              wt = {}
+
+          # Bij mislukte fetch blijft de vorige waterkaart-waarde staan
+          if val is not None:
+              wt["waterkaart"] = {
+                  "temperature": val,
+                  "label": "De Lentse Plas (waterkaart)",
+                  "source": "waterkaart.net",
+                  "updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+              }
+
+          with open("water-temp.json", "w") as f:
+              json.dump(wt, f)
+
+          print("water-temp.json:", wt)
+          PYEOF
 
       - name: Update temp-history.json
         run: |
@@ -115,6 +171,12 @@ jobs:
               wt = {}
 
           nijmegen_val = wt.get("temperature") if "Nijmegen" in wt.get("label", "") else None
+
+          # Waterkaart-waarde alleen in history als hij vandaag is opgehaald
+          wk = wt.get("waterkaart") or {}
+          waterkaart_val = wk.get("temperature")
+          if waterkaart_val is not None and not str(wk.get("updated", "")).startswith(today):
+              waterkaart_val = None
 
           # Haal Lobith 08:30-meting op voor history (vergelijkingsgrafiek)
           lobith_val = None
@@ -158,7 +220,7 @@ jobs:
               history = []
 
           today_entry = next((e for e in history if e.get("date") == today), None)
-          if today_entry and "nijmegen" in today_entry and "lobith" in today_entry:
+          if today_entry and "nijmegen" in today_entry and "lobith" in today_entry and "waterkaart" in today_entry:
               print("Vandaag al opgeslagen, overgeslagen.")
               sys.exit(0)
 
@@ -170,6 +232,8 @@ jobs:
               today_entry["nijmegen"] = nijmegen_val
           if lobith_val is not None:
               today_entry["lobith"] = lobith_val
+          if waterkaart_val is not None:
+              today_entry["waterkaart"] = waterkaart_val
 
           history.sort(key=lambda e: e.get("date", ""), reverse=True)
           history = history[:365]
