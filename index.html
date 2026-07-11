@@ -913,7 +913,7 @@
     </div>
   </div>
   <div class="card" style="margin-top:10px">
-    <div class="card-title">Watertemperatuur: eigen · Nijmegen (Waal) · Lobith</div>
+    <div class="card-title">Watertemperatuur: eigen · De Lentse Plas · Lobith</div>
     <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
     <div id="chart-compare-empty" style="display:none;font-size:12px;color:var(--muted);text-align:center;padding:12px 0">
       Nog geen historische data beschikbaar. Wordt dagelijks opgebouwd.
@@ -1449,6 +1449,7 @@ function condIconCircle(opts, val, size=20) {
 let readings   = [];
 let editingId  = null;
 let liveWaterTemp = null;
+let liveWaterkaartTemp = null;   // De Lentse Plas via waterkaart.net — alleen als default in het metingformulier
 let liveAirTemp   = null;
 let selSky     = null;
 let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
@@ -1648,13 +1649,16 @@ async function fetchWaterTemp() {
   try {
     const r = await fetch('./water-temp.json?t=' + Date.now());
     const d = await r.json();
-    if (d.temperature != null) return {
-      val: d.temperature,
+    const wk = (d.waterkaart && d.waterkaart.temperature != null) ? d.waterkaart.temperature : null;
+    if (d.temperature != null || wk !== null) return {
+      val: d.temperature ?? null,
+      wk,
+      wkLabel: (d.waterkaart && d.waterkaart.label) || 'De Lentse Plas (waterkaart)',
       label: d.label || 'Lobith',
       source: d.source || null
     };
   } catch { /* geen data beschikbaar */ }
-  return { val: null, label: 'Lobith', source: null };
+  return { val: null, wk: null, wkLabel: null, label: 'Lobith', source: null };
 }
 
 async function fetchAndFill() {
@@ -1678,6 +1682,8 @@ async function updateLiveTemps() {
       at < 5  ? '🥶' : at < 12 ? '🧥' :
       at < 18 ? '😊' : at < 25 ? '⛅' : '☀️';
   }
+  // Waterkaart-waarde alleen onthouden voor de formulier-default; weergave blijft RWS
+  liveWaterkaartTemp = wtResult.wk;
   const rwsEl  = document.getElementById('cur-water-rws');
   const srcEl  = document.getElementById('cur-water-rws-src');
   if (rwsEl) {
@@ -1752,7 +1758,10 @@ function openForm(id) {
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
   document.getElementById('f-dt').value = local;
-  document.getElementById('f-wt').value = liveWaterTemp !== null ? liveWaterTemp : '';
+  // Default: watertemperatuur van waterkaart.net (De Lentse Plas), anders RWS
+  document.getElementById('f-wt').value =
+    liveWaterkaartTemp !== null ? liveWaterkaartTemp :
+    liveWaterTemp      !== null ? liveWaterTemp      : '';
   document.getElementById('f-at').value = liveAirTemp   !== null ? liveAirTemp   : '';
   document.getElementById('f-id').value = '';
   clearPhoto();
@@ -2452,7 +2461,7 @@ async function renderComparisonChart() {
 
   const dsOwn        = allDates.map(d => ownByDay[d]
     ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
-  const dsNijmegen   = allDates.map(d => histMap[d]?.nijmegen ?? histMap[d]?.waterkaart ?? null);
+  const dsNijmegen   = allDates.map(d => histMap[d]?.waterkaart ?? histMap[d]?.nijmegen ?? null);
   const dsLobith     = allDates.map(d => histMap[d]?.lobith     ?? null);
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
@@ -2468,7 +2477,7 @@ async function renderComparisonChart() {
     data: { labels, datasets: [
       { label:'Eigen metingen',          data:dsOwn,        borderColor:'#0288d1',
         backgroundColor:'rgba(2,136,209,.08)', tension:.3, pointRadius:3, spanGaps:true },
-      { label:'Nijmegen (Waal)',           data:dsNijmegen,   borderColor:'#00897b',
+      { label:'De Lentse Plas (waterkaart)', data:dsNijmegen,   borderColor:'#00897b',
         backgroundColor:'rgba(0,137,123,.08)', tension:.3, pointRadius:2,
         borderDash:[4,3], spanGaps:true },
       { label:'Lobith (RWS)',             data:dsLobith,     borderColor:'#43a047',
