@@ -1449,6 +1449,7 @@ function condIconCircle(opts, val, size=20) {
 let readings   = [];
 let editingId  = null;
 let liveWaterTemp = null;
+let liveWaterkaartTemp = null;   // De Lentse Plas via waterkaart.net — alleen als default in het metingformulier
 let liveAirTemp   = null;
 let selSky     = null;
 let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
@@ -1681,29 +1682,28 @@ async function updateLiveTemps() {
       at < 5  ? '🥶' : at < 12 ? '🧥' :
       at < 18 ? '😊' : at < 25 ? '⛅' : '☀️';
   }
-  // Waterkaart (De Lentse Plas) heeft voorkeur boven het RWS-station
-  const bestWater      = wtResult.wk !== null ? wtResult.wk : wtResult.val;
-  const bestWaterLabel = wtResult.wk !== null ? wtResult.wkLabel : wtResult.label;
+  // Waterkaart-waarde alleen onthouden voor de formulier-default; weergave blijft RWS
+  liveWaterkaartTemp = wtResult.wk;
   const rwsEl  = document.getElementById('cur-water-rws');
   const srcEl  = document.getElementById('cur-water-rws-src');
   if (rwsEl) {
-    if (bestWater !== null) {
-      liveWaterTemp = bestWater;
-      rwsEl.textContent = bestWater.toFixed(1) + '°C';
-      rwsEl.style.color = tempColor(bestWater);
+    if (wtResult.val !== null) {
+      liveWaterTemp = wtResult.val;
+      rwsEl.textContent = wtResult.val.toFixed(1) + '°C';
+      rwsEl.style.color = tempColor(wtResult.val);
     } else {
       rwsEl.textContent = '--°C';
       rwsEl.style.color = 'var(--muted)';
     }
     if (srcEl) {
-      const bronTekst = bestWaterLabel;
+      const bronTekst = wtResult.label;
       srcEl.textContent = bronTekst;
     }
     // Kleur het huidige-temp blok op basis van watertemperatuur
     const curBlock = document.getElementById('cur-temp-block');
     if (curBlock) {
-      if (bestWater !== null) {
-        const hg = heroGradient(bestWater);
+      if (wtResult.val !== null) {
+        const hg = heroGradient(wtResult.val);
         curBlock.style.background  = hg.grad;
         curBlock.style.boxShadow   = `0 6px 24px ${hg.shadow}`;
         curBlock.classList.add('air-colored');
@@ -1758,7 +1758,10 @@ function openForm(id) {
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
   document.getElementById('f-dt').value = local;
-  document.getElementById('f-wt').value = liveWaterTemp !== null ? liveWaterTemp : '';
+  // Default: watertemperatuur van waterkaart.net (De Lentse Plas), anders RWS
+  document.getElementById('f-wt').value =
+    liveWaterkaartTemp !== null ? liveWaterkaartTemp :
+    liveWaterTemp      !== null ? liveWaterTemp      : '';
   document.getElementById('f-at').value = liveAirTemp   !== null ? liveAirTemp   : '';
   document.getElementById('f-id').value = '';
   clearPhoto();
