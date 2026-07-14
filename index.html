@@ -516,13 +516,71 @@
     .chart-scroll-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .chart-scroll-inner { position:relative; height:200px; min-width:100%; }
 
-    /* ── Landscape: grotere grafieken ── */
+    /* ── Zwevende terug-knop (alleen in liggende grafiekmodus zichtbaar) ── */
+    .land-exit {
+      display: none;
+      position: fixed; top: 8px; right: 10px; z-index: 220;
+      width: 34px; height: 34px; border-radius: 50%;
+      align-items: center; justify-content: center;
+      border: none; cursor: pointer;
+      background: rgba(255,255,255,.85); color: var(--text);
+      box-shadow: 0 2px 10px rgba(0,0,0,.15);
+      font-size: 18px; line-height: 1; font-family: var(--font);
+    }
+
+    /* ── Landscape: iets grotere grafieken (alle apparaten) ── */
     @media (orientation: landscape) {
       .chart-wrap { height: calc(80vh - 80px); min-height:180px; }
       .chart-scroll-inner { height: calc(80vh - 80px); min-height:180px; }
-      #page-chart { padding: 4px 8px; }
-      #page-chart .card { margin-bottom:5px; padding:8px 12px; }
-      body { padding-bottom: 56px; }
+    }
+
+    /* ── Landscape op touch-toestel + grafiekpagina: fullscreen, veeg per grafiek ── */
+    @media (orientation: landscape) and (pointer: coarse) {
+      /* Balken verbergen zodra de grafiekpagina actief is */
+      body.chart-active header,
+      body.chart-active .nav { display: none; }
+      body.chart-active { padding-bottom: 0; }
+      body.chart-active .land-exit { display: flex; }
+
+      /* Grafiekpagina wordt een horizontale carousel over het hele scherm */
+      body.chart-active #page-chart {
+        display: flex; flex-direction: row;
+        position: fixed; inset: 0; z-index: 200;
+        max-width: none; margin: 0; padding: 0;
+        overflow-x: auto; overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        background: var(--bg);
+      }
+      /* Elke kaart = één volledige pagina */
+      body.chart-active #page-chart > .card {
+        flex: 0 0 100vw; width: 100vw; height: 100vh; height: 100dvh;
+        margin: 0; border-radius: 0;
+        scroll-snap-align: center;
+        display: flex; flex-direction: column;
+        padding: 48px 16px 14px;
+      }
+      /* Grafiek vult de beschikbare hoogte */
+      body.chart-active #page-chart > .card .chart-wrap,
+      body.chart-active #page-chart > .card .chart-scroll-outer {
+        flex: 1 1 auto; height: auto; min-height: 0;
+      }
+      body.chart-active #page-chart > .card .chart-scroll-inner {
+        height: 100%; min-height: 0;
+      }
+      /* Filterbalk als zwevende overlay bovenaan, op elke pagina bereikbaar */
+      body.chart-active #chart-filter-btns {
+        position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+        z-index: 210; margin: 0; padding: 5px 10px;
+        background: rgba(255,255,255,.85); backdrop-filter: blur(6px);
+        border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.12);
+        max-width: 82vw; justify-content: center; flex-wrap: nowrap;
+        overflow-x: auto;
+      }
+    }
+    @media (orientation: landscape) and (pointer: coarse) and (prefers-color-scheme: dark) {
+      body.chart-active #chart-filter-btns { background: rgba(17,33,54,.9); }
+      .land-exit { background: rgba(17,33,54,.9); color: #e8eef4; }
     }
 
     /* ── Photo overlay / lightbox ── */
@@ -1001,6 +1059,9 @@
     Versie 2.17 &nbsp;·&nbsp; <span id="build-time"></span>
   </div>
 </div>
+
+<!-- Terug-knop voor liggende fullscreen grafiekweergave -->
+<button class="land-exit" onclick="exitChartLandscape()" aria-label="Terug naar startscherm">✕</button>
 
 <!-- BOTTOM NAV -->
 <nav class="nav">
@@ -1739,7 +1800,15 @@ function goPage(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
+  // Grafiekpagina: in liggende stand fullscreen carousel (banners weg) — zie CSS
+  document.body.classList.toggle('chart-active', name === 'chart');
   if (name === 'chart') setTimeout(() => { renderChartFilterButtons(); renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 50);
+}
+
+// Verlaat de fullscreen liggende grafiekweergave (terug naar startscherm met balken)
+function exitChartLandscape() {
+  const homeBtn = document.querySelector('.nav-btn');
+  goPage('home', homeBtn);
 }
 
 // ─── FORM ─────────────────────────────────────
@@ -2511,7 +2580,7 @@ async function renderComparisonChart() {
         borderDash:[5,4], spanGaps:true },
     ]},
     options: {
-      responsive:true, maintainAspectRatio:true,
+      responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index', intersect:false },
       plugins:{
         legend:{ labels:{ color:tc, font:{ size:11 }, usePointStyle:true } },
