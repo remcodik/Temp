@@ -1,10 +1,12 @@
 // Service Worker — Lentse Plas Temperatuur Tracker
-const CACHE = 'lentse-plas-v20260328';  // Update dit bij elke deploy
+const CACHE = 'lentse-plas-v20260714';  // Update dit bij elke deploy
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js',
+  'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js',
 ];
 
 // Install: cache bestanden — wacht op signaal van app voor activatie
