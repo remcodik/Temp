@@ -375,15 +375,6 @@
     .profile-chip .pc-medal { font-size:22px; line-height:1; }
     .profile-chip .pc-name  { font-size:13px; font-weight:700; color:var(--text); }
 
-    /* ── Data filters — scrollbare rij ── */
-    .year-filter { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
-    .yf-btn {
-      padding:4px 12px; border-radius:16px; border:none;
-      font-size:11px; font-weight:600; cursor:pointer;
-      background:#eef2f5; color:var(--muted);
-      font-family:var(--font); transition:all .15s;
-    }
-    .yf-btn.active { background:#0288d1; color:white; }
 
     /* ── Photo thumbnail in card ── */
     .rc-thumb {
@@ -776,8 +767,6 @@
       .df-btn { background:#1a3a5c; color:#90caf9; }
       .df-btn.active { background:var(--primary); color:white; }
       .df-btn.active-top { background:#e65100; color:white; }
-      .yf-btn { background:#1a3a5c; color:#90caf9; }
-      .yf-btn.active { background:#0288d1; color:white; }
       .ct-btn { background:#1a3a5c; color:#90caf9; }
       .ct-btn.active { background:var(--primary); color:white; }
       .rc-cond-icon { filter: brightness(0.8) saturate(1.3); }
@@ -883,18 +872,13 @@
 
 <!-- CHART -->
 <div id="page-chart" class="page">
-  <div class="period-filter">
-    <button class="pf-btn active" onclick="setChartPeriod('all',this)">Alles</button>
-    <button class="pf-btn" onclick="setChartPeriod('year',this)">Dit jaar</button>
-    <button class="pf-btn" onclick="setChartPeriod('3m',this)">3 maanden</button>
-  </div>
+  <div class="period-filter" id="chart-filter-btns"></div>
   <div class="card">
     <div class="card-title">Water- &amp; luchttemperatuur over tijd</div>
     <div class="chart-wrap"><canvas id="chart-combined"></canvas></div>
   </div>
   <div class="card" style="margin-top:10px">
     <div class="card-title">Gem. watertemperatuur per maand</div>
-    <div class="year-filter" id="year-filter-btns"></div>
     <div class="chart-scroll-outer">
       <div class="chart-scroll-inner" id="chart-monthly-wrap">
         <canvas id="chart-monthly"></canvas>
@@ -1457,8 +1441,7 @@ let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
 let chartCond    = null;
-let chartPeriod  = 'all';
-let chartYearFilter = new Date().getFullYear(); // huidig jaar als standaard
+let chartFilter = 'all';   // 'all' | jaartal (getal) | '6m' | '12m' — geldt voor ALLE grafieken
 let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
 let undoBuffer  = null;
 let undoTimer   = null;
@@ -1728,7 +1711,7 @@ function goPage(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'chart') setTimeout(() => { renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 50);
+  if (name === 'chart') setTimeout(() => { renderChartFilterButtons(); renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 50);
 }
 
 // ─── FORM ─────────────────────────────────────
@@ -2285,7 +2268,7 @@ function renderAll() {
   renderBestDay();
   const chartPage = document.getElementById('page-chart');
   if (chartPage && chartPage.classList.contains('active')) {
-    renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart();
+    renderChartFilterButtons(); renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart();
   }
 
   renderList('preview-list', primary.slice(0,5));
@@ -2448,10 +2431,16 @@ async function renderComparisonChart() {
   const histMap = {};
   history.forEach(h => { histMap[h.date] = h; });
 
+  // Alleen datums met een échte waarde tonen — de history bevat veel lege
+  // placeholder-rijen (dagen zonder RWS/waterkaart-data) die anders de x-as vullen.
+  const histDates = history
+    .filter(h => h.waterkaart != null || h.nijmegen != null || h.lobith != null)
+    .map(h => h.date);
+
   const allDates = [...new Set([
     ...Object.keys(ownByDay),
-    ...history.map(h => h.date)
-  ])].sort();
+    ...histDates
+  ])].filter(d => chartFilterMatch(d)).sort();
 
   if (!allDates.length) {
     if (emptyEl) emptyEl.style.display = 'block';
@@ -2503,43 +2492,60 @@ async function renderComparisonChart() {
 }
 
 // ─── CHARTS ───────────────────────────────────
-function setChartPeriod(period, btn) {
-  chartPeriod = period;
-  document.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
+// Eén periodefilter voor álle grafieken.
+// chartFilter: 'all' | jaartal (getal) | '6m' (laatste 6 mnd) | '12m' (laatste jaar)
+function chartFilterMatch(dateStr) {
+  if (chartFilter === 'all') return true;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return false;
+  if (chartFilter === '6m') {
+    const c = new Date(); c.setMonth(c.getMonth() - 6); return d >= c;
+  }
+  if (chartFilter === '12m') {
+    const c = new Date(); c.setFullYear(c.getFullYear() - 1); return d >= c;
+  }
+  return d.getFullYear() === chartFilter;   // specifiek jaar
+}
+
+function setChartFilter(val, btn) {
+  chartFilter = val;
+  document.querySelectorAll('#chart-filter-btns .pf-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderCharts();
   renderMonthChart();
-}
-
-function setYearFilter(year, btn) {
-  chartYearFilter = year;
-  document.querySelectorAll('.yf-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderMonthChart();
   renderCondChart();
+  renderComparisonChart();
 }
 
-function renderYearFilterButtons() {
-  const container = document.getElementById('year-filter-btns');
+async function renderChartFilterButtons() {
+  const container = document.getElementById('chart-filter-btns');
   if (!container) return;
-  const years = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b) => b - a);
-  let html = `<button class="yf-btn ${chartYearFilter === 'all' ? 'active' : ''}" onclick="setYearFilter('all',this)">Alles</button>`;
-  years.forEach(y => {
-    html += `<button class="yf-btn ${chartYearFilter === y ? 'active' : ''}" onclick="setYearFilter(${y},this)">${y}</button>`;
-  });
+  // Jaren uit eigen metingen én historische data — toekomstbestendig:
+  // nieuwe jaren verschijnen vanzelf zodra er data voor is.
+  const years = new Set(readings.map(r => new Date(r.datetime).getFullYear()));
+  const history = await fetchTempHistory();
+  history.forEach(h => { if (h.date) years.add(new Date(h.date).getFullYear()); });
+  const yearList = [...years].filter(y => !isNaN(y)).sort((a,b) => b - a);
+
+  // Als het actieve jaarfilter niet meer bestaat, val terug op 'all'
+  if (typeof chartFilter === 'number' && !yearList.includes(chartFilter)) chartFilter = 'all';
+
+  const mkBtn = (val, txt) => {
+    const arg = typeof val === 'number' ? val : `'${val}'`;
+    return `<button class="pf-btn ${chartFilter === val ? 'active' : ''}" onclick="setChartFilter(${arg},this)">${txt}</button>`;
+  };
+
+  let html = mkBtn('all', 'Alles');
+  yearList.forEach(y => { html += mkBtn(y, y); });
+  html += mkBtn('6m', '6 mnd') + mkBtn('12m', '1 jaar');
   container.innerHTML = html;
 }
 
 function renderCharts() {
-  // Filter op periode
-  let sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
-  if (chartPeriod === 'year') {
-    const y = new Date().getFullYear();
-    sorted = sorted.filter(r => new Date(r.datetime).getFullYear() === y);
-  } else if (chartPeriod === '3m') {
-    const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - 3);
-    sorted = sorted.filter(r => new Date(r.datetime) >= cutoff);
-  }
+  // Filter op het gedeelde periodefilter
+  const sorted = [...readings]
+    .filter(r => chartFilterMatch(r.datetime))
+    .sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
 
   const labels = sorted.map(r => new Date(r.datetime).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}));
   const wt = sorted.map(r => r.waterTemp);
@@ -2586,34 +2592,42 @@ function renderMonthChart() {
     return;
   }
 
-  renderYearFilterButtons();
-
   const MONTH_NAMES = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-  let labels = [], avgs = [];
-
-  if (chartYearFilter !== 'all') {
-    // Specifiek jaar geselecteerd — altijd alle 12 maanden tonen
-    const year = chartYearFilter;
-    labels = MONTH_NAMES;
-    avgs = MONTH_NAMES.map((_, m) => {
-      const sub = readings.filter(r => {
-        const d = new Date(r.datetime);
-        return d.getFullYear() === year && d.getMonth() === m;
-      });
-      return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
+  const avgOf = (year, month) => {
+    const sub = readings.filter(r => {
+      const d = new Date(r.datetime);
+      return d.getFullYear() === year && d.getMonth() === month;
     });
+    return sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null;
+  };
+
+  let labels = [], avgs = [];
+  let compact = false;   // true = past zonder horizontale scroll
+
+  if (typeof chartFilter === 'number') {
+    // Specifiek jaar — altijd alle 12 maanden tonen
+    labels = MONTH_NAMES;
+    avgs = MONTH_NAMES.map((_, m) => avgOf(chartFilter, m));
+    compact = true;
+
+  } else if (chartFilter === '6m' || chartFilter === '12m') {
+    // Laatste 6 of 12 maanden — alleen de maanden binnen het venster
+    const now = new Date();
+    const count = chartFilter === '6m' ? 6 : 12;
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(MONTH_NAMES[d.getMonth()] + ' \'' + String(d.getFullYear()).slice(2));
+      avgs.push(avgOf(d.getFullYear(), d.getMonth()));
+    }
+    compact = count <= 6;
 
   } else {
     // Alles — per jaar alle 12 maanden tonen
     const yearSet = [...new Set(readings.map(r => new Date(r.datetime).getFullYear()))].sort((a,b)=>a-b);
     yearSet.forEach(year => {
       MONTH_NAMES.forEach((mn, m) => {
-        const sub = readings.filter(r => {
-          const d = new Date(r.datetime);
-          return d.getFullYear() === year && d.getMonth() === m;
-        });
         labels.push(mn + ' \'' + String(year).slice(2));
-        avgs.push(sub.length ? sub.reduce((s,r) => s + r.waterTemp, 0) / sub.length : null);
+        avgs.push(avgOf(year, m));
       });
     });
   }
@@ -2630,17 +2644,10 @@ function renderMonthChart() {
     return 'rgba(255,167,38,.8)';
   });
 
-  // Stel canvas breedte in: bij specifiek jaar altijd passend in viewport (geen scroll)
+  // Stel canvas breedte in: compacte selecties passen in beeld, anders scrollen
   const wrap = document.getElementById('chart-monthly-wrap');
   const containerW = wrap.parentElement.clientWidth || 300;
-  let canvasW;
-  if (chartYearFilter !== 'all') {
-    // 12 vaste maanden — passen altijd in beeld, geen horizontale scroll
-    canvasW = containerW;
-  } else {
-    // Alles — bij veel maanden wél horizontaal scrollen
-    canvasW = Math.max(containerW, labels.length * 40);
-  }
+  const canvasW = compact ? containerW : Math.max(containerW, labels.length * 40);
   wrap.style.width = canvasW + 'px';
 
   if (chartMonthly) chartMonthly.destroy();
@@ -2705,15 +2712,17 @@ function renderCondChart() {
     title = 'Windkracht per maand';
   }
 
-  // Maanden (label) ophalen — zelfde logica als renderMonthChart
+  // Maanden (label) ophalen — zelfde gedeelde filter als de andere grafieken
   const MAAND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
   let monthKeys, labels;
-  if (chartYearFilter !== 'all') {
-    const year = chartYearFilter;
+  if (typeof chartFilter === 'number') {
+    const year = chartFilter;
     monthKeys = MAAND.map((_, i) => `${year}-${String(i + 1).padStart(2,'0')}`);
     labels    = MAAND;
   } else {
-    const sorted = [...readings].sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
+    const sorted = [...readings]
+      .filter(r => chartFilterMatch(r.datetime))
+      .sort((a,b) => new Date(a.datetime) - new Date(b.datetime));
     monthKeys = [...new Set(sorted.map(r => r.datetime.slice(0,7)))];
     labels = monthKeys.map(k => {
       const [y, m] = k.split('-');
