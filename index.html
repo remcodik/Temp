@@ -212,11 +212,20 @@
       overflow: hidden;
     }
     .cur-title {
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
       font-size:10px; font-weight:700; text-transform:uppercase;
       letter-spacing:.8px; color:var(--muted);
       padding-bottom:8px; margin-bottom:8px;
       border-bottom:1px solid var(--border);
     }
+    .cur-refresh {
+      background:none; border:none; cursor:pointer; padding:2px;
+      font-size:15px; line-height:1; opacity:.7; font-family:var(--font);
+    }
+    .cur-refresh:active { opacity:1; }
+    .cur-refresh:disabled { cursor:default; }
+    .cur-refresh.spinning { animation: cur-spin .8s linear infinite; }
+    @keyframes cur-spin { to { transform: rotate(360deg); } }
     .cur-grid  { display:grid; grid-template-columns:1fr 1fr; }
     .cur-col   { padding:0 12px; }
     .cur-col:first-child { padding-left:0; border-right:1px solid var(--border); }
@@ -225,11 +234,11 @@
     .cur-val   { font-size:42px; font-weight:900; line-height:1; letter-spacing:-2px; white-space:nowrap; color:var(--muted); }
     .cur-val-lg{ font-size:60px; font-weight:900; line-height:1; letter-spacing:-3px; white-space:nowrap; color:var(--muted); }
     .cur-sub   { font-size:11px; color:var(--muted); margin-top:4px; min-height:15px; }
-    /* Week-trend badge bij de watertemperatuur */
+    /* Week-trend badge bij de watertemperatuur (compact) */
     .cur-trend {
-      display:inline-flex; align-items:center; gap:4px;
-      margin-top:6px; padding:2px 9px; border-radius:12px;
-      font-size:11px; font-weight:800; line-height:1.4; white-space:nowrap;
+      display:inline-flex; align-items:center; gap:3px;
+      margin-top:5px; padding:1px 7px; border-radius:10px;
+      font-size:10px; font-weight:800; line-height:1.4; white-space:nowrap;
       background:#eef2f5; color:var(--muted);
     }
     .cur-trend.trend-up   { background:#fdecea; color:#c0392b; }
@@ -237,6 +246,24 @@
     .cur-trend.trend-flat { background:#eef2f5; color:#607d8b; }
     /* Op het gekleurde blok: translucent witte pill, altijd leesbaar */
     .air-colored .cur-trend { background:rgba(255,255,255,.22) !important; color:#fff !important; }
+
+    /* ── Waterkwaliteit-badge (onder het temp-blok) ── */
+    .quality-badge {
+      display:flex; align-items:flex-start; gap:8px;
+      margin-bottom:9px; padding:9px 12px; border-radius:12px;
+      font-family:var(--font); font-size:13px; line-height:1.35;
+      background:#f1f5f8; box-shadow:var(--shadow);
+    }
+    .quality-badge .qb-dot    { font-size:14px; line-height:1.25; flex-shrink:0; }
+    .quality-badge .qb-body   { flex:1; min-width:0; }
+    .quality-badge .qb-status { font-weight:800; }
+    .quality-badge .qb-cause  { font-size:12px; color:var(--muted); margin-top:2px; }
+    .quality-badge.q-groen  { background:#e9f7ef; }
+    .quality-badge.q-groen  .qb-status { color:#1e8e3e; }
+    .quality-badge.q-oranje { background:#fef4e6; }
+    .quality-badge.q-oranje .qb-status { color:#c76b00; }
+    .quality-badge.q-rood   { background:#fdecea; }
+    .quality-badge.q-rood   .qb-status { color:#c0392b; }
 
     /* ── Stats grid ── */
     .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:9px; }
@@ -833,6 +860,13 @@
       .ico .il { color:#90caf9; }
       .close-btn { background:#1a3a5c; color:#e3f2fd; }
       .stat-card, .reading-card, .action-card, .modal, .air-secondary { background:#112136; }
+      .quality-badge          { background:#112136; }
+      .quality-badge.q-groen  { background:rgba(46,160,67,.18); }
+      .quality-badge.q-groen  .qb-status { color:#66bb6a; }
+      .quality-badge.q-oranje { background:rgba(230,119,0,.20); }
+      .quality-badge.q-oranje .qb-status { color:#ffb74d; }
+      .quality-badge.q-rood   { background:rgba(192,57,43,.22); }
+      .quality-badge.q-rood   .qb-status { color:#ef9a9a; }
       .rc-sep { color:rgba(255,255,255,.18); }
       .rc-edit  { background:#0d3a60; }
       .fetch-btn { background:#0d3a60; }
@@ -896,12 +930,15 @@
 <!-- HOME -->
 <div id="page-home" class="page active">
   <div class="air-secondary" id="cur-temp-block">
-    <div class="cur-title">Huidige temperatuur</div>
+    <div class="cur-title">
+      <span>Huidige temperatuur</span>
+      <button class="cur-refresh" id="cur-refresh-btn" onclick="refreshLiveTemps()" aria-label="Ververs temperatuur" title="Ververs">🔄</button>
+    </div>
     <div class="cur-grid">
       <div class="cur-col">
         <div class="cur-lbl">🌊 Water</div>
         <div class="cur-val-lg" id="cur-water-rws">--°C</div>
-        <div class="cur-sub" id="cur-water-rws-src"></div>
+        <div class="cur-sub" id="cur-water-rws-src" style="display:none"></div>
         <div class="cur-trend" id="cur-water-trend" style="display:none"></div>
       </div>
       <div class="cur-col">
@@ -911,6 +948,7 @@
       </div>
     </div>
   </div>
+  <div class="quality-badge" id="cur-quality" style="display:none"></div>
   <div id="water-hero-section"></div>
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
@@ -1740,10 +1778,11 @@ async function fetchWaterTemp() {
       wk,
       wkLabel: (d.waterkaart && d.waterkaart.label) || 'De Lentse Plas (waterkaart)',
       label: d.label || 'Lobith',
-      source: d.source || null
+      source: d.source || null,
+      quality: d.quality || null
     };
   } catch { /* geen data beschikbaar */ }
-  return { val: null, wk: null, wkLabel: null, label: 'Lobith', source: null };
+  return { val: null, wk: null, wkLabel: null, label: 'Lobith', source: null, quality: null };
 }
 
 async function fetchAndFill() {
@@ -1806,7 +1845,62 @@ async function updateLiveTemps() {
     const weekTrend = wtResult.wk !== null ? await computeWeeklyWaterTrend() : null;
     renderWaterTrendBadge(weekTrend);
   }
+  // Waterkwaliteit-badge (De Lentse Plas)
+  renderQualityBadge(wtResult.quality);
 }
+
+// Toont de zwemwaterkwaliteit van De Lentse Plas als gekleurde badge onder het temp-blok
+function renderQualityBadge(q) {
+  const el = document.getElementById('cur-quality');
+  if (!el) return;
+  if (!q || !q.status) { el.style.display = 'none'; el.textContent = ''; return; }
+
+  const color = String(q.color || '').toLowerCase();
+  const known = ['groen', 'oranje', 'rood'].includes(color);
+  const dot = color === 'groen' ? '🟢' : color === 'oranje' ? '🟠' : color === 'rood' ? '🔴' : '⚪';
+  const statusTxt = q.status.charAt(0).toUpperCase() + q.status.slice(1);
+
+  el.className = 'quality-badge q-' + (known ? color : 'groen');
+  el.textContent = '';   // veilig opbouwen (geen innerHTML met gescrapete tekst)
+
+  const dotEl = document.createElement('span');
+  dotEl.className = 'qb-dot';
+  dotEl.textContent = dot;
+
+  const body = document.createElement('div');
+  body.className = 'qb-body';
+  const st = document.createElement('div');
+  st.className = 'qb-status';
+  st.textContent = 'Waterkwaliteit: ' + statusTxt;
+  body.appendChild(st);
+
+  // Oorzaak alleen tonen als het niet 'goed' is
+  if (q.cause && color !== 'groen') {
+    const c = document.createElement('div');
+    c.className = 'qb-cause';
+    c.textContent = q.cause + (q.since ? ' · sinds ' + q.since : '');
+    body.appendChild(c);
+  }
+
+  el.appendChild(dotEl);
+  el.appendChild(body);
+  el.style.display = 'flex';
+}
+
+// Handmatig de laatst gepubliceerde temperatuur/kwaliteit opnieuw ophalen
+async function refreshLiveTemps() {
+  const btn = document.getElementById('cur-refresh-btn');
+  if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
+  try {
+    await updateLiveTemps();
+    showToast('🔄 Ververst');
+  } catch {
+    showToast('❌ Verversen mislukt');
+  } finally {
+    if (btn) { btn.classList.remove('spinning'); btn.disabled = false; }
+  }
+}
+
 // ─── WEEK-TREND WATERTEMPERATUUR (De Lentse Plas) ──────────
 // Netto verschil: laatste dagwaarde minus de waarde ~7 dagen eerder.
 async function computeWeeklyWaterTrend() {
