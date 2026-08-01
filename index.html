@@ -1438,7 +1438,7 @@ const WEATHER_API =
   `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
   `&current=temperature_2m&timezone=Europe%2FAmsterdam`;
 
-// RWS watertemperatuur — wordt elk uur bijgewerkt via GitHub Action (geen CORS issue)
+// RWS watertemperatuur — wordt dagelijks bijgewerkt via GitHub Action (geen CORS issue)
 
 const SKY = [
   { v:'sunny',         e:'☀️',  l:'Zonnig',       cc:'#f59e0b', bg:'#fef3c7' },  // amber
@@ -1729,7 +1729,7 @@ async function fetchAirTemp() {
 
 // ─── RWS WATERTEMPERATUUR ─────────────────────
 // ─── RWS WATERTEMPERATUUR ─────────────────────
-// Leest water-temp.json — bijgewerkt elk uur door GitHub Action (geen CORS probleem)
+// Leest water-temp.json — dagelijks bijgewerkt door GitHub Action (geen CORS probleem)
 async function fetchWaterTemp() {
   try {
     const r = await fetch('./water-temp.json?t=' + Date.now());
