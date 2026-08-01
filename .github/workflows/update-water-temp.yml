@@ -134,12 +134,13 @@ jobs:
         env:
           USED_STATION: ${{ steps.fetch.outputs.used_station }}
 
-      - name: Fetch watertemperatuur De Lentse Plas (waterkaart.net)
+      - name: Fetch watertemperatuur + waterkwaliteit De Lentse Plas (waterkaart.net)
         run: |
           python3 - <<'PYEOF'
           import json, re, datetime, urllib.request
 
           URL = "https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas"
+          html = None
           val = None
           try:
               req = urllib.request.Request(URL, headers={
@@ -148,7 +149,14 @@ jobs:
               })
               with urllib.request.urlopen(req, timeout=15) as r:
                   html = r.read().decode("utf-8", errors="replace")
-              # Voorbeeld: <span class="meet-label">Watertemperatuur</span><span class="meet-waarde">~23.2</span>
+          except Exception as e:
+              print(f"Waterkaart fetch fout: {e}")
+
+          now_iso = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          # ── Watertemperatuur ──
+          # Voorbeeld: <span class="meet-label">Watertemperatuur</span><span class="meet-waarde">~23.2</span>
+          if html:
               m = re.search(
                   r'Watertemperatuur</span>\s*<span class="meet-waarde">\s*~?\s*([0-9]+(?:[.,][0-9]+)?)',
                   html)
@@ -157,8 +165,43 @@ jobs:
                   print(f"Waterkaart De Lentse Plas: {val}°C")
               else:
                   print("Geen watertemperatuur gevonden op waterkaart-pagina")
-          except Exception as e:
-              print(f"Waterkaart fetch fout: {e}")
+
+          # ── Waterkwaliteit ──
+          # Status: <span class="meet-waarde bold oranje">waarschuwing</span>  (kleur = groen/oranje/rood)
+          quality = None
+          if html:
+              ms = re.search(
+                  r'zwemwaterkwaliteit bij[^<]*?is\s*<span class="meet-waarde bold (\w+)">\s*([^<]+?)\s*</span>',
+                  html)
+              if ms:
+                  quality = {
+                      "status": ms.group(2).strip().lower(),
+                      "color":  ms.group(1).strip().lower(),   # groen | oranje | rood
+                      "cause": None,
+                      "since": None,
+                      "measured": None,
+                      "updated": now_iso,
+                  }
+                  # Oorzaak (alleen aanwezig bij waarschuwing/afgeraden)
+                  mo = re.search(
+                      r'<b>Oorzaak</b>\s*<br>\s*(.*?)\s*<br>\s*<span class="meta-tekst">\s*Vanaf:\s*<span[^>]*>\s*([0-9]{2}-[0-9]{2}-[0-9]{4})',
+                      html, re.S)
+                  if mo:
+                      cause = re.sub(r'<[^>]+>', '', mo.group(1))
+                      quality["cause"] = cause.strip().rstrip('_ ').strip()
+                      quality["since"] = mo.group(2).strip()
+                  else:
+                      mo2 = re.search(r'<b>Oorzaak</b>\s*<br>\s*(.*?)\s*<br>', html, re.S)
+                      if mo2:
+                          cause = re.sub(r'<[^>]+>', '', mo2.group(1))
+                          quality["cause"] = cause.strip().rstrip('_ ').strip()
+                  # Meetdatum kwaliteit
+                  md = re.search(r'Kwaliteit:\s*([0-9]{2}-[0-9]{2}-[0-9]{4})', html)
+                  if md:
+                      quality["measured"] = md.group(1)
+                  print(f"Waterkwaliteit: {quality['status']} ({quality['color']}) — {quality['cause']}")
+              else:
+                  print("Geen waterkwaliteit-status gevonden op waterkaart-pagina")
 
           try:
               with open("water-temp.json") as f:
@@ -166,14 +209,16 @@ jobs:
           except Exception:
               wt = {}
 
-          # Bij mislukte fetch blijft de vorige waterkaart-waarde staan
+          # Bij mislukte fetch blijft de vorige waarde staan
           if val is not None:
               wt["waterkaart"] = {
                   "temperature": val,
                   "label": "De Lentse Plas (waterkaart)",
                   "source": "waterkaart.net",
-                  "updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                  "updated": now_iso,
               }
+          if quality is not None:
+              wt["quality"] = quality
 
           with open("water-temp.json", "w") as f:
               json.dump(wt, f)
