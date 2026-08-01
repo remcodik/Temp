@@ -225,6 +225,18 @@
     .cur-val   { font-size:42px; font-weight:900; line-height:1; letter-spacing:-2px; white-space:nowrap; color:var(--muted); }
     .cur-val-lg{ font-size:60px; font-weight:900; line-height:1; letter-spacing:-3px; white-space:nowrap; color:var(--muted); }
     .cur-sub   { font-size:11px; color:var(--muted); margin-top:4px; min-height:15px; }
+    /* Week-trend badge bij de watertemperatuur */
+    .cur-trend {
+      display:inline-flex; align-items:center; gap:4px;
+      margin-top:6px; padding:2px 9px; border-radius:12px;
+      font-size:11px; font-weight:800; line-height:1.4; white-space:nowrap;
+      background:#eef2f5; color:var(--muted);
+    }
+    .cur-trend.trend-up   { background:#fdecea; color:#c0392b; }
+    .cur-trend.trend-down { background:#e8f2fb; color:#1565c0; }
+    .cur-trend.trend-flat { background:#eef2f5; color:#607d8b; }
+    /* Op het gekleurde blok: translucent witte pill, altijd leesbaar */
+    .air-colored .cur-trend { background:rgba(255,255,255,.22) !important; color:#fff !important; }
 
     /* ── Stats grid ── */
     .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:9px; }
@@ -890,6 +902,7 @@
         <div class="cur-lbl">🌊 Water</div>
         <div class="cur-val-lg" id="cur-water-rws">--°C</div>
         <div class="cur-sub" id="cur-water-rws-src"></div>
+        <div class="cur-trend" id="cur-water-trend" style="display:none"></div>
       </div>
       <div class="cur-col">
         <div class="cur-lbl">🌡️ Lucht</div>
@@ -1789,8 +1802,59 @@ async function updateLiveTemps() {
         if (iconEl) iconEl.style.color = 'rgba(255,255,255,.8)';
       }
     }
+    // Week-trend van De Lentse Plas (netto verschil t.o.v. 7 dagen terug)
+    const weekTrend = wtResult.wk !== null ? await computeWeeklyWaterTrend() : null;
+    renderWaterTrendBadge(weekTrend);
   }
 }
+// ─── WEEK-TREND WATERTEMPERATUUR (De Lentse Plas) ──────────
+// Netto verschil: laatste dagwaarde minus de waarde ~7 dagen eerder.
+async function computeWeeklyWaterTrend() {
+  const history = await fetchTempHistory();
+  if (!Array.isArray(history)) return null;
+  const series = history
+    .filter(h => h && h.waterkaart != null && h.date)
+    .map(h => ({ date: h.date, v: h.waterkaart }))
+    .sort((a,b) => a.date.localeCompare(b.date));   // oplopend op datum
+  if (series.length < 2) return null;
+
+  const latest     = series[series.length - 1];
+  const latestDate = new Date(latest.date + 'T00:00');
+  const target     = new Date(latestDate);
+  target.setDate(target.getDate() - 7);
+
+  // Dagen binnen [7 dagen terug .. gisteren]; referentie = oudste (dichtst bij 7 dgn terug)
+  const inWindow = series.filter(s => {
+    const d = new Date(s.date + 'T00:00');
+    return d >= target && d < latestDate;
+  });
+  if (!inWindow.length) return null;
+
+  const ref   = inWindow[0];
+  const delta = +(latest.v - ref.v).toFixed(1);
+  const days  = Math.round((latestDate - new Date(ref.date + 'T00:00')) / 86400000);
+  return { delta, from: ref.v, to: latest.v, days };
+}
+
+function renderWaterTrendBadge(trend) {
+  const el = document.getElementById('cur-water-trend');
+  if (!el) return;
+  if (!trend) { el.style.display = 'none'; el.textContent = ''; return; }
+  const DEAD = 0.3;   // dode zone: kleine schommeling = stabiel
+  let arrow, cls, txt;
+  if (Math.abs(trend.delta) < DEAD) {
+    arrow = '→'; cls = 'trend-flat'; txt = 'stabiel';
+  } else if (trend.delta > 0) {
+    arrow = '↑'; cls = 'trend-up';   txt = '+' + trend.delta.toFixed(1) + '°C';
+  } else {
+    arrow = '↓'; cls = 'trend-down'; txt = trend.delta.toFixed(1) + '°C';
+  }
+  el.className = 'cur-trend ' + cls;
+  el.style.display = 'inline-flex';
+  el.textContent = arrow + ' ' + txt + ' deze week';
+  el.title = 'van ' + trend.from.toFixed(1) + '° naar ' + trend.to.toFixed(1) + '° in ' + trend.days + ' dagen';
+}
+
 // Backwards compat alias
 function updateAirTemp() { return updateLiveTemps(); }
 
