@@ -2,7 +2,9 @@ name: Update Water Temperature
 
 on:
   schedule:
-    - cron: '15 * * * *'   # Elk uur op :15
+    # Eén keer per dag. GitHub draait op UTC (geen zomertijd), dus 06:00 UTC =
+    # 08:00 Nederlandse zomertijd (07:00 in de winter). Valt na de ~07:00-update van de bron.
+    - cron: '0 6 * * *'
   workflow_dispatch:         # Handmatig starten mogelijk
 
 permissions:
