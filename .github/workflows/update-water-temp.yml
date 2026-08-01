@@ -2,17 +2,40 @@ name: Update Water Temperature
 
 on:
   schedule:
-    # Eén keer per dag. GitHub draait op UTC (geen zomertijd), dus 06:00 UTC =
-    # 08:00 Nederlandse zomertijd (07:00 in de winter). Valt na de ~07:00-update van de bron.
-    - cron: '0 6 * * *'
-  workflow_dispatch:         # Handmatig starten mogelijk
+    # GitHub draait op vaste UTC-tijd (geen zomertijd). Om altijd om 08:00
+    # Nederlandse tijd te draaien, triggeren we op beide mogelijke UTC-tijden
+    # en laat de 'gate'-job alleen de run door om 08:00 lokale tijd:
+    - cron: '0 6 * * *'   # 08:00 in zomertijd (CEST, UTC+2)
+    - cron: '0 7 * * *'   # 08:00 in wintertijd (CET, UTC+1)
+  workflow_dispatch:         # Handmatig starten mogelijk (altijd)
 
 permissions:
   contents: write
   actions: write   # nodig om de Pages-deploy te triggeren na een data-update
 
 jobs:
+  # Poortwachter: bepaalt of de update mag draaien (exact 08:00 NL, of handmatig)
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Handmatige start — altijd draaien."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "$(TZ='Europe/Amsterdam' date +%H)" = "08" ]; then
+            echo "Lokale tijd is 08:00 — draaien."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Lokale tijd is $(TZ='Europe/Amsterdam' date +%H):00, niet 08:00 — overslaan."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   update:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
