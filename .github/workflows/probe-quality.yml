@@ -1,0 +1,23 @@
+name: Probe waterkwaliteit (tijdelijk)
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch en vergelijk
+        run: |
+          URL="https://waterkaart.net/gids/zwemplek.php?naam=De%20Lentse%20Plas"
+          curl -s --max-time 20 -A "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" "$URL" -o page.html
+          python3 - <<'PY'
+          import re
+          h=open('page.html',encoding='utf-8',errors='replace').read()
+          m=re.search(r'Watertemperatuur</span>\s*<span class="meet-waarde">([^<]*)</span>',h)
+          print("SITE toont (ruwe span):", repr(m.group(1)) if m else "niet gevonden")
+          m2=re.search(r'Watertemperatuur</span>\s*<span class="meet-waarde">\s*~?\s*([0-9]+(?:[.,][0-9]+)?)',h)
+          print("ONZE scraper extraheert:", round(float(m2.group(1).replace(',','.')),1) if m2 else None)
+          mt=re.search(r'Temp:\s*([^<]+?)</span>',h)
+          print("SITE meet-tijd:", mt.group(1).strip() if mt else "?")
+          ms=re.search(r'zwemwaterkwaliteit bij[^<]*?is\s*<span class="meet-waarde bold (\w+)">\s*([^<]+?)\s*</span>',h)
+          print("Kwaliteit:", (ms.group(2),ms.group(1)) if ms else "?")
+          PY
