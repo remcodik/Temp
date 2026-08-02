@@ -1,5 +1,5 @@
 // Service Worker — Lentse Plas Temperatuur Tracker
-const CACHE = 'lentse-plas-v20260714';  // Update dit bij elke deploy
+const CACHE = 'lentse-plas-v20260802b';  // Update dit bij elke deploy
 const ASSETS = [
   './',
   './index.html',
@@ -9,11 +9,13 @@ const ASSETS = [
   'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js',
 ];
 
-// Install: cache bestanden — wacht op signaal van app voor activatie
+// Install: cache bestanden en meteen activeren (nieuwe versie direct actief,
+// zodat gebruikers niet op een oude cache blijven hangen)
 self.addEventListener('install', ev => {
   ev.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS))
-    // Geen skipWaiting() — gebruiker kiest zelf wanneer hij bijwerkt
+    caches.open(CACHE)
+      .then(c => c.addAll(ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -37,8 +39,12 @@ self.addEventListener('message', ev => {
 self.addEventListener('fetch', ev => {
   const url = ev.request.url;
 
-  // Altijd netwerk voor API-aanroepen — nooit cachen
+  // Altijd netwerk, NOOIT cachen — API's én de dagelijkse databestanden.
+  // water-temp.json / temp-history.json moeten altijd vers zijn, anders toont
+  // de app een oude (gecachte) temperatuur die afwijkt van de site.
   if (
+    url.includes('water-temp.json') ||
+    url.includes('temp-history.json') ||
     url.includes('api.open-meteo.com') ||
     url.includes('googleapis.com') ||
     url.includes('firebaseio.com') ||
