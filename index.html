@@ -1771,7 +1771,7 @@ async function fetchAirTemp() {
 // Leest water-temp.json — dagelijks bijgewerkt door GitHub Action (geen CORS probleem)
 async function fetchWaterTemp() {
   try {
-    const r = await fetch('./water-temp.json?t=' + Date.now());
+    const r = await fetch('./water-temp.json?t=' + Date.now(), { cache: 'no-store' });
     const d = await r.json();
     const wk = (d.waterkaart && d.waterkaart.temperature != null) ? d.waterkaart.temperature : null;
     if (d.temperature != null || wk !== null) return {
@@ -2674,7 +2674,7 @@ let tempHistoryCache = null;
 async function fetchTempHistory(force = false) {
   if (!force && tempHistoryCache !== null) return tempHistoryCache;
   try {
-    const r = await fetch('./temp-history.json?t=' + Date.now());
+    const r = await fetch('./temp-history.json?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return tempHistoryCache || [];
     tempHistoryCache = await r.json();
     return tempHistoryCache;
