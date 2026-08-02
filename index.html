@@ -1574,6 +1574,7 @@ let readings   = [];
 let editingId  = null;
 let liveWaterTemp = null;
 let liveWaterkaartTemp = null;   // De Lentse Plas via waterkaart.net — alleen als default in het metingformulier
+let liveWaterUpdated = null;     // ISO-tijd waarop de watertemp voor het laatst is opgehaald
 let liveAirTemp   = null;
 let selSky     = null;
 let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
@@ -1779,10 +1780,11 @@ async function fetchWaterTemp() {
       wkLabel: (d.waterkaart && d.waterkaart.label) || 'De Lentse Plas (waterkaart)',
       label: d.label || 'Lobith',
       source: d.source || null,
-      quality: d.quality || null
+      quality: d.quality || null,
+      updated: (d.waterkaart && d.waterkaart.updated) || d.updated || null
     };
   } catch { /* geen data beschikbaar */ }
-  return { val: null, wk: null, wkLabel: null, label: 'Lobith', source: null, quality: null };
+  return { val: null, wk: null, wkLabel: null, label: 'Lobith', source: null, quality: null, updated: null };
 }
 
 async function fetchAndFill() {
@@ -1808,6 +1810,7 @@ async function updateLiveTemps() {
   }
   // Waterkaart (De Lentse Plas) heeft voorkeur boven het RWS-station
   liveWaterkaartTemp = wtResult.wk;
+  liveWaterUpdated = wtResult.updated;
   const bestWater      = wtResult.wk !== null ? wtResult.wk : wtResult.val;
   const bestWaterLabel = wtResult.wk !== null ? wtResult.wkLabel : wtResult.label;
   const rwsEl  = document.getElementById('cur-water-rws');
@@ -1894,7 +1897,13 @@ async function refreshLiveTemps() {
   try {
     tempHistoryCache = null;   // forceer verse history zodat de week-delta herberekent
     await updateLiveTemps();
-    showToast('🔄 Ververst');
+    let msg = '🔄 Ververst';
+    if (liveWaterUpdated) {
+      const t = new Date(liveWaterUpdated);
+      if (!isNaN(t)) msg += ' · data van ' + t.toLocaleString('nl-NL',
+        { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    }
+    showToast(msg);
   } catch {
     showToast('❌ Verversen mislukt');
   } finally {
