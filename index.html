@@ -1019,7 +1019,7 @@
     </div>
   </div>
   <div class="card" style="margin-top:10px">
-    <div class="card-title">Watertemperatuur: eigen · De Lentse Plas · Lobith</div>
+    <div class="card-title">Watertemperatuur: eigen · De Lentse Plas</div>
     <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
     <div class="compare-hint" id="chart-compare-hint">
       <span>🔍 Knijp of scroll om in te zoomen, sleep om te schuiven</span>
@@ -1808,11 +1808,11 @@ async function updateLiveTemps() {
       at < 5  ? '🥶' : at < 12 ? '🧥' :
       at < 18 ? '😊' : at < 25 ? '⛅' : '☀️';
   }
-  // Waterkaart (De Lentse Plas) heeft voorkeur boven het RWS-station
+  // Alleen De Lentse Plas (waterkaart) — geen Lobith/RWS meer in de app
   liveWaterkaartTemp = wtResult.wk;
   liveWaterUpdated = wtResult.updated;
-  const bestWater      = wtResult.wk !== null ? wtResult.wk : wtResult.val;
-  const bestWaterLabel = wtResult.wk !== null ? wtResult.wkLabel : wtResult.label;
+  const bestWater      = wtResult.wk;
+  const bestWaterLabel = wtResult.wkLabel;
   const rwsEl  = document.getElementById('cur-water-rws');
   const srcEl  = document.getElementById('cur-water-rws-src');
   if (rwsEl) {
@@ -2011,10 +2011,9 @@ function openForm(id) {
   const now   = new Date();
   const local = now.toISOString().slice(0,10);
   document.getElementById('f-dt').value = local;
-  // Default: watertemperatuur van waterkaart.net (De Lentse Plas), anders RWS
+  // Default: watertemperatuur van waterkaart.net (De Lentse Plas)
   document.getElementById('f-wt').value =
-    liveWaterkaartTemp !== null ? liveWaterkaartTemp :
-    liveWaterTemp      !== null ? liveWaterTemp      : '';
+    liveWaterkaartTemp !== null ? liveWaterkaartTemp : '';
   document.getElementById('f-at').value = liveAirTemp   !== null ? liveAirTemp   : '';
   document.getElementById('f-id').value = '';
   clearPhoto();
@@ -2699,10 +2698,10 @@ async function renderComparisonChart() {
   const histMap = {};
   history.forEach(h => { histMap[h.date] = h; });
 
-  // Alleen datums met een échte waarde tonen — de history bevat veel lege
-  // placeholder-rijen (dagen zonder RWS/waterkaart-data) die anders de x-as vullen.
+  // Alleen datums met een échte De Lentse Plas-waarde tonen — de history bevat
+  // veel lege placeholder-rijen die anders de x-as zouden vullen.
   const histDates = history
-    .filter(h => h.waterkaart != null || h.nijmegen != null || h.lobith != null)
+    .filter(h => h.waterkaart != null || h.nijmegen != null)
     .map(h => h.date);
 
   const allDates = [...new Set([
@@ -2721,7 +2720,6 @@ async function renderComparisonChart() {
   const dsOwn        = allDates.map(d => ownByDay[d]
     ? +(ownByDay[d].reduce((a,b)=>a+b,0)/ownByDay[d].length).toFixed(1) : null);
   const dsNijmegen   = allDates.map(d => histMap[d]?.waterkaart ?? histMap[d]?.nijmegen ?? null);
-  const dsLobith     = allDates.map(d => histMap[d]?.lobith     ?? null);
 
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
@@ -2743,12 +2741,6 @@ async function renderComparisonChart() {
         backgroundColor:'rgba(230,81,0,.08)', borderWidth:2.5, tension:.3,
         pointRadius:5, pointHoverRadius:8, pointStyle:'rectRot',
         pointBackgroundColor:'#e65100', pointBorderColor:'#fff', pointBorderWidth:1, spanGaps:true },
-      // Lobith (RWS) — paars, driehoek-punten, gestippeld
-      { label:'Lobith (RWS)',             data:dsLobith,     borderColor:'#8e24aa',
-        backgroundColor:'rgba(142,36,170,.06)', borderWidth:2, tension:.3,
-        pointRadius:5, pointHoverRadius:8, pointStyle:'triangle',
-        pointBackgroundColor:'#8e24aa', pointBorderColor:'#fff', pointBorderWidth:1,
-        borderDash:[5,4], spanGaps:true },
     ]},
     options: {
       responsive:true, maintainAspectRatio:false,
