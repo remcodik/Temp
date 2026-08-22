@@ -2908,6 +2908,16 @@ function renderMonthChart() {
     });
   }
 
+  // Lege maanden aan begin en eind wegknippen (niet bij een specifiek jaar —
+  // daar tonen we bewust alle 12 maanden). Anders start de grafiek op een leeg
+  // begin (bv. jan '25) terwijl de eerste data pas later komt.
+  if (typeof chartFilter !== 'number') {
+    let s = 0, e = avgs.length - 1;
+    while (s <= e && avgs[s] == null) s++;
+    while (e >= s && avgs[e] == null) e--;
+    if (e >= s) { labels = labels.slice(s, e + 1); avgs = avgs.slice(s, e + 1); }
+  }
+
   const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const tc   = dark ? '#90caf9' : '#546e7a';
   const gc   = dark ? 'rgba(144,202,249,.1)' : 'rgba(0,0,0,.05)';
