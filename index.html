@@ -688,6 +688,9 @@
       font-family:var(--font); transition:all .15s;
     }
     .pf-btn.active { background:var(--primary); color:white; }
+    /* 'Nu'-actieknop (geen filter) — onderscheidend, omlijnd */
+    .pf-now { background:transparent; color:var(--primary); border:1px solid var(--primary); }
+    .pf-now:active { background:var(--primary); color:#fff; }
 
     /* ── Zoom-hint + herstelknop onder vergelijkingsgrafiek ── */
     .compare-hint {
@@ -881,6 +884,7 @@
       .topday-btn.active { background:#2a1e00; border-color:#f9a825; color:#ffb74d; }
       .pf-btn { background:#1a3a5c; color:#90caf9; }
       .pf-btn.active { background:var(--primary); color:white; }
+      .pf-now { background:transparent; color:#90caf9; border-color:#90caf9; }
       .df-btn { background:#1a3a5c; color:#90caf9; }
       .df-btn.active { background:var(--primary); color:white; }
       .df-btn.active-top { background:#e65100; color:white; }
@@ -1001,7 +1005,7 @@
   </div>
   <div class="card" style="margin-top:10px">
     <div class="card-title">Gem. watertemperatuur per maand</div>
-    <div class="chart-scroll-outer">
+    <div class="chart-scroll-outer" id="chart-monthly-scroll">
       <div class="chart-scroll-inner" id="chart-monthly-wrap">
         <canvas id="chart-monthly"></canvas>
       </div>
@@ -1973,7 +1977,7 @@ function goPage(name, btn) {
   if (btn) btn.classList.add('active');
   // Grafiekpagina: in liggende stand fullscreen carousel (banners weg) — zie CSS
   document.body.classList.toggle('chart-active', name === 'chart');
-  if (name === 'chart') setTimeout(() => { renderChartFilterButtons(); renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); }, 50);
+  if (name === 'chart') setTimeout(() => { renderChartFilterButtons(); renderCharts(); renderMonthChart(); renderCondChart(); renderComparisonChart(); setTimeout(jumpChartsToNewest, 120); }, 50);
 }
 
 // Verlaat de fullscreen liggende grafiekweergave (terug naar startscherm met balken)
@@ -2814,7 +2818,20 @@ async function renderChartFilterButtons() {
   let html = mkBtn('all', 'Alles');
   yearList.forEach(y => { html += mkBtn(y, y); });
   html += mkBtn('6m', '6 mnd') + mkBtn('12m', '1 jaar');
+  // Actie-knop (geen filter): springt alle grafieken naar de nieuwste maand
+  html += `<button class="pf-btn pf-now" onclick="jumpChartsToNewest()" title="Spring naar de nieuwste maand">Nu →</button>`;
   container.innerHTML = html;
+}
+
+// Laat elke grafiek eindigen op de nieuwste (huidige) maand, zonder het filter
+// te wijzigen: scrollbare grafieken naar het eind, vergelijkingsgrafiek naar
+// het volledige overzicht (de lijngrafieken tonen de nieuwste al rechts).
+function jumpChartsToNewest() {
+  ['chart-monthly-scroll'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.scrollLeft = el.scrollWidth;
+  });
+  resetCompareZoom();
 }
 
 function renderCharts() {
@@ -2966,6 +2983,13 @@ function renderMonthChart() {
       }
     }
   });
+
+  // Scroll naar het eind zodat de nieuwste (huidige) maand rechts in beeld staat
+  // en je meteen een gevulde grafiek ziet i.p.v. de oudste maanden links.
+  if (!compact) {
+    const outer = wrap.parentElement;
+    if (outer) requestAnimationFrame(() => { outer.scrollLeft = outer.scrollWidth; });
+  }
 }
 
 // ─── CONDITIE GRAFIEK ─────────────────────────
