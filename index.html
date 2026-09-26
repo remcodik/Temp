@@ -422,6 +422,14 @@
       flex-shrink:0; margin-left:auto;
     }
 
+    /* ── Opmerking in kaart: ingekort, tikbaar om uit te klappen ── */
+    .rc-notes {
+      font-size:12px; color:var(--muted); margin-top:4px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      cursor:pointer;
+    }
+    .rc-notes.expanded { white-space:normal; overflow:visible; }
+
     /* ── Empty state ── */
     .empty { text-align:center; padding:36px 16px; color:var(--muted); }
     .empty .ei { font-size:44px; display:block; margin-bottom:10px; }
@@ -1205,6 +1213,11 @@
         </div>
         <input type="file" id="f-photo" accept="image/*" style="display:none"
                onchange="handlePhotoSelect(event)">
+      </div>
+
+      <div class="fg">
+        <label>💬 Opmerking</label>
+        <input type="text" id="f-notes" maxlength="140" placeholder="Bijv. lekker rustig, veel algen...">
       </div>
 
       <div class="submit-sticky">
@@ -2020,6 +2033,7 @@ function openForm(id) {
     liveWaterkaartTemp !== null ? liveWaterkaartTemp : '';
   document.getElementById('f-at').value = liveAirTemp   !== null ? liveAirTemp   : '';
   document.getElementById('f-id').value = '';
+  document.getElementById('f-notes').value = '';
   clearPhoto();
 
   if (id) {
@@ -2030,6 +2044,7 @@ function openForm(id) {
       document.getElementById('f-dt').value    = r.datetime.slice(0,10);
       document.getElementById('f-wt').value = r.waterTemp;
       document.getElementById('f-at').value = r.airTemp ?? '';
+      document.getElementById('f-notes').value = r.notes || '';
       setTopDayUI(r.isTopDay || false);
       if (r.sky)     pickIcon('sky',     r.sky);
       if (r.wind)    pickIcon('feeling', r.wind);
@@ -2121,7 +2136,7 @@ function saveReading(ev) {
     sky       : selSky,
     wind      : selWind,    // gevoel (backward compat)
     windStr   : selWindStr, // windkracht
-    notes     : (readings.find(x => x.id === id) || {}).notes || '',
+    notes     : document.getElementById('f-notes').value.trim(),
     isTopDay  : selTopDay,
   };
   const idx = readings.findIndex(x => x.id === id);
@@ -2262,7 +2277,9 @@ function readingHTML(r, showSwipeHint) {
     ? `<span class="rc-sep">|</span><span class="rc-air" style="color:${tempColor(r.airTemp)}">${r.airTemp}°</span>`
     : '';
   const photoHTML = hasPhoto
-    ? `<button class="rc-photo-btn" onclick="openPhoto('${r.id}')" title="Foto bekijken">📷</button>` : '';
+    ? `<img class="rc-thumb" src="${loadPhoto(r.id)}" onclick="openPhoto('${r.id}')" alt="Foto meting" title="Foto bekijken">` : '';
+  const notesHTML = r.notes
+    ? `<div class="rc-notes" id="notes-${r.id}" onclick="this.classList.toggle('expanded')" title="Tik om volledig te lezen">${r.notes}</div>` : '';
 
   // Gevoel-icon (opgeslagen als 'wind')
   const feelIcon  = r.wind    ? condIconCircle(FEELING,  r.wind,    36) : '';
@@ -2299,6 +2316,7 @@ function readingHTML(r, showSwipeHint) {
             ${photoHTML}
           </div>
           ${iconsHTML}
+          ${notesHTML}
         </div>
       </div>
     </div>`;
