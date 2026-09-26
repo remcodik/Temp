@@ -424,8 +424,9 @@
 
     /* ── Opmerking in kaart: ingekort, tikbaar om uit te klappen ── */
     .rc-notes {
-      font-size:12px; color:var(--muted); margin-top:4px;
+      font-size:11px; color:var(--muted); margin-left:6px;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width:100px; min-width:0; flex-shrink:1;
       cursor:pointer;
     }
     .rc-notes.expanded { white-space:normal; overflow:visible; }
@@ -2299,6 +2300,7 @@ function readingHTML(r, showSwipeHint) {
         <div class="rc-header">
           <div class="rc-date">${fmtDate(r.datetime)}</div>
           ${topdayHTML}
+          ${notesHTML}
           <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
             ${r.createdBy ? `<div class="rc-date">${getProfileName(r.createdBy)}</div>` : ''}
           ${!isGuest() && isOwn ? `<button class="rc-edit" onclick="openForm('${r.id}')" aria-label="Bewerken">
@@ -2316,7 +2318,6 @@ function readingHTML(r, showSwipeHint) {
             ${photoHTML}
           </div>
           ${iconsHTML}
-          ${notesHTML}
         </div>
       </div>
     </div>`;
