@@ -6,6 +6,7 @@ on:
     # geplande jobs vaak flink vertraagd/onregelmatig; door meermaals per dag
     # te draaien vangen we de dagelijkse update betrouwbaar op en blijft de
     # data vers (geen exacte-tijd-gate meer, die miste updates bij vertraging).
+    - cron: '*/15 4-7 * * *'
     - cron: '0 */3 * * *'
   workflow_dispatch:         # Handmatig starten mogelijk (altijd)
 
