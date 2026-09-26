@@ -1605,6 +1605,7 @@ let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
 let undoBuffer  = null;
 let undoTimer   = null;
 let pendingPhotoData = null; // base64 van nieuwe foto in form
+let photoRemoved = false;    // gebruiker heeft bestaande foto expliciet verwijderd
 let selTopDay = false;
 
 // ─── PERSISTENCE ─────────────────────────────
@@ -1661,6 +1662,7 @@ function handlePhotoSelect(ev) {
 
 function clearPhoto() {
   pendingPhotoData = null;
+  photoRemoved = true;
   document.getElementById('f-photo').value = '';
   const prev = document.getElementById('photo-preview');
   const clr  = document.getElementById('photo-clear');
@@ -2020,6 +2022,7 @@ function openForm(id) {
   editingId = id || null;
   selSky = selWind = selWindStr = null;
   pendingPhotoData = null;
+  photoRemoved = false;
   setTopDayUI(false);
 
   renderPicker('sky-picker',     SKY,     'sky');
@@ -2149,8 +2152,9 @@ function saveReading(ev) {
     readings.push(r);
   }
 
-  // Sla foto op
+  // Sla foto op (of verwijder als gebruiker die expliciet weghaalde)
   if (pendingPhotoData) savePhoto(id, pendingPhotoData);
+  else if (photoRemoved) deletePhoto(id);
 
   readings.sort((a,b) => new Date(b.datetime) - new Date(a.datetime));
   save();
