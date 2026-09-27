@@ -561,6 +561,8 @@
 
     /* ── Charts ── */
     .chart-wrap { position:relative; height:200px; }
+    .chart-row { display:flex; }
+    .chart-yaxis-wrap { flex-shrink:0; width:38px; height:200px; }
     .chart-scroll-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .chart-scroll-inner { position:relative; height:200px; min-width:100%; }
 
@@ -580,6 +582,7 @@
     @media (orientation: landscape) {
       .chart-wrap { height: calc(80vh - 80px); min-height:180px; }
       .chart-scroll-inner { height: calc(80vh - 80px); min-height:180px; }
+      .chart-yaxis-wrap { height: calc(80vh - 80px); min-height:180px; }
     }
 
     /* ── Landscape op touch-toestel + grafiekpagina: fullscreen, veeg per grafiek ── */
@@ -610,10 +613,12 @@
       }
       /* Grafiek vult de beschikbare hoogte */
       body.chart-active #page-chart > .card .chart-wrap,
+      body.chart-active #page-chart > .card .chart-row,
       body.chart-active #page-chart > .card .chart-scroll-outer {
         flex: 1 1 auto; height: auto; min-height: 0;
       }
-      body.chart-active #page-chart > .card .chart-scroll-inner {
+      body.chart-active #page-chart > .card .chart-scroll-inner,
+      body.chart-active #page-chart > .card .chart-yaxis-wrap {
         height: 100%; min-height: 0;
       }
       /* Filterbalk als zwevende overlay bovenaan, op elke pagina bereikbaar */
@@ -1014,9 +1019,12 @@
   </div>
   <div class="card" style="margin-top:10px">
     <div class="card-title">Gem. watertemperatuur per maand</div>
-    <div class="chart-scroll-outer" id="chart-monthly-scroll">
-      <div class="chart-scroll-inner" id="chart-monthly-wrap">
-        <canvas id="chart-monthly"></canvas>
+    <div class="chart-row">
+      <div class="chart-yaxis-wrap"><canvas id="chart-monthly-yaxis"></canvas></div>
+      <div class="chart-scroll-outer" id="chart-monthly-scroll" style="flex:1;min-width:0">
+        <div class="chart-scroll-inner" id="chart-monthly-wrap">
+          <canvas id="chart-monthly"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -1599,6 +1607,7 @@ let selWind    = null;   // gevoel (backward compat: opgeslagen als 'wind')
 let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
+let chartMonthlyYAxis = null;
 let chartCond    = null;
 let chartFilter = 'all';   // 'all' | jaartal (getal) | '6m' | '12m' — geldt voor ALLE grafieken
 let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
@@ -2905,6 +2914,7 @@ function renderCharts() {
 function renderMonthChart() {
   if (!readings.length) {
     if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
+    if (chartMonthlyYAxis) { chartMonthlyYAxis.destroy(); chartMonthlyYAxis = null; }
     return;
   }
 
@@ -2976,6 +2986,12 @@ function renderMonthChart() {
   const canvasW = compact ? containerW : Math.max(containerW, labels.length * 40);
   wrap.style.width = canvasW + 'px';
 
+  // Gedeelde y-schaal berekenen zodat de vaste as-kolom exact aansluit
+  // op de balkjes in de scrollende grafiek.
+  const validVals = avgs.filter(v => v !== null);
+  const yMin = validVals.length ? Math.floor(Math.min(...validVals) - 1) : 0;
+  const yMax = validVals.length ? Math.ceil(Math.max(...validVals) + 1) : 25;
+
   if (chartMonthly) chartMonthly.destroy();
   chartMonthly = new Chart(document.getElementById('chart-monthly'), {
     type: 'bar',
@@ -3002,7 +3018,28 @@ function renderMonthChart() {
       },
       scales: {
         x: { ticks: { color: tc, font: { size: 10 } }, grid: { color: gc } },
-        y: { ticks: { color: tc, callback: v => v + '°C', font: { size: 10 } }, grid: { color: gc }, beginAtZero: false },
+        // Labels van de y-as hier verbergen: die tonen we vast in de aparte
+        // as-kolom links, zodat ze niet verdwijnen bij horizontaal scrollen.
+        y: { min: yMin, max: yMax, ticks: { display: false }, grid: { color: gc }, beginAtZero: false },
+      }
+    }
+  });
+
+  // Vaste y-as-kolom: zelfde schaal, onzichtbare balkjes, alleen de as-labels
+  // zijn hier zichtbaar. Staat buiten de scrollende container, dus blijft
+  // altijd in beeld terwijl je door de maanden schuift.
+  if (chartMonthlyYAxis) chartMonthlyYAxis.destroy();
+  chartMonthlyYAxis = new Chart(document.getElementById('chart-monthly-yaxis'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: avgs.map(() => null) }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: 0 },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: { min: yMin, max: yMax, ticks: { color: tc, callback: v => v + '°C', font: { size: 10 } }, grid: { display: false }, beginAtZero: false },
       }
     }
   });
