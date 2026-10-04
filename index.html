@@ -2928,12 +2928,14 @@ function renderMonthChart() {
   };
 
   let labels = [], avgs = [];
+  let avgsPrevYear = null;  // alleen gevuld bij specifiek-jaar filter: zelfde maand, jaar ervoor
   let compact = false;   // true = past zonder horizontale scroll
 
   if (typeof chartFilter === 'number') {
-    // Specifiek jaar — altijd alle 12 maanden tonen
+    // Specifiek jaar — altijd alle 12 maanden tonen, plus vorig jaar als smalle staaf ernaast
     labels = MONTH_NAMES;
     avgs = MONTH_NAMES.map((_, m) => avgOf(chartFilter, m));
+    avgsPrevYear = MONTH_NAMES.map((_, m) => avgOf(chartFilter - 1, m));
     compact = true;
 
   } else if (chartFilter === '6m' || chartFilter === '12m') {
@@ -2988,31 +2990,42 @@ function renderMonthChart() {
 
   // Gedeelde y-schaal berekenen zodat de vaste as-kolom exact aansluit
   // op de balkjes in de scrollende grafiek.
-  const validVals = avgs.filter(v => v !== null);
+  const validVals = (avgsPrevYear ? avgs.concat(avgsPrevYear) : avgs).filter(v => v !== null);
   const yMin = validVals.length ? Math.floor(Math.min(...validVals) - 1) : 0;
   const yMax = validVals.length ? Math.ceil(Math.max(...validVals) + 1) : 25;
+
+  const monthlyDatasets = [{
+    label: avgsPrevYear ? String(chartFilter) : 'Gem. watertemperatuur °C',
+    data: avgs,
+    backgroundColor: bgColors,
+    borderRadius: 5,
+    borderSkipped: false,
+  }];
+  if (avgsPrevYear) {
+    monthlyDatasets.push({
+      label: String(chartFilter - 1),
+      data: avgsPrevYear,
+      backgroundColor: dark ? 'rgba(144,202,249,.3)' : 'rgba(84,110,122,.3)',
+      borderRadius: 5,
+      borderSkipped: false,
+    });
+  }
 
   if (chartMonthly) chartMonthly.destroy();
   chartMonthly = new Chart(document.getElementById('chart-monthly'), {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Gem. watertemperatuur °C',
-        data: avgs,
-        backgroundColor: bgColors,
-        borderRadius: 5,
-        borderSkipped: false,
-      }]
-    },
+    data: { labels, datasets: monthlyDatasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: { display: !!avgsPrevYear, labels: { color: tc, font: { size: 10 }, boxWidth: 12 } },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.parsed.y !== null ? `${ctx.parsed.y.toFixed(1)}°C` : 'Geen data',
+            label: ctx => {
+              const val = ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '°C' : 'geen data';
+              return avgsPrevYear ? `${ctx.dataset.label}: ${val}` : val;
+            },
           }
         }
       },
