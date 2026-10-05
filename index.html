@@ -3000,6 +3000,8 @@ function renderMonthChart() {
     backgroundColor: bgColors,
     borderRadius: 5,
     borderSkipped: false,
+    // Bij vergelijking: breed — vult vrijwel het hele maandvakje.
+    ...(avgsPrevYear ? { barPercentage: 1.0, categoryPercentage: 0.8 } : {}),
   }];
   if (avgsPrevYear) {
     monthlyDatasets.push({
@@ -3008,6 +3010,9 @@ function renderMonthChart() {
       backgroundColor: dark ? 'rgba(144,202,249,.3)' : 'rgba(84,110,122,.3)',
       borderRadius: 5,
       borderSkipped: false,
+      // Smal — duidelijk ondergeschikt aan de staaf van het huidige jaar.
+      barPercentage: 0.45,
+      categoryPercentage: 0.8,
     });
   }
 
