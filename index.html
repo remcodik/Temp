@@ -367,7 +367,6 @@
     .rc-water  { font-size:28px; font-weight:900; line-height:1; }
     .rc-air    { font-size:20px; font-weight:700; line-height:1; }
     .rc-sep    { font-size:12px; color:rgba(0,0,0,.2); }
-    .rc-notes  { margin-top:5px; font-size:11px; color:var(--muted); font-style:italic; line-height:1.4; }
     .rc-photo-btn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; margin-left:2px; }
     .rc-cond-icons { display:flex; gap:5px; align-items:center; margin-left:auto; }
     .rc-cond-icon  {
@@ -1019,6 +1018,7 @@
   </div>
   <div class="card" style="margin-top:10px">
     <div class="card-title">Gem. watertemperatuur per maand</div>
+    <div id="monthly-compare-toggle" style="margin-bottom:8px"></div>
     <div class="chart-row">
       <div class="chart-yaxis-wrap"><canvas id="chart-monthly-yaxis"></canvas></div>
       <div class="chart-scroll-outer" id="chart-monthly-scroll" style="flex:1;min-width:0">
@@ -1608,6 +1608,7 @@ let selWindStr = null;   // windkracht (nieuw: opgeslagen als 'windStr')
 let chartComb    = null;
 let chartMonthly = null;
 let chartMonthlyYAxis = null;
+let compareLastYear = false;  // toggle: vorig jaar als smalle staaf erbij (jaar- en 6m/12m-filter)
 let chartCond    = null;
 let chartFilter = 'all';   // 'all' | jaartal (getal) | '6m' | '12m' — geldt voor ALLE grafieken
 let condChartMode = 'sky';   // 'sky' | 'feel' | 'wind'
@@ -2911,7 +2912,19 @@ function renderCharts() {
   });
 }
 
+function renderCompareToggle() {
+  const el = document.getElementById('monthly-compare-toggle');
+  if (!el) return;
+  // Alleen zinvol bij jaar- of 6m/12m-filter; bij "alles" staat elk jaar al los.
+  if (chartFilter === 'all') { el.innerHTML = ''; return; }
+  el.innerHTML = `<button class="ct-btn ${compareLastYear ? 'active' : ''}" style="flex:none;padding:5px 12px"
+    onclick="compareLastYear = !compareLastYear; renderCompareToggle(); renderMonthChart();">
+    📊 Vergelijk met vorig jaar
+  </button>`;
+}
+
 function renderMonthChart() {
+  renderCompareToggle();
   if (!readings.length) {
     if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
     if (chartMonthlyYAxis) { chartMonthlyYAxis.destroy(); chartMonthlyYAxis = null; }
@@ -2928,25 +2941,30 @@ function renderMonthChart() {
   };
 
   let labels = [], avgs = [];
-  let avgsPrevYear = null;  // alleen gevuld bij specifiek-jaar filter: zelfde maand, jaar ervoor
+  // Alleen gevuld bij jaar- of 6m/12m-filter én als de toggle aanstaat: zelfde maand, jaar ervoor.
+  // Bij "alles" blijft dit altijd leeg — daar staat elk jaar al los naast elkaar.
+  let avgsPrevYear = null;
   let compact = false;   // true = past zonder horizontale scroll
 
   if (typeof chartFilter === 'number') {
     // Specifiek jaar — altijd alle 12 maanden tonen, plus vorig jaar als smalle staaf ernaast
     labels = MONTH_NAMES;
     avgs = MONTH_NAMES.map((_, m) => avgOf(chartFilter, m));
-    avgsPrevYear = MONTH_NAMES.map((_, m) => avgOf(chartFilter - 1, m));
+    if (compareLastYear) avgsPrevYear = MONTH_NAMES.map((_, m) => avgOf(chartFilter - 1, m));
     compact = true;
 
   } else if (chartFilter === '6m' || chartFilter === '12m') {
     // Laatste 6 of 12 maanden — alleen de maanden binnen het venster
     const now = new Date();
     const count = chartFilter === '6m' ? 6 : 12;
+    const windowYears = [], windowMonths = [];
     for (let i = count - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       labels.push(MONTH_NAMES[d.getMonth()] + ' \'' + String(d.getFullYear()).slice(2));
       avgs.push(avgOf(d.getFullYear(), d.getMonth()));
+      windowYears.push(d.getFullYear()); windowMonths.push(d.getMonth());
     }
+    if (compareLastYear) avgsPrevYear = windowYears.map((y, i) => avgOf(y - 1, windowMonths[i]));
     compact = count <= 6;
 
   } else {
@@ -3001,18 +3019,18 @@ function renderMonthChart() {
     borderRadius: 5,
     borderSkipped: false,
     // Bij vergelijking: breed — vult vrijwel het hele maandvakje.
-    ...(avgsPrevYear ? { barPercentage: 1.0, categoryPercentage: 0.8 } : {}),
+    ...(avgsPrevYear ? { barPercentage: 1.0, categoryPercentage: 0.9 } : {}),
   }];
   if (avgsPrevYear) {
     monthlyDatasets.push({
-      label: String(chartFilter - 1),
+      label: String(typeof chartFilter === 'number' ? chartFilter - 1 : 'vorig jaar'),
       data: avgsPrevYear,
       backgroundColor: dark ? 'rgba(144,202,249,.3)' : 'rgba(84,110,122,.3)',
       borderRadius: 5,
       borderSkipped: false,
-      // Smal — duidelijk ondergeschikt aan de staaf van het huidige jaar.
-      barPercentage: 0.45,
-      categoryPercentage: 0.8,
+      // Smal maar dicht tegen de brede staaf aan — minder gat ertussen.
+      barPercentage: 0.65,
+      categoryPercentage: 0.9,
     });
   }
 
